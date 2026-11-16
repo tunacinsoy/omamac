@@ -83,13 +83,13 @@ snapshot() {
   [ -z "$(grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' <<< "$output")" ]
 }
 
-@test "a failing step names itself and the log" {
+@test "a failing step names itself, not a log that lacks it" {
   echo 'alias x=y' > "$HOME/.zshrc"
   chmod 444 "$HOME/.zshrc"
   run install
   [ "$status" -eq 1 ]
   [[ "$output" == *".zshrc"* ]]
-  [[ "$output" == *"Log:"* ]]
+  [[ "$output" != *"Log:"* ]]
   [[ "$output" == *"run the one-liner again"* ]]
 }
 

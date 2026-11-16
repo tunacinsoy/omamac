@@ -20,7 +20,7 @@ source "$OMAMAC_CHECKOUT/lib/ui.sh"
 OMAMAC_STEP='starting'
 
 install_failed() {
-  ui_fail "omamac stopped while $OMAMAC_STEP. Log: $OMAMAC_LOG"
+  ui_fail "omamac stopped while $OMAMAC_STEP."
   ui_fail "Fix the problem and run the one-liner again; it picks up where it stopped."
   exit 1
 }

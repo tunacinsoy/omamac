@@ -117,7 +117,7 @@ In order. Each step that fails prints one plain-text message (gum isn't there ye
 
 ### `install.sh` (bash 5)
 
-`set -Eeuo pipefail`, sources `lib/*.sh`, and stops at once if `BASH_VERSINFO[0]` < 5. An `ERR` trap prints, with gum: which step failed, the log path, and "Fix the problem and run the one-liner again; it picks up where it stopped."
+`set -Eeuo pipefail`, sources `lib/*.sh`, and stops at once if `BASH_VERSINFO[0]` < 5. An `ERR` trap prints, with gum: which step failed and "Fix the problem and run the one-liner again; it picks up where it stopped."
 
 Steps, each a `ui` step line with a ✓ when done:
 
