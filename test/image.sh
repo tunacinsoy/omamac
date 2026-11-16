@@ -48,9 +48,11 @@ for _ in $(seq 60); do
 done
 OMAMAC_VM_TIMEOUT=30 vm true >/dev/null 2>&1 || fail "No SSH login to $NEW at $ip in 5 minutes"
 
-info "Making sudo ask for the password and turning Gatekeeper on"
-vm 'sudo rm /etc/sudoers.d/admin-nopasswd'
+info "Turning Gatekeeper on and making sudo ask for the password"
+# Gatekeeper first, while sudo needs no password: vm.exp allows only the ssh
+# login's password prompt.
 vm 'sudo spctl --global-enable'
+vm 'sudo rm /etc/sudoers.d/admin-nopasswd'
 
 info "Checking it behaves like a fresh Mac"
 vm '! command -v brew && [ ! -e /opt/homebrew ]' || fail "Homebrew is in the base image"

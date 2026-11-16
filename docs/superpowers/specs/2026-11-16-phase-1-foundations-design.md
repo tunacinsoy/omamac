@@ -193,8 +193,8 @@ Run on the dev Mac (by Tuna or the agent), rarely (first setup, and when a new m
 
 1. `tart clone ghcr.io/cirruslabs/macos-golden-gate-vanilla:latest omamac-clean-new` (macOS 27; the base name is one constant at the top, changed when the next macOS ships), then `tart set omamac-clean-new --disk-size 80`. The base's 50 GB disk is too small once macOS prepares a background OS update (about 9 GB); the guest grows into the bigger disk on its own. `tart set` refuses to shrink a disk, so a bigger base stops the script until the number is raised.
 2. Boot it, and through `test/vm.exp` as Cirrus's default user (`admin` / `admin`):
-   - `sudo rm /etc/sudoers.d/admin-nopasswd`, so sudo asks for the password like a real Mac;
-   - `sudo spctl --global-enable` (Gatekeeper on); if macOS 27 needs a click for it, the script stops and says which.
+   - `sudo spctl --global-enable` (Gatekeeper on); if macOS 27 needs a click for it, the script stops and says which. This comes first, while sudo needs no password, because `vm.exp` allows only the ssh login's password prompt;
+   - `sudo rm /etc/sudoers.d/admin-nopasswd`, so sudo asks for the password like a real Mac.
    - Check: `brew` absent, `sudo -n true` fails, `spctl --status` says enabled, and `df -g /` shows at least 30 GB free (so a base that doesn't grow fails here).
 3. Shut it down, delete the old `omamac-clean` if any, rename `omamac-clean-new` to `omamac-clean`, and `tart prune` the download cache. Exactly one clean image stays on disk.
 
