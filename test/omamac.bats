@@ -40,7 +40,9 @@ omamac() { "$BASH5" "$REPO_ROOT/bin/omamac" "$@"; }
 
 @test "ui_run logs output and returns the status" {
   export OMAMAC_LOG="$BATS_TEST_TMPDIR/l"
-  run "$BASH5" -c 'source "$REPO_ROOT/lib/ui.sh"; ui_run t bash -c "echo out; exit 3"'
+  install_fake_brew
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gum
+  run "$BASH5" -c 'source "$REPO_ROOT/lib/paths.sh"; source "$REPO_ROOT/lib/ui.sh"; ui_run t bash -c "echo out; exit 3"'
   [ "$status" -eq 3 ]
   grep -q out "$OMAMAC_LOG"
   [[ "$output" == *"Log:"* ]]
@@ -48,8 +50,19 @@ omamac() { "$BASH5" "$REPO_ROOT/bin/omamac" "$@"; }
 
 @test "ui_run logs stdout and stderr" {
   export OMAMAC_LOG="$BATS_TEST_TMPDIR/l"
-  run "$BASH5" -c 'source "$REPO_ROOT/lib/ui.sh"; ui_run t bash -c "echo out; echo err >&2; exit 3"'
+  install_fake_brew
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gum
+  run "$BASH5" -c 'source "$REPO_ROOT/lib/paths.sh"; source "$REPO_ROOT/lib/ui.sh"; ui_run t bash -c "echo out; echo err >&2; exit 3"'
   [ "$status" -eq 3 ]
   grep -q out "$OMAMAC_LOG"
   grep -q err "$OMAMAC_LOG"
+}
+
+@test "ui_run without gum still logs and returns the status" {
+  export OMAMAC_LOG="$BATS_TEST_TMPDIR/l"
+  rm "$STUB_DIR/gum"
+  run "$BASH5" -c 'source "$REPO_ROOT/lib/paths.sh"; source "$REPO_ROOT/lib/ui.sh"; ui_run t bash -c "echo out; exit 3"'
+  [ "$status" -eq 3 ]
+  grep -q out "$OMAMAC_LOG"
+  [[ "$output" == *"✗ Log:"* ]]
 }

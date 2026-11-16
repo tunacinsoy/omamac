@@ -63,6 +63,19 @@ expect_fail() {
   expect_fail "gum" "brew install gum"
 }
 
+@test "gum not installed and none on PATH: plain ✗ lines" {
+  healthy_mac
+  rm -r "$OMAMAC_TEST_BREW_PREFIX/Cellar/gum" "$OMAMAC_TEST_BREW_PREFIX/bin/gum" "$STUB_DIR/gum"
+  PATH=/usr/bin:/bin expect_fail "gum" "brew install gum"
+}
+
+@test "Homebrew line missing and no brew or gum on PATH" {
+  healthy_mac
+  : > "$HOME/.zprofile"
+  rm "$STUB_DIR/gum"
+  PATH=/usr/bin:/bin expect_fail "Homebrew line" "Run the one-liner again"
+}
+
 @test "checkout missing" {
   healthy_mac
   rm -rf "$HOME/.local/share/omamac"

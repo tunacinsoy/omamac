@@ -166,7 +166,7 @@ One line per check, ✓ / ✗ / ℹ. A ✗ says what it found, why it matters, a
 
 ### `lib/ui.sh`
 
-Small wrappers over `gum style` / `gum spin` so every script prints the same way: a step line, ✓, ✗ (to stderr), ℹ, and a summary box. Long commands (`brew install`) run under `gum spin` with output sent to the log. Colours come from gum's defaults until Phase 4 brings themes.
+Small wrappers over `gum style` / `gum spin` so every script prints the same way: a step line, ✓, ✗ (to stderr), ℹ, and a summary box. Long commands (`brew install`) run under `gum spin` with output sent to the log. Colours come from gum's defaults until Phase 4 brings themes. gum is called as `/opt/homebrew/bin/gum`, not by name, so doctor works when Homebrew isn't on PATH. If gum isn't there, the same text prints plainly with the same ✓ ✗ ℹ markers, so doctor can still say what's wrong.
 
 ### bats suite
 

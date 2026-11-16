@@ -5,6 +5,7 @@ bats_require_minimum_version 1.5.0
 setup() {
   setup_sandbox
   install_fake_brew
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gum
   export OMAMAC_LOG="$BATS_TEST_TMPDIR/run.log"
 }
 
