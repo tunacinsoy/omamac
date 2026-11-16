@@ -97,7 +97,7 @@ vm "mkdir -p ~/.local/state/omamac && curl -fsSL $raw/test/fixtures/$fixture.env
 # 4. The one-liner, in a login shell as Terminal opens one.
 one_liner="zsh -lc 'curl -fsSL $raw/boot.sh | OMAMAC_REF=$branch bash'"
 step='first run'
-info "Running the one-liner (the first run takes 10 to 25 minutes)"
+info "Running the one-liner"
 vm "$one_liner"
 
 # 5. The checkout is the tested commit, and a new Terminal window finds omamac.
@@ -105,10 +105,11 @@ step='checks after the first run'
 vm "[ \"\$(git -C ~/.local/share/omamac rev-parse HEAD)\" = $sha ]"
 vm "zsh -lic 'omamac doctor'"
 
-# 6. A second run changes nothing. The markers cut out ssh's own lines.
+# 6. A second run changes nothing. The markers cut out ssh's own lines; the
+# whole output also goes to the log (stderr), so a failure there shows why.
 fingerprint() {
   vm "echo fingerprint-begin && curl -fsSL $raw/test/fingerprint.sh | /bin/bash && echo fingerprint-end" |
-    tr -d '\r' | sed -n '/^fingerprint-begin$/,/^fingerprint-end$/p' >"$1"
+    tr -d '\r' | tee /dev/stderr | sed -n '/^fingerprint-begin$/,/^fingerprint-end$/p' >"$1"
   grep -qx fingerprint-end "$1"
 }
 step=fingerprint
