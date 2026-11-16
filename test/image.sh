@@ -32,6 +32,10 @@ command -v tart >/dev/null || fail "Tart is missing: brew install openai/tools/t
 cleanup # a leftover from an interrupted run
 info "Cloning $BASE"
 tart clone "$BASE" "$NEW"
+# The base's 50 GB disk has too little room for the background OS update macOS
+# prepares (about 9 GB). The guest grows into the bigger disk on its own. tart
+# set refuses to shrink, so a base bigger than this stops here: raise the number.
+tart set "$NEW" --disk-size 80
 
 info "Booting"
 tart run --no-graphics "$NEW" >/dev/null &
@@ -53,6 +57,9 @@ vm '! command -v brew && [ ! -e /opt/homebrew ]' || fail "Homebrew is in the bas
 vm 'sudo -k; ! sudo -n true' || fail "sudo still works without a password"
 vm 'spctl --status | grep -qx "assessments enabled"' ||
   fail "Gatekeeper is still off: macOS needs it turned on in System Settings > Privacy & Security"
+# shellcheck disable=SC2016 # the VM's shell expands these
+vm 'free=$(df -g / | awk "NR == 2 {print \$4}"); echo "Free: $free GB"; [ "$free" -ge 30 ]' ||
+  fail "The VM's disk has less than 30 GB free: the guest didn't grow into the bigger disk"
 
 info "Saving it as $IMAGE"
 tart stop "$NEW"
