@@ -198,7 +198,7 @@ This is why the repo is public from day one: the VM must fetch omamac with no cr
 
 **Nobody sits at the keyboard.** Whoever starts `test/vm.sh` only reads ✓ or ✗ at the end. The script clones the image, boots it, pastes the one-liner over SSH, types the sudo password when asked (the throwaway VM's own password, never Tuna's, typed with `expect` like a person would), answers the questions from the fixture, runs the checks, saves the log and deletes the VM.
 
-**The clean image.** Exactly one clean image stays on disk, made from Cirrus Labs' `macos-*-vanilla` (no Homebrew). Downloading it for every run would take longer than the time budget. Every test VM is a copy-on-write clone, deleted when its run ends, and `test/vm.sh` clears Tart's download cache; the Mac has a 512 GB disk. When a macOS update ships, the image is replaced, never kept alongside the old one.
+**The clean image.** Exactly one clean image stays on disk, made from Cirrus Labs' `macos-*-vanilla` (no Homebrew). Downloading it for every run would take longer than the time budget. Every test VM is a copy-on-write clone, deleted when its run ends, and `test/image.sh` clears Tart's download cache after building the image; the Mac has a 512 GB disk. When a macOS update ships, the image is replaced, never kept alongside the old one.
 
 **The VM behaves like a real user's Mac.** The vanilla image comes with passwordless sudo and Gatekeeper switched off, which would hide the password prompt and first-launch warnings a real user sees. When the clean image is made, both are put back once: `/etc/sudoers.d/admin-nopasswd` is deleted and Gatekeeper is switched on.
 
@@ -307,7 +307,8 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - Desktop apps come only from Homebrew casks; no Mac App Store (`mas`) in v1.
 - Subcommands: install, update, theme, doctor, uninstall.
 - Saved choices live in `~/.local/state/omamac/choices.env`.
-- Testing a branch uses `OMAMAC_REF=<branch>` on the same one-liner.
+- Testing a branch uses the one-liner with `<branch>` in the `boot.sh` URL and `OMAMAC_REF=<branch>`; `test/vm.sh` uses the commit SHA in the URL. Reason: `main`'s `boot.sh` can't test a branch that changes `boot.sh`, and the Phase 1 PR has no `main` `boot.sh` at all.
+- Logs live in `~/.local/state/omamac/logs/` (newest 10).
 - Apple Silicon only.
 - Adoption is offered only for apps in omamac's catalog, at the moment the user picks them; omamac doesn't scan Applications for other hand-installed apps.
 - Files omamac never creates or modifies, to start with: `~/.ssh/**`, `~/.gitconfig`, `~/.npmrc`, `~/.m2/settings.xml`, `~/.curlrc`, `/etc/hosts`, `/etc/resolver/*`, and anything else under `/etc` or `/Library` beyond what Homebrew's own installer does.

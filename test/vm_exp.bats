@@ -1,0 +1,44 @@
+#!/usr/bin/env bats
+# test/vm.exp against a fake ssh that asks for the password a set number of times.
+
+load helpers/common
+
+setup() {
+  setup_sandbox
+  # shellcheck disable=SC2016 # the stub expands these itself
+  stub ssh 'n=${T_PROMPTS:-1}
+while [ "$n" -gt 0 ]; do printf "Password:"; read -r _; n=$((n - 1)); done
+[ -z "${T_KILL:-}" ] || kill -TERM $$
+exit "${T_EXIT:-0}"'
+  export OMAMAC_VM_TIMEOUT=10
+}
+
+vm_exp() { run /usr/bin/expect -f "$REPO_ROOT/test/vm.exp" 192.0.2.1 true; }
+
+@test "one password prompt is answered" {
+  vm_exp
+  [ "$status" -eq 0 ]
+}
+
+@test "passes on the command's exit status" {
+  T_EXIT=3 vm_exp
+  [ "$status" -eq 3 ]
+}
+
+@test "a second password prompt fails by default" {
+  T_PROMPTS=2 vm_exp
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"asked for a password 2 times"* ]]
+}
+
+@test "OMAMAC_VM_MAX_PASSWORDS raises the limit" {
+  T_PROMPTS=2 OMAMAC_VM_MAX_PASSWORDS=2 vm_exp
+  [ "$status" -eq 0 ]
+  T_PROMPTS=3 OMAMAC_VM_MAX_PASSWORDS=2 vm_exp
+  [ "$status" -eq 1 ]
+}
+
+@test "a command killed by a signal fails" {
+  T_KILL=1 vm_exp
+  [ "$status" -eq 1 ]
+}

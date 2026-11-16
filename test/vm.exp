@@ -1,0 +1,50 @@
+#!/usr/bin/expect -f
+# test/vm.exp <ip> <command>: run one command in a test VM over SSH, typing the
+# VM's password at each password prompt. Exits with the command's exit status.
+# More prompts than OMAMAC_VM_MAX_PASSWORDS (default 1, the ssh login) fail the
+# run: omamac may ask for the password only once.
+#
+# Host key checks are off: the VM is new every time and only ever reached at
+# its local IP, so there is no known key to check against.
+
+if {[llength $argv] != 2} {
+  puts stderr "usage: vm.exp <ip> <command>"
+  exit 2
+}
+lassign $argv ip command
+
+# The Cirrus image's public default password, not a secret.
+set password admin
+if {[info exists env(OMAMAC_VM_PASSWORD)]} { set password $env(OMAMAC_VM_PASSWORD) }
+set timeout 2700
+if {[info exists env(OMAMAC_VM_TIMEOUT)]} { set timeout $env(OMAMAC_VM_TIMEOUT) }
+set max_passwords 1
+if {[info exists env(OMAMAC_VM_MAX_PASSWORDS)]} { set max_passwords $env(OMAMAC_VM_MAX_PASSWORDS) }
+set passwords 0
+
+spawn ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null admin@$ip $command
+
+# The y/n pattern is an alternation on purpose: a bracket class holding \[ or
+# \] loses its backslashes in this block and never matches.
+expect {
+  -re {[Pp]assword:} {
+    incr passwords
+    if {$passwords > $max_passwords} {
+      puts stderr "\nvm.exp: asked for a password $passwords times, more than $max_passwords"
+      exit 1
+    }
+    send -- "$password\r"
+    exp_continue
+  }
+  -re {\([yY]/[nN]\)|\[[yY]/[nN]\]} { puts stderr "\nvm.exp: unexpected prompt"; exit 1 }
+  timeout { puts stderr "\nvm.exp: timed out after $timeout s"; exit 1 }
+  eof
+}
+
+# wait returns {pid spawn_id os_error value}; os_error -1 means value is errno.
+# A child killed by a signal adds more fields (CHILDKILLED, the signal) and
+# can report value 0, so any extra field is a failure.
+set result [wait]
+lassign $result pid spawn_id os_error value
+if {$os_error != 0 || [llength $result] > 4} { exit 1 }
+exit $value
