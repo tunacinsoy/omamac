@@ -28,6 +28,17 @@ Each run writes a log to `~/.local/state/omamac/logs/`. The newest 10 are kept.
 
 Open a new terminal window.
 
+## What it changes
+
+- Homebrew, in `/opt/homebrew`. It brings Apple's Command Line Tools.
+- bash and gum, installed with Homebrew.
+- One line in `~/.zprofile` (skipped if it already sets up Homebrew) and one in `~/.zshrc`. Both end in `# added by omamac`.
+- `~/.local/share/omamac`: omamac itself.
+- `~/.config/omamac`: files omamac writes.
+- `~/.local/state/omamac`: logs.
+
+There is no uninstall command yet. To undo by hand: delete the two lines ending in `# added by omamac`, delete the three folders, and, if omamac installed them, run `brew uninstall gum bash`. To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
+
 ## Testing a branch
 
 For contributors. Put the branch in the URL and in `OMAMAC_REF`:
