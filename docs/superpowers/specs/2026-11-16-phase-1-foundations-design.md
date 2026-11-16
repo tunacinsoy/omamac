@@ -106,6 +106,8 @@ In order. Each step that fails prints one plain-text message (gum isn't there ye
    - Missing: `git clone --branch "$OMAMAC_REF" https://github.com/tunacinsoy/omamac "$OMAMAC_HOME"`.
    - Present and a git checkout of that URL: `git fetch origin "$OMAMAC_REF"`, `git switch "$OMAMAC_REF"` (creates the tracking branch when needed), `git merge --ff-only "origin/$OMAMAC_REF"`.
    - Present but not a git checkout, or `origin` is another URL: stop, change nothing, and say what's there.
+   - Before cloning or fetching, `git ls-remote --exit-code --heads <url> refs/heads/<ref>` checks that the branch exists. The full name matters: a bare `nope` would also match `x/nope`. No such branch: stop with "'<ref>' isn't on GitHub. The checkout wasn't changed."
+   - `GIT_TERMINAL_PROMPT=0` for the whole run, so a renamed or private repo fails instead of asking for a username.
    - Network failures: stop with omawsl's style of help (no internet, network blocking github.com, GitHub status page). A failed switch or fast-forward stops with "local changes or a diverged history?" and the log tail.
 7. **Restart.** `exec /opt/homebrew/bin/bash "$OMAMAC_HOME/install.sh"`.
 

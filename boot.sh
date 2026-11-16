@@ -13,6 +13,8 @@ BOOT_USR_LOCAL_BREW=${OMAMAC_TEST_USR_LOCAL_BREW:-/usr/local/bin/brew}
 BOOT_TTY=${OMAMAC_TEST_TTY:-/dev/tty}
 BOOT_REF=${OMAMAC_REF:-main}
 OMAMAC_HOME=$HOME/.local/share/omamac
+# A renamed or private repo makes git fail instead of asking for a username.
+export GIT_TERMINAL_PROMPT=0
 
 boot_die() {
   echo "omamac: $*" >&2
@@ -121,10 +123,10 @@ boot_formulas() {
 # Stops unless the ref exists on GitHub; ls-remote exits 2 for "no such ref".
 boot_check_ref() {
   local rc=0
-  git ls-remote --exit-code --heads "$BOOT_REPO_URL" "$BOOT_REF" >> "$OMAMAC_LOG" 2>&1 || rc=$?
+  git ls-remote --exit-code --heads "$BOOT_REPO_URL" "refs/heads/$BOOT_REF" >> "$OMAMAC_LOG" 2>&1 || rc=$?
   case "$rc" in
     0) ;;
-    2) boot_die "'$BOOT_REF' isn't on GitHub ($BOOT_REPO_URL). Nothing was changed." ;;
+    2) boot_die "'$BOOT_REF' isn't on GitHub ($BOOT_REPO_URL). The checkout wasn't changed." ;;
     *) boot_network_help ;;
   esac
 }
@@ -132,9 +134,9 @@ boot_check_ref() {
 boot_checkout() {
   if [ -d "$OMAMAC_HOME" ] && [ -n "$(ls -A "$OMAMAC_HOME")" ]; then
     [ -d "$OMAMAC_HOME/.git" ] ||
-      boot_die "$OMAMAC_HOME exists and isn't an omamac checkout. Move it away and run this again. Nothing was changed."
+      boot_die "$OMAMAC_HOME exists and isn't an omamac checkout. Move it away and run this again. The checkout wasn't changed."
     [ "$(git -C "$OMAMAC_HOME" remote get-url origin 2>/dev/null)" = "$BOOT_REPO_URL" ] ||
-      boot_die "$OMAMAC_HOME is a git checkout of something other than $BOOT_REPO_URL. Move it away and run this again. Nothing was changed."
+      boot_die "$OMAMAC_HOME is a git checkout of something other than $BOOT_REPO_URL. Move it away and run this again. The checkout wasn't changed."
     boot_check_ref
     git -C "$OMAMAC_HOME" fetch origin "+refs/heads/$BOOT_REF:refs/remotes/origin/$BOOT_REF" >> "$OMAMAC_LOG" 2>&1 ||
       boot_network_help

@@ -13,7 +13,9 @@ setup() {
   stub curl 'if [ -n "${T_CURL_FAIL:-}" ]; then exit 6; fi
 echo "mkdir -p \"\$OMAMAC_TEST_BREW_PREFIX/bin\"; cp \"\$HELPERS_DIR/fake-brew\" \"\$OMAMAC_TEST_BREW_PREFIX/bin/brew\""'
   # Logs, then runs the real git. Like a fresh Mac, it fails until Homebrew's installer has run.
+  # It also fails if git could ask for a username (a renamed or private repo).
   stub git '[ -x "$OMAMAC_TEST_BREW_PREFIX/bin/brew" ] || { echo "git ran before Homebrew" >&2; exit 1; }
+[ "${GIT_TERMINAL_PROMPT:-}" = 0 ] || { echo "git could ask for a username" >&2; exit 1; }
 [ -z "${T_GIT_BROKEN:-}" ] || exit 1
 exec /usr/bin/git "$@"'
 
@@ -93,7 +95,16 @@ call_line() { stub_calls | grep -n -m1 -E "$1" | cut -d: -f1 | grep .; }
   OMAMAC_REF=nope run_boot
   [ "$status" -eq 1 ]
   [[ "$output" == *"nope"* && "$output" == *"isn't on GitHub"* ]]
+  [[ "$output" == *"The checkout wasn't changed."* ]]
   [ ! -e "$HOME_CHECKOUT" ]
+  [ ! -e "$RAN" ]
+}
+
+@test "a ref matching only the end of another branch is unknown" {
+  git_real -C "$BATS_TEST_TMPDIR/work" push -q origin main:refs/heads/x/nope
+  OMAMAC_REF=nope run_boot
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"isn't on GitHub"* ]]
   [ ! -e "$RAN" ]
 }
 
@@ -110,6 +121,7 @@ call_line() { stub_calls | grep -n -m1 -E "$1" | cut -d: -f1 | grep .; }
   run_boot
   [ "$status" -eq 1 ]
   [[ "$output" == *"$HOME_CHECKOUT"* ]]
+  [[ "$output" == *"The checkout wasn't changed."* ]]
   [ ! -e "$RAN" ]
   [ "$(git_real -C "$HOME_CHECKOUT" remote get-url origin)" = https://example.test/other.git ]
 }
@@ -120,6 +132,7 @@ call_line() { stub_calls | grep -n -m1 -E "$1" | cut -d: -f1 | grep .; }
   run_boot
   [ "$status" -eq 1 ]
   [[ "$output" == *"$HOME_CHECKOUT"* ]]
+  [[ "$output" == *"The checkout wasn't changed."* ]]
   [ "$(ls -A "$HOME_CHECKOUT")" = notes.txt ]
   [ ! -e "$RAN" ]
 }
