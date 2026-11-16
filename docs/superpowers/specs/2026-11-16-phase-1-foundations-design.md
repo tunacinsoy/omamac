@@ -239,7 +239,7 @@ The repo is empty, so the first steps are a one-time bootstrap:
 ### Docs
 
 - **README.md:** what omamac is (one paragraph); "Before you begin" (Apple Silicon, macOS 27+, Setup Assistant done, admin account, macOS updated, internet); "Install" (the one-liner; that it asks for the password once; how long it takes); "After install" (open a new terminal window; empty otherwise for now); "Testing a branch" for contributors (the one-liner with the branch in the URL and `OMAMAC_REF=<branch>`); a link to omawsl as the sister project. No apt, Windows or WSL.
-- **CONTRIBUTING.md:** the flow (branch → push → PR → `bats` in CI → `test/vm.sh` → merge by Tuna); making and refreshing the clean image; the dev-Mac tools (`brew trust --formula openai/tools/tart openai/tools/softnet`, then `brew install openai/tools/tart bats-core shellcheck`, `gh auth login`; Tart moved from Cirrus Labs to OpenAI, its images still come from ghcr.io/cirruslabs); the gate files: the agent writes and changes them only in a PR about the gate, never to turn a red check green; never posting `vm` by hand; the trust model; "never run omamac on the development Mac".
+- **CONTRIBUTING.md:** the flow (branch → push → PR → `bats` in CI → `test/vm.sh` → merge by Tuna); making and refreshing the clean image; the dev-Mac tools (`brew trust --formula openai/tools/tart openai/tools/softnet`, then `brew install bash openai/tools/tart bats-core shellcheck gh`, `gh auth login`; Tart moved from Cirrus Labs to OpenAI, its images still come from ghcr.io/cirruslabs); the gate files: the agent writes and changes them only in a PR about the gate, never to turn a red check green; never posting `vm` by hand; the trust model; "never run omamac on the development Mac".
 
 ### Vision updates in this change
 

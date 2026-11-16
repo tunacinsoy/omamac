@@ -14,7 +14,7 @@ Never run omamac on the development Mac. It runs only inside test VMs.
 
 `main` takes changes only through pull requests, and only when `bats` and `vm` both passed on the PR's exact head commit, with the branch up to date with `main`. No one can bypass this, admins and agents included. `bats` counts only when GitHub Actions posts it.
 
-Never post `vm` by hand. Only `test/vm.sh` posts it, on a pass.
+Never post `vm` by hand. Only `test/vm.sh` posts it, on a pass or a fail. Only a pass posts success.
 
 Gate files (the ruleset, the CI workflow, `test/vm.sh`, `test/vm.exp`, `test/fingerprint.sh`, `test/image.sh`) are written and changed by the agent, but only in a PR whose purpose is the gate itself, never to turn a red check green. CI flags every PR that touches them, so Tuna sees it before merging. Merging stays Tuna's only.
 
@@ -23,7 +23,7 @@ Gate files (the ruleset, the CI workflow, `test/vm.sh`, `test/vm.exp`, `test/fin
 ## Tools on the development Mac
 
 ```
-brew install openai/tools/tart bats-core shellcheck gh
+brew install bash openai/tools/tart bats-core shellcheck gh
 gh auth login
 ```
 
