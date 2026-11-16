@@ -22,17 +22,18 @@ omamac() { "$BASH5" "$REPO_ROOT/bin/omamac" "$@"; }
 
 @test "commands not built yet say so" {
   for c in install update theme uninstall; do
-    run omamac "$c"
+    run --separate-stderr omamac "$c"
     [ "$status" -eq 1 ]
-    [ "$output" = "omamac $c isn't available yet." ]
+    [ "$output" = "" ]
+    [ "$stderr" = "omamac $c isn't available yet." ]
   done
 }
 
 @test "unknown command" {
-  run omamac frob
+  run --separate-stderr omamac frob
   [ "$status" -eq 2 ]
-  [[ "$output" == *"Unknown command: frob"* ]]
-  [[ "$output" == *"Usage: omamac <command>"* ]]
+  [[ "$stderr" == *"Unknown command: frob"* ]]
+  [[ "$stderr" == *"Usage: omamac <command>"* ]]
 }
 
 @test "ui_run logs output and returns the status" {
@@ -41,4 +42,12 @@ omamac() { "$BASH5" "$REPO_ROOT/bin/omamac" "$@"; }
   [ "$status" -eq 3 ]
   grep -q out "$OMAMAC_LOG"
   [[ "$output" == *"Log:"* ]]
+}
+
+@test "ui_run logs stdout and stderr" {
+  export OMAMAC_LOG="$BATS_TEST_TMPDIR/l"
+  run "$BASH5" -c 'source "$REPO_ROOT/lib/ui.sh"; ui_run t bash -c "echo out; echo err >&2; exit 3"'
+  [ "$status" -eq 3 ]
+  grep -q out "$OMAMAC_LOG"
+  grep -q err "$OMAMAC_LOG"
 }

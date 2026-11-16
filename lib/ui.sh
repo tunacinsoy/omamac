@@ -13,7 +13,8 @@ ui_box() { gum style --border=rounded --padding="0 2" "$@"; }
 ui_run() {
   local title=$1 status=0
   shift
-  gum spin --title "$title" -- "$@" >>"$OMAMAC_LOG" 2>&1 || status=$?
+  # The inner bash writes the log itself: gum spin captures output on its own.
+  gum spin --title "$title" -- bash -c '"$@" >>"$0" 2>&1' "$OMAMAC_LOG" "$@" || status=$?
   if [ "$status" -ne 0 ]; then
     tail -n 20 "$OMAMAC_LOG" >&2 || true
     ui_fail "Log: $OMAMAC_LOG"
