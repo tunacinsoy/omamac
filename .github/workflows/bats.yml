@@ -1,0 +1,17 @@
+name: bats
+on: [push, pull_request]
+jobs:
+  bats:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: brew install bash bats-core shellcheck
+      - run: git ls-files '*.sh' '*.bash' bin/omamac test/helpers/fake-* | xargs shellcheck
+      - run: bats test/
+      - name: Flag gate changes
+        if: github.event_name == 'pull_request'
+        run: |
+          gate='^(\.github/rulesets/main\.json|\.github/workflows/bats\.yml|test/(vm\.sh|vm\.exp|fingerprint\.sh|image\.sh))$'
+          files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -E "$gate" | paste -sd ' ' - || true)
+          [ -z "$files" ] || echo "::warning::This PR changes the merge gate: $files"

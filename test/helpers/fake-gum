@@ -1,0 +1,18 @@
+#!/bin/bash
+# Test double for gum. Bash 3.2 safe.
+case "${1:-}" in
+  style)
+    shift
+    # Print the text args; flags are skipped (tests pass them as --flag=value).
+    for a in "$@"; do
+      case "$a" in -*) ;; *) echo "$a" ;; esac
+    done
+    ;;
+  spin)
+    shift
+    while [ $# -gt 0 ] && [ "$1" != "--" ]; do shift; done
+    [ $# -eq 0 ] || shift
+    "$@"
+    ;;
+  *) echo "$@" ;;
+esac

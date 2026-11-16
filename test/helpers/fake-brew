@@ -1,0 +1,29 @@
+#!/bin/bash
+# Test double for Homebrew. Bash 3.2 safe. Prefix comes from OMAMAC_TEST_BREW_PREFIX.
+prefix="${OMAMAC_TEST_BREW_PREFIX:?fake-brew needs OMAMAC_TEST_BREW_PREFIX}"
+[ -z "${STUB_LOG:-}" ] || echo "brew $*" >> "$STUB_LOG"
+
+case "${1:-}" in
+  shellenv)
+    echo "export PATH=\"$prefix/bin:\$PATH\""
+    ;;
+  list)
+    if [ "${2:-}" = "--formula" ]; then
+      [ -e "$prefix/Cellar/${3:-}" ]; exit
+    elif [ "${2:-}" = "--versions" ]; then
+      for d in "$prefix"/Cellar/*; do
+        [ -e "$d" ] && echo "$(basename "$d") 1.0"
+      done
+      exit 0
+    fi
+    ;;
+  install)
+    f="${2:?brew install needs a formula}"
+    mkdir -p "$prefix/Cellar/$f" "$prefix/bin"
+    case "$f" in
+      bash) ln -sf "${BASH5:-/opt/homebrew/bin/bash}" "$prefix/bin/bash" ;;
+      gum)  ln -sf "${HELPERS_DIR:?fake-brew needs HELPERS_DIR}/fake-gum" "$prefix/bin/gum" ;;
+    esac
+    ;;
+esac
+exit 0
