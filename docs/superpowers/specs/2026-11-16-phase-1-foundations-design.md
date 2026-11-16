@@ -181,11 +181,11 @@ Small wrappers over `gum style` / `gum spin` so every script prints the same way
 
 ### CI: `.github/workflows/bats.yml`
 
-On every push and pull request, one job named `bats` on `macos-latest`: `brew install bats-core shellcheck`, `shellcheck` every shell file (`boot.sh` with `--shell=bash` and a 3.2 check by the bats tests above), then `bats test/`. The VM scripts are shellchecked but not run in CI. The job's check name is `bats`, which the ruleset requires.
+On every push and pull request, one job named `bats` on `macos-latest`: `brew install bats-core shellcheck`, `shellcheck` every shell file (`boot.sh` with `--shell=bash` and a 3.2 check by the bats tests above), then `bats test/`. The VM scripts are shellchecked but not run in CI. The job's check name is `bats`, which the ruleset requires. The workflow's token is read-only (`permissions: contents: read`).
 
 ### Gate-file flag
 
-A second step in the `bats` job, on pull requests only: if the PR changes any gate file, it prints a GitHub warning annotation, "This PR changes the merge gate: <files>", which shows on the PR's checks so Tuna sees it before merging. It warns; it doesn't fail, because gate PRs are legitimate.
+A second step in the `bats` job, on pull requests only: if the PR changes any gate file, it prints a GitHub warning annotation, "This PR changes the merge gate: <files>", which shows on the PR's checks so Tuna sees it before merging. It warns; it doesn't fail, because gate PRs are legitimate. A failed `git diff` does fail the step, since then no one can tell. The base branch reaches the script through `env:`, not pasted into it.
 
 ### The clean image: `test/image.sh`
 
