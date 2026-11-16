@@ -1,5 +1,7 @@
 load helpers/common
 
+bats_require_minimum_version 1.5.0
+
 setup() { setup_sandbox; }
 
 omamac() { "$BASH5" "$REPO_ROOT/bin/omamac" "$@"; }

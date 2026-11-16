@@ -14,6 +14,7 @@ ui_run() {
   local title=$1 status=0
   shift
   # The inner bash writes the log itself: gum spin captures output on its own.
+  # shellcheck disable=SC2016 # the inner bash expands these
   gum spin --title "$title" -- bash -c '"$@" >>"$0" 2>&1' "$OMAMAC_LOG" "$@" || status=$?
   if [ "$status" -ne 0 ]; then
     tail -n 20 "$OMAMAC_LOG" >&2 || true
