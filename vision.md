@@ -198,7 +198,7 @@ This is why the repo is public from day one: the VM must fetch omamac with no cr
 
 **Nobody sits at the keyboard.** Whoever starts `test/vm.sh` only reads ✓ or ✗ at the end. The script clones the image, boots it, pastes the one-liner over SSH, types the sudo password when asked (the throwaway VM's own password, never Tuna's, typed with `expect` like a person would), answers the questions from the fixture, runs the checks, saves the log and deletes the VM.
 
-**The clean image.** Exactly one clean image stays on disk, made from Cirrus Labs' `macos-*-vanilla` (no Homebrew). Downloading it for every run would take longer than the time budget. Every test VM is a copy-on-write clone, deleted when its run ends, and `test/vm.sh` clears Tart's download cache; the Mac has a 512 GB disk. When a macOS update ships, the image is replaced, never kept alongside the old one.
+**The clean image.** Exactly one clean image stays on disk, made from Cirrus Labs' `macos-*-vanilla` (no Homebrew). Downloading it for every run would take longer than the time budget. Every test VM is a copy-on-write clone, deleted when its run ends, and `test/image.sh` clears Tart's download cache after building the image; the Mac has a 512 GB disk. When a macOS update ships, the image is replaced, never kept alongside the old one.
 
 **The VM behaves like a real user's Mac.** The vanilla image comes with passwordless sudo and Gatekeeper switched off, which would hide the password prompt and first-launch warnings a real user sees. When the clean image is made, both are put back once: `/etc/sudoers.d/admin-nopasswd` is deleted and Gatekeeper is switched on.
 
