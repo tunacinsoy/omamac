@@ -1,13 +1,14 @@
 #!/opt/homebrew/bin/bash
 # The omamac command.
+# shellcheck source-path=SCRIPTDIR/..
 set -Eeuo pipefail
 
 OMAMAC_CHECKOUT=$(cd "$(dirname "$0")/.." && pwd -P)
-# shellcheck source=../lib/paths.sh
+# shellcheck source=lib/paths.sh
 source "$OMAMAC_CHECKOUT/lib/paths.sh"
-# shellcheck source=../lib/lines.sh
+# shellcheck source=lib/lines.sh
 source "$OMAMAC_CHECKOUT/lib/lines.sh"
-# shellcheck source=../lib/ui.sh
+# shellcheck source=lib/ui.sh
 source "$OMAMAC_CHECKOUT/lib/ui.sh"
 
 omamac_usage() {
