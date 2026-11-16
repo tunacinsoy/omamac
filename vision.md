@@ -307,7 +307,8 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - Desktop apps come only from Homebrew casks; no Mac App Store (`mas`) in v1.
 - Subcommands: install, update, theme, doctor, uninstall.
 - Saved choices live in `~/.local/state/omamac/choices.env`.
-- Testing a branch uses `OMAMAC_REF=<branch>` on the same one-liner.
+- Testing a branch uses the one-liner with `<branch>` in the `boot.sh` URL and `OMAMAC_REF=<branch>`; `test/vm.sh` uses the commit SHA in the URL. Reason: `main`'s `boot.sh` can't test a branch that changes `boot.sh`, and the Phase 1 PR has no `main` `boot.sh` at all.
+- Logs live in `~/.local/state/omamac/logs/` (newest 10).
 - Apple Silicon only.
 - Adoption is offered only for apps in omamac's catalog, at the moment the user picks them; omamac doesn't scan Applications for other hand-installed apps.
 - Files omamac never creates or modifies, to start with: `~/.ssh/**`, `~/.gitconfig`, `~/.npmrc`, `~/.m2/settings.xml`, `~/.curlrc`, `/etc/hosts`, `/etc/resolver/*`, and anything else under `/etc` or `/Library` beyond what Homebrew's own installer does.

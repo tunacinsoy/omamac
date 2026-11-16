@@ -40,3 +40,14 @@ install_fake_brew() {
   cp "$HELPERS_DIR/fake-brew" "$OMAMAC_TEST_BREW_PREFIX/bin/brew"
   chmod +x "$OMAMAC_TEST_BREW_PREFIX/bin/brew"
 }
+
+# A Mac that passes every boot.sh preflight check. Tests change one fact with T_* variables.
+stub_healthy_mac() {
+  stub id 'case "$1" in -u) echo "${T_UID:-501}";; -un) echo tester;; -Gn) echo "${T_GROUPS:-staff admin}";; esac'
+  stub sysctl 'case "$2" in hw.optional.arm64) echo "${T_ARM64:-1}";; sysctl.proc_translated) echo "${T_TRANSLATED:-0}";; esac'
+  stub sw_vers 'echo "${T_MACOS:-27.1}"'
+  stub dscl 'echo "UserShell: ${T_SHELL:-/bin/zsh}"'
+  : > "$BATS_TEST_TMPDIR/tty"
+  export OMAMAC_TEST_TTY="$BATS_TEST_TMPDIR/tty"
+  export OMAMAC_TEST_USR_LOCAL_BREW="$BATS_TEST_TMPDIR/usr/local/bin/brew"
+}

@@ -6,19 +6,12 @@ load helpers/common
 
 setup() {
   setup_sandbox
-  # A healthy Mac. Each test changes one fact.
-  stub id 'case "$1" in -u) echo "${T_UID:-501}";; -Gn) echo "${T_GROUPS:-staff admin}";; esac'
-  stub sysctl 'case "$2" in hw.optional.arm64) echo "${T_ARM64:-1}";; sysctl.proc_translated) echo "${T_TRANSLATED:-0}";; esac'
-  stub sw_vers 'echo "${T_MACOS:-27.1}"'
-  stub dscl 'echo "UserShell: ${T_SHELL:-/bin/zsh}"'
+  stub_healthy_mac
   # Commands that must never run during preflight.
   stub sudo
   stub curl
   stub brew
   stub git
-  : > "$BATS_TEST_TMPDIR/tty"
-  export OMAMAC_TEST_TTY="$BATS_TEST_TMPDIR/tty"
-  export OMAMAC_TEST_USR_LOCAL_BREW="$BATS_TEST_TMPDIR/usr/local/bin/brew"
 }
 
 run_boot() { run --separate-stderr /bin/bash -c 'cat "$REPO_ROOT/boot.sh" | /bin/bash'; }
@@ -33,7 +26,10 @@ assert_stopped() {
 
 @test "a healthy Mac passes preflight" {
   run_boot
-  [ "$status" -eq 0 ]
+  # The stubs can't install Homebrew, so the run ends later; what matters is
+  # that every check passed and the password step began.
+  [[ "$stderr" != *"needs a terminal"* && "$stderr" != *"Run this as your normal user"* ]]
+  stub_calls | grep -qx 'sudo -v'
 }
 
 @test "banner says what will happen and how to stop" {
