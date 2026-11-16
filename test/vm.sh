@@ -25,8 +25,9 @@ command -v gh >/dev/null || refuse "gh is missing: brew install gh"
 gh auth status >/dev/null 2>&1 || refuse "gh isn't logged in: gh auth login"
 [ -x /usr/bin/expect ] || refuse "expect is missing"
 tart get "$IMAGE" >/dev/null 2>&1 || refuse "$IMAGE is missing: run test/image.sh first"
-# The branch goes into a shell command in the VM, so keep it to plain characters.
+# Both go into a shell command in the VM, so keep them to plain characters.
 [[ $branch =~ ^[A-Za-z0-9._/-]+$ ]] || refuse "'$branch' isn't a plain branch name"
+[[ $fixture =~ ^[A-Za-z0-9_-]+$ ]] || refuse "'$fixture' isn't a plain fixture name"
 [ -f "$TEST_DIR/fixtures/$fixture.env" ] || refuse "No fixture '$fixture': test/fixtures/$fixture.env is missing"
 cd "$TEST_DIR/.."
 changes=$(git status --porcelain)
@@ -73,6 +74,7 @@ finish() {
     echo "✓ $branch ($fixture) passed at ${sha:0:7}. Log: $log" >&3
   else
     echo "✗ $branch ($fixture) failed at $step. Log: $log" >&3
+    status=1
   fi
   exit "$status"
 }
