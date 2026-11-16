@@ -102,9 +102,11 @@ vm "mkdir -p ~/.local/state/omamac && curl -fsSL $raw/test/fixtures/$fixture.env
 # 4. The one-liner, in a login shell as Terminal opens one. zsh has no pipefail
 # by default: without it a failed fetch feeds bash nothing, and bash exits 0.
 one_liner="zsh -lc 'set -o pipefail; curl -fsSL $raw/boot.sh | OMAMAC_REF=$branch bash'"
+# Two password prompts: the ssh login and omamac's one sudo prompt. A third fails.
+run_one_liner() { OMAMAC_VM_MAX_PASSWORDS=2 vm "$one_liner"; }
 step='first run'
 info "Running the one-liner"
-vm "$one_liner"
+run_one_liner
 
 # 5. The checkout is the tested commit, and a new Terminal window finds omamac.
 step='checks after the first run'
@@ -125,7 +127,7 @@ step=fingerprint
 fingerprint "${log%.log}-before.txt"
 step='second run'
 info "Running the one-liner again"
-vm "$one_liner"
+run_one_liner
 step='fingerprint after the second run'
 fingerprint "${log%.log}-after.txt"
 step='comparing fingerprints'
