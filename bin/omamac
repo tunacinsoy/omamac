@@ -1,0 +1,42 @@
+#!/opt/homebrew/bin/bash
+# The omamac command.
+set -Eeuo pipefail
+
+OMAMAC_CHECKOUT=$(cd "$(dirname "$0")/.." && pwd -P)
+# shellcheck source=../lib/paths.sh
+source "$OMAMAC_CHECKOUT/lib/paths.sh"
+# shellcheck source=../lib/lines.sh
+source "$OMAMAC_CHECKOUT/lib/lines.sh"
+# shellcheck source=../lib/ui.sh
+source "$OMAMAC_CHECKOUT/lib/ui.sh"
+
+omamac_usage() {
+  cat <<'USAGE'
+Usage: omamac <command>
+
+  install     Add tools and apps
+  update      Update omamac and what it installed
+  theme       Switch the theme everywhere
+  doctor      Check that everything is healthy
+  uninstall   Remove one thing omamac installed
+USAGE
+}
+
+omamac_main() {
+  local cmd=${1:-help}
+  case "$cmd" in
+    help | -h | --help) omamac_usage ;;
+    install | update | theme | doctor | uninstall)
+      # doctor is wired in Task 4.
+      echo "omamac $cmd isn't available yet." >&2
+      return 1
+      ;;
+    *)
+      echo "Unknown command: $cmd" >&2
+      omamac_usage >&2
+      return 2
+      ;;
+  esac
+}
+
+omamac_main "$@"
