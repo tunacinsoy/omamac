@@ -42,6 +42,7 @@ install_fake_brew() {
 }
 
 # A Mac that passes every boot.sh preflight check. Tests change one fact with T_* variables.
+# shellcheck disable=SC2016 # stub bodies expand when the stub runs, not here
 stub_healthy_mac() {
   stub id 'case "$1" in -u) echo "${T_UID:-501}";; -un) echo tester;; -Gn) echo "${T_GROUPS:-staff admin}";; esac'
   stub sysctl 'case "$2" in hw.optional.arm64) echo "${T_ARM64:-1}";; sysctl.proc_translated) echo "${T_TRANSLATED:-0}";; esac'
