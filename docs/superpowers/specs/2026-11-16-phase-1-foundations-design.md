@@ -196,6 +196,11 @@ Run on the dev Mac (by Tuna or the agent), rarely (first setup, and when a new m
    - Check: `brew` absent, `sudo -n true` fails, `spctl --status` says enabled.
 3. Shut it down, delete the old `omamac-clean` if any, rename `omamac-clean-new` to `omamac-clean`, and `tart prune` the download cache. Exactly one clean image stays on disk.
 
+Found when first built (macOS 27.2):
+- The base image has no Command Line Tools (`xcode-select -p` fails, no CLT receipt), so `boot.sh`'s `git` stub constraint is real in the VM.
+- `sudo spctl --global-enable` works over SSH with no click; `spctl --status` then says `assessments enabled`.
+- Clearing the download cache is `tart prune --entries caches --space-budget 0`. After it, refreshing the image downloads the base again (about 35 GB).
+
 ### The VM loop: `test/vm.sh <branch> <fixture>`
 
 Runs on the dev Mac. Exits 0 on pass, 1 on fail, and prints only a few progress lines and ✓ or ✗ at the end.
@@ -232,7 +237,7 @@ The repo is empty, so the first steps are a one-time bootstrap:
 ### Docs
 
 - **README.md:** what omamac is (one paragraph); "Before you begin" (Apple Silicon, macOS 27+, Setup Assistant done, admin account, macOS updated, internet); "Install" (the one-liner; that it asks for the password once; how long it takes); "After install" (open a new terminal window; empty otherwise for now); "Testing a branch" for contributors (the one-liner with the branch in the URL and `OMAMAC_REF=<branch>`); a link to omawsl as the sister project. No apt, Windows or WSL.
-- **CONTRIBUTING.md:** the flow (branch → push → PR → `bats` in CI → `test/vm.sh` → merge by Tuna); making and refreshing the clean image; the dev-Mac tools (`brew install cirruslabs/cli/tart bats-core shellcheck`, `gh auth login`); the gate files: the agent writes and changes them only in a PR about the gate, never to turn a red check green; never posting `vm` by hand; the trust model; "never run omamac on the development Mac".
+- **CONTRIBUTING.md:** the flow (branch → push → PR → `bats` in CI → `test/vm.sh` → merge by Tuna); making and refreshing the clean image; the dev-Mac tools (`brew trust --formula openai/tools/tart openai/tools/softnet`, then `brew install openai/tools/tart bats-core shellcheck`, `gh auth login`; Tart moved from Cirrus Labs to OpenAI, its images still come from ghcr.io/cirruslabs); the gate files: the agent writes and changes them only in a PR about the gate, never to turn a red check green; never posting `vm` by hand; the trust model; "never run omamac on the development Mac".
 
 ### Vision updates in this change
 

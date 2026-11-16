@@ -1,0 +1,34 @@
+#!/usr/bin/expect -f
+# test/vm.exp <ip> <command>: run one command in a test VM over SSH, typing the
+# VM's password at every password prompt. Exits with the command's exit status.
+#
+# Host key checks are off: the VM is new every time and only ever reached at
+# its local IP, so there is no known key to check against.
+
+if {[llength $argv] != 2} {
+  puts stderr "usage: vm.exp <ip> <command>"
+  exit 2
+}
+lassign $argv ip command
+
+# The Cirrus image's public default password, not a secret.
+set password admin
+if {[info exists env(OMAMAC_VM_PASSWORD)]} { set password $env(OMAMAC_VM_PASSWORD) }
+set timeout 2700
+if {[info exists env(OMAMAC_VM_TIMEOUT)]} { set timeout $env(OMAMAC_VM_TIMEOUT) }
+
+spawn ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null admin@$ip $command
+
+# The y/n pattern is an alternation on purpose: a bracket class holding \[ or
+# \] loses its backslashes in this block and never matches.
+expect {
+  -re {[Pp]assword:} { send -- "$password\r"; exp_continue }
+  -re {\([yY]/[nN]\)|\[[yY]/[nN]\]} { puts stderr "\nvm.exp: unexpected prompt"; exit 1 }
+  timeout { puts stderr "\nvm.exp: timed out after $timeout s"; exit 1 }
+  eof
+}
+
+# wait returns {pid spawn_id os_error value}; os_error -1 means value is errno.
+lassign [wait] pid spawn_id os_error value
+if {$os_error != 0} { exit 1 }
+exit $value
