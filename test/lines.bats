@@ -60,6 +60,20 @@ b5() { "$BASH5" -c 'source "$REPO_ROOT/lib/paths.sh"; source "$REPO_ROOT/lib/lin
   [ "$(cat "$HOME/.zshrc")" = "a" ]
 }
 
+@test "unwritable symlinked file: names the target, no chown" {
+  [ "$(id -u)" -ne 0 ]
+  mkdir "$HOME/store"
+  printf 'a\n' > "$HOME/store/zshrc"
+  chmod 444 "$HOME/store/zshrc"
+  ln -s "$HOME/store/zshrc" "$HOME/.zshrc"
+  run b5 lines_add "$HOME/.zshrc" "the line"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"store/zshrc"* ]]
+  [[ "$output" == *"the line"* ]]
+  [[ "$output" != *"chown"* ]]
+  [ "$(cat "$HOME/store/zshrc")" = "a" ]
+}
+
 @test "lines_has finds and misses" {
   printf 'hello world\n' > "$HOME/f"
   b5 lines_has "$HOME/f" "lo wor"

@@ -20,7 +20,12 @@ lines_add() {
     while [ ! -e "$target" ]; do target=$(dirname -- "$target"); done
     [ -w "$target" ] || reason='the folder is not writable'
   fi
-  if [ -n "$reason" ]; then
+  # chown follows a link and could change a file other tools own (a dotfile
+  # manager, a read-only store), so for a link name its target and stop there.
+  if [ -n "$reason" ] && [ -L "$file" ]; then
+    echo "omamac can't write $file: it links to $(readlink -f -- "$file"), which is not writable. Fix: add this line there yourself: $line" >&2
+    return 1
+  elif [ -n "$reason" ]; then
     echo "omamac can't write $file: $reason. Fix: sudo chown \"\$USER\" \"$target\" && chmod u+w \"$target\"" >&2
     return 1
   fi

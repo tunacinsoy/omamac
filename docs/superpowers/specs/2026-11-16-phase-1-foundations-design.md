@@ -137,7 +137,7 @@ Steps, each a `ui` step line with a ✓ when done:
 - Creates the parent folder and the file if missing (the file then holds only the line).
 - Does nothing if the line (or the pattern) is already there.
 - Otherwise appends, first adding a newline if the file doesn't end with one. Nothing else in the file changes.
-- Follows a symlinked `~/.zshrc` (dotfile managers) and writes to its target, never replacing the link.
+- Follows a symlinked `~/.zshrc` (dotfile managers) and writes to its target, never replacing the link. If that target isn't writable, it stops, names the target and asks the user to add the line there. It never suggests `chown` for a link, since that would change the file the link points to.
 - The trailing `# added by omamac` lets a later uninstall find exactly its own line.
 
 ### `bin/omamac`
