@@ -10,6 +10,8 @@ source "$OMAMAC_CHECKOUT/lib/paths.sh"
 source "$OMAMAC_CHECKOUT/lib/lines.sh"
 # shellcheck source=lib/ui.sh
 source "$OMAMAC_CHECKOUT/lib/ui.sh"
+# shellcheck source=lib/doctor.sh
+source "$OMAMAC_CHECKOUT/lib/doctor.sh"
 
 omamac_usage() {
   cat <<'USAGE'
@@ -27,8 +29,8 @@ omamac_main() {
   local cmd=${1:-help}
   case "$cmd" in
     help | -h | --help) omamac_usage ;;
-    install | update | theme | doctor | uninstall)
-      # doctor is wired in Task 4.
+    doctor) doctor_run ;;
+    install | update | theme | uninstall)
       echo "omamac $cmd isn't available yet." >&2
       return 1
       ;;
