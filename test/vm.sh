@@ -67,9 +67,12 @@ finish() {
   else
     state=failure description="$fixture: failed at $step"
   fi
-  gh api -X POST "repos/$REPO/statuses/$sha" -f state="$state" -f context=vm \
-    -f description="$description" >/dev/null ||
+  if ! gh api -X POST "repos/$REPO/statuses/$sha" -f state="$state" -f context=vm \
+    -f description="$description" >/dev/null; then
     echo "✗ Couldn't post the vm status" >&3
+    # Without the status the merge rule can't see a pass, so it isn't one.
+    [ "$status" -ne 0 ] || { status=1 step='posting the vm status'; }
+  fi
   if [ "$status" -eq 0 ]; then
     echo "✓ $branch ($fixture) passed at ${sha:0:7}. Log: $log" >&3
   else
@@ -96,8 +99,9 @@ OMAMAC_VM_TIMEOUT=30 vm true
 step=fixture
 vm "mkdir -p ~/.local/state/omamac && curl -fsSL $raw/test/fixtures/$fixture.env -o ~/.local/state/omamac/choices.env"
 
-# 4. The one-liner, in a login shell as Terminal opens one.
-one_liner="zsh -lc 'curl -fsSL $raw/boot.sh | OMAMAC_REF=$branch bash'"
+# 4. The one-liner, in a login shell as Terminal opens one. zsh has no pipefail
+# by default: without it a failed fetch feeds bash nothing, and bash exits 0.
+one_liner="zsh -lc 'set -o pipefail; curl -fsSL $raw/boot.sh | OMAMAC_REF=$branch bash'"
 step='first run'
 info "Running the one-liner"
 vm "$one_liner"
@@ -109,21 +113,24 @@ vm "zsh -lic 'omamac doctor'"
 
 # 6. A second run changes nothing. The markers cut out ssh's own lines; the
 # whole output also goes to the log (stderr), so a failure there shows why.
+# Requiring the checkout line rejects an empty record and proves the checkout
+# is still the tested commit.
 fingerprint() {
-  vm "echo fingerprint-begin && curl -fsSL $raw/test/fingerprint.sh | /bin/bash && echo fingerprint-end" |
+  vm "set -o pipefail; echo fingerprint-begin && curl -fsSL $raw/test/fingerprint.sh | /bin/bash && echo fingerprint-end" |
     tr -d '\r' | tee /dev/stderr | sed -n '/^fingerprint-begin$/,/^fingerprint-end$/p' >"$1"
   grep -qx fingerprint-end "$1"
+  grep -qx "checkout: $sha" "$1"
 }
 step=fingerprint
-fingerprint "$logs/$stamp-before.txt"
+fingerprint "${log%.log}-before.txt"
 step='second run'
 info "Running the one-liner again"
 vm "$one_liner"
 step='fingerprint after the second run'
-fingerprint "$logs/$stamp-after.txt"
+fingerprint "${log%.log}-after.txt"
 step='comparing fingerprints'
 echo "--- fingerprint diff (before, after)"
 # Shown on the terminal too: it is the reason for the failure.
-diff "$logs/$stamp-before.txt" "$logs/$stamp-after.txt" | tee /dev/fd/3
+diff "${log%.log}-before.txt" "${log%.log}-after.txt" | tee /dev/fd/3
 step='doctor after the second run'
 vm "zsh -lic 'omamac doctor'"
