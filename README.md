@@ -2,6 +2,8 @@
 
 omamac sets up a fresh Mac for development in one command: Homebrew, a modern bash, your terminal, editor, apps and theme. After that, one command, `omamac`, keeps it all up to date. It is the sister project of [omawsl](https://github.com/tunacinsoy/omawsl).
 
+omamac is still being built. Today the one-liner installs Homebrew, bash, gum and the `omamac` command (with `omamac doctor`).
+
 ## Before you begin
 
 - A Mac with Apple Silicon, on macOS 27 or later.

@@ -156,11 +156,12 @@ call_line() { stub_calls | grep -n -m1 -E "$1" | cut -d: -f1 | grep .; }
 @test "sudo keep-alive ends with the run" {
   run_boot
   [ "$status" -eq 0 ]
-  local i
-  for i in $(seq 1 20); do
-    pgrep -f "$STUB_DIR/sudo -n true" > /dev/null || return 0
-    sleep 0.5
-  done
-  echo "keep-alive still running" >&2
-  return 1
+  # The loop wakes every 5 s while the run lives. Once the run is over it must stop calling sudo.
+  sleep 6
+  local before after
+  before=$(grep -c '^sudo -n true$' "$STUB_LOG")
+  [ "$before" -ge 1 ]   # the loop started
+  sleep 6
+  after=$(grep -c '^sudo -n true$' "$STUB_LOG")
+  [ "$before" -eq "$after" ]
 }

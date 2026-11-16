@@ -12,7 +12,7 @@ BOOT_BREW_PREFIX=${OMAMAC_TEST_BREW_PREFIX:-/opt/homebrew}
 BOOT_USR_LOCAL_BREW=${OMAMAC_TEST_USR_LOCAL_BREW:-/usr/local/bin/brew}
 BOOT_TTY=${OMAMAC_TEST_TTY:-/dev/tty}
 BOOT_REF=${OMAMAC_REF:-main}
-OMAMAC_HOME=${OMAMAC_HOME:-$HOME/.local/share/omamac}
+OMAMAC_HOME=$HOME/.local/share/omamac
 
 boot_die() {
   echo "omamac: $*" >&2
@@ -63,7 +63,6 @@ boot_log_start() {
   : > "$OMAMAC_LOG"
   export OMAMAC_LOG
   # Names sort by time, so everything after the newest 10 is old.
-  # shellcheck disable=SC2012 # our own names are plain, and ls sorts them
   # shellcheck disable=SC2012 # our own names are plain, and ls sorts them
   ls -1 "$dir" | sort -r | tail -n +11 | while IFS= read -r old; do
     rm -f "$dir/$old"

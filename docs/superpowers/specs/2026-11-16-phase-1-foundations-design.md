@@ -106,7 +106,7 @@ In order. Each step that fails prints one plain-text message (gum isn't there ye
    - Missing: `git clone --branch "$OMAMAC_REF" https://github.com/tunacinsoy/omamac "$OMAMAC_HOME"`.
    - Present and a git checkout of that URL: `git fetch origin "$OMAMAC_REF"`, `git switch "$OMAMAC_REF"` (creates the tracking branch when needed), `git merge --ff-only "origin/$OMAMAC_REF"`.
    - Present but not a git checkout, or `origin` is another URL: stop, change nothing, and say what's there.
-   - Any network or fast-forward failure: stop with omawsl's style of help (no internet, network blocking github.com, GitHub status page).
+   - Network failures: stop with omawsl's style of help (no internet, network blocking github.com, GitHub status page). A failed switch or fast-forward stops with "local changes or a diverged history?" and the log tail.
 7. **Restart.** `exec /opt/homebrew/bin/bash "$OMAMAC_HOME/install.sh"`.
 
 **The log.** Every run writes `~/.local/state/omamac/logs/<UTC timestamp>.log` (mkdir -p first, after step 2). Only the newest 10 logs are kept. `boot.sh` starts the log; `install.sh` appends to the same file, whose path it gets in `OMAMAC_LOG`.
