@@ -62,6 +62,16 @@ gum_answers() {
   if [ $# -eq 0 ]; then : > "$T_GUM_ANSWERS"; else printf '%s\n' "$@" > "$T_GUM_ANSWERS"; fi
 }
 
+# unopenable_tty <path>: a file that reads as readable but can't be opened,
+# like /dev/tty with no terminal. A unix socket, as a folder opens fine on
+# macOS. Bound from its folder: a socket path can't pass 104 characters.
+unopenable_tty() {
+  rm -f "$1"
+  (cd "$(dirname "$1")" && perl -MSocket -e \
+    'socket(my $s, PF_UNIX, SOCK_STREAM, 0) or die "$!"; bind($s, pack_sockaddr_un($ARGV[0])) or die "$!"' \
+    "$(basename "$1")")
+}
+
 # shellcheck disable=SC2034 # used by the .bats files
 # The 16 answers bats uses for a fresh run, in table order.
 FRESH_ANSWERS=(tokyo-night "firefox brave" "" "" cap "" "" "" no yes no no yes "node python" gh none)

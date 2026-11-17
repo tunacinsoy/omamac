@@ -217,7 +217,7 @@ doctor_check_chosen() {
 # A failed reinstall is said and the next one is asked; the report's status stays doctor's.
 doctor_offer() {
   local id key label logged=0
-  if [ "${#DOCTOR_GONE[@]}" -eq 0 ] || [ ! -r "$OMAMAC_TTY" ]; then return 0; fi
+  if [ "${#DOCTOR_GONE[@]}" -eq 0 ] || ! ask_has_tty; then return 0; fi
   for id in "${DOCTOR_GONE[@]}"; do
     key=$(doctor_key "$id")
     label=$(question_label "$key" "$id")

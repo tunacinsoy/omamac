@@ -187,3 +187,12 @@ prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
   in_ask 'ask_yes "Install?"'
   [ "$status" -eq 1 ]
 }
+
+@test "a terminal that can't be opened: ask_yes stops, never reads it as no" {
+  gum_answers no
+  unopenable_tty "$OMAMAC_TEST_TTY"
+  in_ask 'ask_yes "Install?"'
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"✗ omamac needs a terminal to ask its questions. Run it from Terminal."* ]]
+  [ -z "$(prompts)" ]
+}

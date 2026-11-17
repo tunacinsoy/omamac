@@ -11,10 +11,14 @@ ask_stopped() {
   exit 130
 }
 
+# ask_has_tty: the terminal can be opened. Not [ -r ]: /dev/tty is readable by
+# everyone even when there is no terminal, but opening it then fails.
+ask_has_tty() { { : < "$OMAMAC_TTY"; } 2>/dev/null; }
+
 # A missing terminal would make every yes/no prompt fail with exit 1, which
 # reads as "no". boot.sh checks it too; this keeps ask.sh safe on its own.
 ask_need_tty() {
-  [ -r "$OMAMAC_TTY" ] && return 0
+  ask_has_tty && return 0
   ui_fail "omamac needs a terminal to ask its questions. Run it from Terminal."
   exit 1
 }

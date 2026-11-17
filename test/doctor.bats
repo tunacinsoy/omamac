@@ -472,6 +472,17 @@ expect_fail() {
   [ -z "$(grep '^gum' "$STUB_LOG")" ]
 }
 
+@test "a terminal that can't be opened: no offer" {
+  healthy_mac
+  choose languages go
+  unopenable_tty "$OMAMAC_TEST_TTY"
+  run doctor
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"✗ Go"* ]]
+  [[ "$output" != *"couldn't ask"* ]]
+  [ -z "$(grep '^gum' "$STUB_LOG")" ]
+}
+
 @test "nothing gone: no prompt" {
   healthy_mac
   gum_answers
