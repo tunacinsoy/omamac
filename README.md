@@ -20,7 +20,7 @@ Open Terminal and paste:
 curl -fsSL https://raw.githubusercontent.com/tunacinsoy/omamac/main/boot.sh | bash
 ```
 
-omamac asks for your password once and never stores it. Then it asks a few questions: theme, apps, macOS settings, languages and Docker. Nothing is chosen for you: press x or Tab to pick, Enter to go on. It shows your answers and asks "Install?"; after that it runs on its own. If you answer no, nothing more is changed and the next run asks the questions again. Once you've said yes, later runs skip the questions and only ask "Install?".
+omamac asks for your password once and never stores it. Then it asks a few questions: theme, apps, macOS settings, languages and Docker. Nothing is chosen for you: press x or Tab to pick, Enter to go on. It shows your answers and asks "Install?"; after that it runs on its own. Answer no the first time and nothing is saved, so the next run asks again. Once you've said yes, your answers are kept and later runs only ask "Install?".
 
 Allow about 10 minutes, mostly for Apple's Command Line Tools. If it stops, fix what it says and run the same line again; it picks up where it stopped.
 

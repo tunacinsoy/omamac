@@ -142,7 +142,7 @@ expect_fail() {
 @test "saved answers invalid" {
   healthy_mac
   echo 'colour=red' >> "$CHOICES_FILE"
-  expect_fail "Saved answers" "delete that line"
+  expect_fail "Saved answers" "Delete that line"
   [[ "$output" == *"line 18"* ]]
 }
 

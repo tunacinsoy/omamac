@@ -149,7 +149,7 @@ snapshot() {
   gum_answers tokyo-night "exit 130"
   run install
   [ "$status" -eq 130 ]
-  [[ "$output" == *"Stopped. Nothing was changed."* ]]
+  [[ "$output" == *"Stopped. Nothing else was changed."* ]]
   [[ "$output" != *"omamac stopped while"* ]]
   [ ! -e "$CHOICES_FILE" ]
   [ ! -e "$HOME/.zshrc" ]
@@ -175,4 +175,39 @@ snapshot() {
   [[ "$output" == *"saving your answers"* ]]
   [ ! -e "$HOME/.config/omamac/zshrc" ]
   [ ! -e "$HOME/.zshrc" ]
+}
+
+@test "Ctrl-C at Install?: exit 130, nothing written" {
+  fresh_answers "exit 130"
+  run install
+  [ "$status" -eq 130 ]
+  [ ! -e "$CHOICES_FILE" ]
+  [ ! -e "$HOME/.zshrc" ]
+}
+
+@test "partial file: only the new question is asked, saved answers kept" {
+  sed -i '' -e '/^docker=/d' -e 's/^apps_media=$/apps_media=vlc/' "$CHOICES_FILE"
+  gum_answers orbstack yes
+  run install
+  [ "$status" -eq 0 ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
+  grep -qx 'docker=orbstack' "$CHOICES_FILE"
+  grep -qx 'apps_media=vlc' "$CHOICES_FILE"
+  [ "$(grep -c '=' "$CHOICES_FILE")" = 16 ]
+}
+
+@test "no on a re-run keeps the saved answers and says nothing about asking again" {
+  gum_answers no
+  run install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Stopped. Nothing else was changed."* ]]
+  [[ "$output" != *"asks"* ]]
+  cmp "$CHOICES_FILE" "$REPO_ROOT/test/fixtures/bare.env"
+}
+
+@test "no on a first run says the next run asks again" {
+  fresh_answers no
+  run install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"The next run asks those questions again."* ]]
 }

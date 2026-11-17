@@ -99,10 +99,11 @@ doctor_check_choices() {
   local what="Saved answers" message
   if [ ! -e "$OMAMAC_CHOICES_FILE" ]; then
     doctor_report fail "$what" "omamac doesn't know your answers" "Run the one-liner"
-  elif ! message=$(choices_load "$OMAMAC_CHOICES_FILE" 2>&1); then
-    # choices_load says "<problem>. Fix: <fix>"; split it into doctor's why and fix.
+  elif ! choices_load "$OMAMAC_CHOICES_FILE" 2>/dev/null; then
+    # Load again for the message, "<problem>. Fix: <fix>", split into doctor's why and fix.
+    message=$(choices_load "$OMAMAC_CHOICES_FILE" 2>&1) || true
     doctor_report fail "$what" "${message%%. Fix: *}" "${message#*. Fix: }"
-  elif [ -n "$(choices_load "$OMAMAC_CHOICES_FILE" && choices_missing)" ]; then
+  elif [ -n "$(choices_missing)" ]; then
     doctor_report fail "$what" "a question has no answer yet" "Run the one-liner; it asks only that one"
   else
     doctor_report ok "$what"

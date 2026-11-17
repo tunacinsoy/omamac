@@ -41,10 +41,18 @@ install_questions() {
   # choices_load has said what's wrong and how to fix it.
   choices_load "$OMAMAC_CHOICES_FILE" || exit 1
   OMAMAC_STEP='asking the questions'
+  local unanswered
+  unanswered=$(choices_missing)
   ask_missing
   ask_summary
   if ! ask_install; then
-    ui_info "Stopped. Nothing else was changed. Run the one-liner again to start over."
+    # Saved answers stay: changing one later is uninstalling one thing and
+    # installing another, not answering again.
+    if [ -n "$unanswered" ]; then
+      ui_info "Stopped. Nothing else was changed. The next run asks those questions again."
+    else
+      ui_info "Stopped. Nothing else was changed."
+    fi
     exit 0
   fi
   OMAMAC_STEP='saving your answers'

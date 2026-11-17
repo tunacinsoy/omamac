@@ -17,7 +17,7 @@
 - Nothing is selected before the user picks it: no `--selected`; every `gum confirm` has `--default=false`; Docker lists `No Docker:none` first.
 - `choices.env` is never `source`d or `eval`ed. Each line is `^[a-z_]+=[a-z0-9 -]*$`, a table key, once, with a valid value.
 - Nothing in `install.sh` writes a file before "Install?" is answered yes.
-- Ctrl-C at any prompt: print `Stopped. Nothing was changed.` and exit 130.
+- Ctrl-C at any prompt: print `Stopped. Nothing else was changed.` and exit 130.
 - Users never see apt, Windows or WSL, so the carriage-return error must not say "Windows" (`test/hygiene.bats` greps `lib/`).
 - Gate files (`test/vm.exp`, `test/vm.sh`, `test/fingerprint.sh`, `test/image.sh`, `.github/workflows/bats.yml`, `.github/rulesets/main.json`) change only in Task 1's PR.
 - Messages: fewest plain words, ✓ ✗ ℹ markers via `lib/ui.sh`.
@@ -213,7 +213,7 @@ git commit -m "feat: add the question table and saved answers"
   - `ask_missing` — for each key from `choices_missing`, asks it and sets `CHOICES[key]` (multi in table order). Before the first `apps_*` question it asks, prints one `ui_info` line: desktop apps, installed with Homebrew; picking none is fine.
   - `ask_summary` — `ui_box` with one line per key: `<QUESTION_TITLE>: <labels joined by ", ">`, `none` for an empty multi.
   - `ask_install` — `gum confirm --default=false "Install?"`; returns 0 on yes, 1 on no.
-  - Any prompt exiting 130: `ui_fail "Stopped. Nothing was changed."`, `exit 130`. Any other non-zero (other than confirm's 1): `ui_fail` naming the question's title, return 1.
+  - Any prompt exiting 130: `ui_fail "Stopped. Nothing else was changed."`, `exit 130`. Any other non-zero (other than confirm's 1): `ui_fail` naming the question's title, return 1.
   - Calls: single `gum choose --header "<text>" --label-delimiter=: <options>`; multi adds `--no-limit`; yesno `gum confirm --default=false "<text>"`; all `< "$OMAMAC_TTY"`.
 - Produces, in the test helpers:
   - `fake-gum choose|confirm` logs `gum <args…>` to `$STUB_LOG`; requires the first line of its stdin to be `fake-tty` (else prints `fake-gum: prompt not reading the tty` and exits 98); takes the next line of `$T_GUM_ANSWERS` (a position counter in `$T_GUM_ANSWERS.pos`). For `choose` the line is space-separated values, printed one per line (empty line → prints nothing); for `confirm`, `yes` → exit 0, `no` → exit 1. `exit <n>` → exits n. No line left → `fake-gum: no answer for prompt <n>`, exit 99.

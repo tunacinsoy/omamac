@@ -62,7 +62,7 @@ choices_load() {
       fi
     fi
     if [ -n "$problem" ]; then
-      echo "$shown, line $n: $problem. Fix: delete that line and run the one-liner again; omamac asks that question again." >&2
+      echo "$shown, line $n: $problem. Fix: Delete that line, then run the one-liner again." >&2
       return 1
     fi
   done < "$file"
@@ -92,7 +92,7 @@ choices_save() {
   dir=$(dirname -- "$file")
   mkdir -p -- "$dir"
   tmp=$(mktemp "$dir/choices.XXXXXX")
-  choices_render > "$tmp"
+  choices_render > "$tmp" || { rm -f -- "$tmp"; return 1; }
   if cmp -s "$tmp" "$file"; then
     rm -f -- "$tmp"
   else

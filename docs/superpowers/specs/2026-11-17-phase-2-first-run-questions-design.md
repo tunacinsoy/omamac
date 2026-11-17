@@ -1,6 +1,6 @@
 # Phase 2: first-run questions — design
 
-Status: draft · 2026-11-17 · Source of truth for the why: [`vision.md`](../../../vision.md)
+Status: built · 2026-11-17 · Source of truth for the why: [`vision.md`](../../../vision.md)
 
 ## Intent
 
@@ -36,7 +36,8 @@ Failure even if it technically works:
 - A file is written, or anything installed, before "Install?" is answered yes.
 - A re-run asks a question that already has a saved answer, or rewrites `choices.env` when nothing changed.
 - `choices.env` is `source`d, so a crafted value runs code.
-- Saying no traps the user: after "no" the next run must ask the questions afresh.
+- Saying no traps the user: answers not yet saved are asked again on the next run. (Answers already saved stay saved on "no": changing one later is uninstalling one thing and installing another, as the vision settles; there is no "edit answers".)
+- A prompt is cut off before the user sees what they're agreeing to.
 - A question's text names keys that gum 2 doesn't use (gum 2 toggles with x or Tab, not Space, and draws its own key help).
 
 ## Constraints
@@ -48,6 +49,7 @@ Failure even if it technically works:
   - `gum confirm --default=false`: Enter means No (exit 1); `y` means yes (exit 0), `n` no (exit 1).
   - Ctrl-C exits 130 from both, printing nothing.
   - In a 0×0 terminal (expect's default) gum draws nothing at all. With a size set it draws, and draws a `confirm` prompt twice (first frame and a redraw).
+  - gum cuts a prompt or header off at the terminal's edge rather than wrapping it (found in the whole-branch review). So every question text stays at most 76 characters, and any longer explanation is a help line printed before the prompt, where the terminal wraps it.
 - `install.sh` runs under `set -Eeuo pipefail` with an `ERR` trap; a prompt's non-zero exit must be handled where it's called, not left to the trap.
 - bash 5 from here on, so associative arrays are fine.
 - Gate files (`test/vm.exp`, `test/fingerprint.sh`, …) change only in a PR whose purpose is the gate.
@@ -82,11 +84,11 @@ Tuna handed the how to Claude once the vision was agreed; this design is Claude'
 
 ### The question table: `lib/questions.sh`
 
-Each question has a key (its line in `choices.env`), a kind, its text, and for `single` and `multi` its options as `Label:value`. Order is the vision's: most visible to most technical.
+Each question has a key (its line in `choices.env`), a kind, its text (at most 76 characters), an optional help line printed before it, and for `single` and `multi` its options as `Label:value`. Order is the vision's: most visible to most technical.
 
 | # | Key | Kind | Text (draft; final wording is the builder's, fewest plain words) | Options (value) |
 | --- | --- | --- | --- | --- |
-| 1 | `theme` | single | Pick a theme for the terminal, editor and prompt. `omamac theme` changes it later. | Catppuccin (`catppuccin`), Dracula (`dracula`), Everforest (`everforest`), Gruvbox (`gruvbox`), Kanagawa (`kanagawa`), Matte Black (`matte-black`), Nord (`nord`), One Dark (`one-dark`), Osaka Jade (`osaka-jade`), Ristretto (`ristretto`), Rosé Pine (`rose-pine`), Solarized (`solarized`), Tokyo Night (`tokyo-night`) |
+| 1 | `theme` | single | Pick a theme for the terminal, editor and prompt. *Help:* You can change it later with omamac theme. | Catppuccin (`catppuccin`), Dracula (`dracula`), Everforest (`everforest`), Gruvbox (`gruvbox`), Kanagawa (`kanagawa`), Matte Black (`matte-black`), Nord (`nord`), One Dark (`one-dark`), Osaka Jade (`osaka-jade`), Ristretto (`ristretto`), Rosé Pine (`rose-pine`), Solarized (`solarized`), Tokyo Night (`tokyo-night`) |
 | 2 | `apps_browsers` | multi | Browsers | Brave (`brave`), Chrome (`chrome`), Firefox (`firefox`) |
 | 3 | `apps_communication` | multi | Communication | WhatsApp (`whatsapp`), Telegram (`telegram`), Signal (`signal`), Discord (`discord`), Slack (`slack`), Zoom (`zoom`) |
 | 4 | `apps_media` | multi | Media | Spotify (`spotify`), VLC (`vlc`) |
@@ -94,10 +96,10 @@ Each question has a key (its line in `choices.env`), a kind, its text, and for `
 | 6 | `apps_storage` | multi | Storage and sync | Dropbox (`dropbox`), Google Drive (`google-drive`) |
 | 7 | `apps_developer` | multi | Developer | VS Code (`vscode`) |
 | 8 | `apps_productivity` | multi | Productivity | Raycast (`raycast`), Obsidian (`obsidian`) |
-| 9 | `wispr_flow` | yesno | Install Wispr Flow for voice dictation? It turns speech into text in the cloud. | |
-| 10 | `desktops` | yesno | Make desktops behave like workspaces? They keep their order, switching to an app goes to its desktop, and Reduce motion turns on, which shortens animations everywhere. | |
+| 9 | `wispr_flow` | yesno | Install Wispr Flow for voice dictation? *Help:* Wispr Flow turns your speech into text in the cloud. | |
+| 10 | `desktops` | yesno | Make desktops behave like workspaces? *Help:* Desktops keep their order, switching to an app goes to its desktop, and Reduce motion turns on, which shortens animations everywhere. | |
 | 11 | `window_margins` | yesno | Add margins between tiled windows? | |
-| 12 | `dock` | yesno | Clean up the Dock? Apple's apps and Downloads leave the Dock (not your Mac), and the apps omamac installs take their place. | |
+| 12 | `dock` | yesno | Clean up the Dock? *Help:* Apple's apps and Downloads leave the Dock (not your Mac), and the apps omamac installs take their place. | |
 | 13 | `dock_autohide` | yesno | Hide the Dock when you're not using it? | |
 | 14 | `languages` | multi | Programming languages | Ruby on Rails (`ruby`), Node.js (`node`), Go (`go`), PHP (`php`), Python (`python`), Elixir (`elixir`), Rust (`rust`), Java (`java`) |
 | 15 | `cloud_clis` | multi | Cloud command-line tools | Azure CLI (`azure`), AWS CLI (`aws`), Google Cloud CLI (`gcloud`), GitHub CLI (`gh`), Terraform (`terraform`) |
@@ -112,8 +114,8 @@ Values are stable ids: later phases map them to formulas, casks and mise names, 
 - **single**: `gum choose --header "<text>" --label-delimiter=: <options…>`, no `--selected`. Enter picks the option under the cursor, which starts on the first, so a single question whose answer can be "nothing" lists that answer first (Docker). *(Claude's call, from the builder check.)*
 - **multi**: the same with `--no-limit`. Nothing toggled is a valid answer: none.
 - **yesno**: `gum confirm --default=false "<text>"`. Exit 0 → `yes`, exit 1 → `no`.
-- Every call reads `< "$OMAMAC_TTY"` (`/dev/tty`, overridable by the existing `OMAMAC_TEST_TTY` seam).
-- Exit 130 (Ctrl-C) from any prompt: print "Stopped. Nothing was changed." and exit 130. Any other unexpected exit is an error with the question named.
+- Every call reads `< "$OMAMAC_TTY"` (`/dev/tty`, overridable by the existing `OMAMAC_TEST_TTY` seam). If that isn't readable, omamac stops before the first prompt: a failed redirect would make a yes/no prompt exit 1, which reads as "no".
+- Exit 130 (Ctrl-C) from any prompt: print "Stopped. Nothing else was changed." and exit 130. Any other unexpected exit is an error with the question named.
 - Only questions whose key is missing from the loaded choices are asked. Answers collect in memory; nothing is written yet.
 - Questions are laid out with `lib/ui.sh` as gum styles them, consistent with Phase 1 output.
 
@@ -122,7 +124,7 @@ Values are stable ids: later phases map them to formulas, casks and mise names, 
 - A `ui_box` with one line per question: a short label and the answer as labels, e.g. `Theme: Tokyo Night`, `Browsers: Brave, Firefox`, `Communication: none`, `Wispr Flow: no`, `Docker: colima`. Shown on every run, including re-runs where nothing was asked.
 - Then `gum confirm --default=false "Install?"`, reading the tty.
   - yes → save choices (below), then the Phase 1 steps (zsh file, two lines, final summary).
-  - no → "Stopped. Nothing else was changed. Run the one-liner again to start over." Exit 0: the user chose to stop; nothing failed. Choices are not saved, so the next run asks again.
+  - no → "Stopped. Nothing else was changed." Exit 0: the user chose to stop; nothing failed. Nothing new is saved. If questions were asked in this run, the message adds "The next run asks those questions again."; answers saved by an earlier yes stay as they are.
   - 130 → as above, exit 130.
 
 `install.sh`'s order becomes: load choices → ask missing → summary → Install? → save → Phase 1 steps. So nothing in `install.sh` writes before the yes.
@@ -148,7 +150,7 @@ docker=none
 **Reading** (`choices_load <file>`), never `source`:
 - Missing file → no answers.
 - Blank lines and lines starting with `#` are skipped.
-- Every other line must match `^[a-z_]+=[a-z0-9 -]*$`, name a key in the table, appear once, and hold a valid value for its kind. Anything else stops the run before any question, naming the file, the line number and the problem, with the fix: "Delete that line and run the one-liner again; omamac asks that question again."
+- Every other line must match `^[a-z_]+=[a-z0-9 -]*$`, name a key in the table, appear once, and hold a valid value for its kind. Anything else stops the run before any question, naming the file, the line number and the problem, with the fix: "Delete that line, then run the one-liner again."
 - Values are checked against the table, so a value can only ever be one of the ids above.
 
 **Saving** (`choices_save <file>`): render every key in table order to a temp file in the same folder, then `mv` it into place only if it differs from the current file (`cmp -s`), as Phase 1 does for the zsh file. A second run with nothing new leaves the file and its mtime alone. Creates `~/.local/state/omamac` if missing.
@@ -182,7 +184,8 @@ Tests (`test/questions.bats`, `test/choices.bats`, additions to `install.bats` a
 - Parser: comment and blank lines; unknown key; duplicate key; bad value per kind; a duplicate multi value is rejected; multi values out of order are read and saved in table order; a `$(touch …)` value is rejected and nothing is created; Windows line endings rejected with a clear message.
 - Summary: labels, "none" for empty multi.
 - Every fixture is valid and complete.
-- The existing never-touch and "no apt, Windows or WSL" tests cover the new files as they are.
+- The existing never-touch test covers the new files as it is. The "no apt, Windows or WSL" test becomes case-sensitive for "Windows" (the OS's name), since "tiled windows" speaks of macOS windows; apt and WSL stay case-insensitive.
+- Every question text is at most 76 characters, and every summary line fits an 80-column box with every option picked.
 
 ### Docs
 
