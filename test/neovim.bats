@@ -21,6 +21,7 @@ in_lib() {
   [ ! -e "$HOME/.config/nvim/.git" ]
   [ "$(cat "$HOME/.config/nvim/lua/plugins/omamac.lua")" = "$(printf -- '-- Set up by omamac.\nreturn {}')" ]
   [[ "$output" == *"neovim is set up with LazyVim"* ]]
+  [ -z "$(ls -d "$HOME"/.config/nvim.omamac.* 2>/dev/null)" ]
 }
 
 @test "existing folder: untouched, says so" {
@@ -31,6 +32,7 @@ in_lib() {
   [[ "$output" == *"Your own neovim config is kept."* ]]
   [ "$(ls -A "$HOME/.config/nvim")" = "init.lua" ]
   [ "$(cat "$HOME/.config/nvim/init.lua")" = mine ]
+  [ -z "$(ls -d "$HOME"/.config/nvim.omamac.* 2>/dev/null)" ]
 }
 
 @test "omamac's own folder: no message on a re-run" {
@@ -46,7 +48,20 @@ in_lib() {
   in_lib neovim_setup
   [ "$status" -eq 0 ]
   [ -L "$HOME/.config/nvim" ]
+  [ "$(readlink "$HOME/.config/nvim")" = "$HOME/dotfiles/nvim" ]
   [ -z "$(ls -A "$HOME/dotfiles/nvim")" ]
+  [ -z "$(ls -d "$HOME"/.config/nvim.omamac.* 2>/dev/null)" ]
+}
+
+@test "a dangling symlink counts as the user's" {
+  mkdir -p "$HOME/.config"
+  ln -s "$HOME/nowhere" "$HOME/.config/nvim"
+  in_lib neovim_setup
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Your own neovim config is kept."* ]]
+  [ -L "$HOME/.config/nvim" ]
+  [ ! -e "$HOME/nowhere" ]
+  [ -z "$(ls -d "$HOME"/.config/nvim.omamac.* 2>/dev/null)" ]
 }
 
 @test "a failed clone leaves nothing" {
