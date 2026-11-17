@@ -23,7 +23,7 @@ omamac() { "$BASH5" "$REPO_ROOT/bin/omamac" "$@"; }
 }
 
 @test "commands not built yet say so" {
-  for c in install update theme uninstall; do
+  for c in install theme uninstall; do
     run --separate-stderr omamac "$c"
     [ "$status" -eq 1 ]
     [ "$output" = "" ]

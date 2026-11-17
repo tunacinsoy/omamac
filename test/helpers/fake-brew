@@ -9,7 +9,19 @@ case "${1:-}" in
     ;;
   list)
     if [ "${2:-}" = "--formula" ]; then
-      [ -e "$prefix/Cellar/${3:-}" ]; exit
+      [ "${T_BREW_LIST_FAIL:-0}" != 1 ] || { echo "Error: brew list failed" >&2; exit 1; }
+      case "${3:-}" in
+        '' | -1)
+          for d in "$prefix"/Cellar/*; do
+            [ -e "$d" ] && basename "$d"
+          done
+          exit 0
+          ;;
+        *) [ -e "$prefix/Cellar/$3" ]; exit ;;
+      esac
+    elif [ "${2:-}" = "--pinned" ]; then
+      [ ! -f "$prefix/pinned" ] || cat "$prefix/pinned"
+      exit 0
     elif [ "${2:-}" = "--versions" ]; then
       for d in "$prefix"/Cellar/*; do
         [ -e "$d" ] && echo "$(basename "$d") 1.0"
@@ -18,12 +30,18 @@ case "${1:-}" in
     fi
     ;;
   install)
-    f="${2:?brew install needs a formula}"
-    mkdir -p "$prefix/Cellar/$f" "$prefix/bin"
-    case "$f" in
-      bash) ln -sf "${BASH5:-/opt/homebrew/bin/bash}" "$prefix/bin/bash" ;;
-      gum)  ln -sf "${HELPERS_DIR:?fake-brew needs HELPERS_DIR}/fake-gum" "$prefix/bin/gum" ;;
-    esac
+    [ "${T_BREW_FAIL:-0}" != 1 ] || { echo "Error: brew install failed" >&2; exit 1; }
+    [ $# -ge 2 ] || { echo "brew install needs a formula" >&2; exit 1; }
+    shift
+    for f in "$@"; do
+      mkdir -p "$prefix/Cellar/$f" "$prefix/bin"
+      case "$f" in
+        bash) ln -sf "${BASH5:-/opt/homebrew/bin/bash}" "$prefix/bin/bash" ;;
+        gum)  ln -sf "${HELPERS_DIR:?fake-brew needs HELPERS_DIR}/fake-gum" "$prefix/bin/gum" ;;
+      esac
+    done
+    ;;
+  upgrade)
     ;;
 esac
 exit 0

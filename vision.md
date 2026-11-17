@@ -114,7 +114,8 @@ omamac configures tools whose config files the user may already have written, on
 - **The user's file gets one line.** The tool's normal config file holds a single include line pointing at omamac's file, added only if it isn't already there. Nothing else in that file is changed, reordered or reformatted. If a tool has a drop-in folder for extra config files, omamac puts its file there and leaves the user's file alone entirely.
 - **The same result on every Mac.** On a new Mac the user's file doesn't exist yet, so omamac creates it holding just the include line. On a used Mac the line is appended to the file the user already has. Either way omamac's file and the line are identical, and a second run finds the line and changes nothing.
 - **The line goes where the tool actually looks.** Some tools read config from more than one place. omamac adds its line to the existing file the tool loads last, so nothing loaded after it can undo omamac's settings, and creates one fixed default path only when no file exists. Example: Ghostty on macOS reads `config.ghostty` or `config` (the name before 1.2.3) under `~/.config/ghostty/` and then under `~/Library/Application Support/com.mitchellh.ghostty/`. If none exists, omamac creates `~/.config/ghostty/config.ghostty`. The line is `config-file = ?<omamac's ghostty file>`; the `?` makes it optional, so Ghostty never errors if omamac's file is gone.
-- **omamac wins on the settings it sets.** When the user's file and omamac's file set the same setting, omamac's value is used, so the chosen theme and omamac's key bindings apply the same way on every Mac. In return, omamac sets as few settings per tool as it can (for Ghostty: theme, `macos-option-as-alt` and starting herdr), and the installer tells the user which settings it takes over. Every setting omamac doesn't set stays the user's. Where a tool's load order would let the include lose, omamac places the line so it wins (in `~/.zshrc`, at the end).
+- **omamac wins on the settings it sets.** When the user's file and omamac's file set the same setting, omamac's value is used, so the chosen theme and omamac's key bindings apply the same way on every Mac. In return, omamac sets as few settings per tool as it can (for Ghostty: theme, `macos-option-as-alt` and starting herdr), and the installer tells the user which settings it takes over. Every setting omamac doesn't set stays the user's. Where a tool's load order would let the include lose, omamac places the line so it wins (in `~/.zshrc`, at the end). The exception is a tool that can't include omamac's file at all: there the user's own file wins whole (see the next bullets).
+- **Tools that read one config file and can't include another** (herdr, starship): omamac keeps its file in `~/.config/omamac/` and points the tool at it with the tool's own variable (`HERDR_CONFIG_PATH`, `STARSHIP_CONFIG`), set in omamac's zsh file only when the user has no config file of their own. If they do, it is used untouched, and `omamac doctor` explains (ℹ) that omamac's settings don't reach that tool, as for neovim below. Likewise a language version the user pins in their own mise config wins over omamac's.
 - **Files with no include mechanism** (for example a JSON settings file) are edited only as a last resort: back up first (`<file>.bak`), add or change only omamac's own keys, and skip with a message, never a rewrite, if the file isn't valid.
 - **Config folders with no include mechanism** (neovim's `~/.config/nvim` is a whole folder, not a file that takes one line): if the folder already exists, omamac leaves it alone, adds no files beside it, and says so. `omamac theme` then can't reach neovim, and `omamac doctor` explains why (ℹ, not ✗) and asks: "Move your neovim config aside so omamac can set up its own? (y/n)". On yes, it renames the folder to `~/.config/nvim.bak-<date>` (nothing is deleted) and sets up omamac's neovim config; renaming it back restores the user's own. On no, nothing changes. On a fresh Mac the folder doesn't exist, and omamac sets up its neovim config as planned.
 - **Shell files.** `~/.zshrc` gets one guarded line that sources omamac's zsh config. `~/.zprofile` gets one guarded line that puts Homebrew on the PATH, only if it isn't already there.
@@ -130,13 +131,14 @@ omamac configures tools whose config files the user may already have written, on
 
 **The core: installed for everyone, no question asked**
 - Ghostty, herdr, the zsh config, starship, neovim, btop and mise.
+- The small tools omawsl's aliases and LazyVim rely on: eza, bat, zoxide, fzf, ripgrep, fd, lazygit and tree-sitter-cli. jq comes along because herdr's key bindings need it.
 - Everything else is optional and asked about, with nothing pre-selected.
 
 **Developer environment** (largely borrowed from omawsl)
 - Shell: the user's zsh (macOS default), configured with the same aliases and prompt as omawsl.
 - Prompt: starship. Editor: neovim. Monitor: btop.
 - Multiplexer: **herdr only** (`brew install herdr`), with omawsl's herdr config and key bindings. zellij is not offered: one multiplexer means one config, one set of bindings and no question to ask.
-- Languages via mise, at the latest version when chosen: Ruby on Rails, Node.js, Go, PHP, Python, Elixir, Rust, Java.
+- Languages via mise, at the latest version when chosen: Ruby on Rails, Node.js, Go, Python, Elixir, Rust, Java. PHP is left out for now (see "Backlog").
 - Cloud CLIs via Homebrew: Azure CLI, AWS CLI, Google Cloud CLI, GitHub CLI (`gh`), and Terraform from HashiCorp's official tap (`hashicorp/tap/terraform`), since it's no longer in Homebrew's main repository.
 - Docker: one choice, nothing pre-selected: colima, OrbStack, Docker Desktop or none.
 
@@ -264,7 +266,7 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - Uninstalling an app asks whether to remove the app only or the app with its settings and data (`--zap`), nothing pre-selected, then asks for a final confirmation.
 - omamac has its own macOS config-safety rules (not omawsl's lists): its content lives only in its own files; a user's config file gets at most one guarded include line, placed in the file the tool loads last; the result is the same on a new or a used Mac.
 - When the user's config and omamac's set the same setting, omamac wins, so the theme and key bindings apply the same everywhere; omamac keeps the settings it takes over to a minimum and says which they are.
-- The core, installed for everyone without a question: Ghostty, herdr, the zsh config, starship, neovim, btop, mise. "Nothing pre-selected" applies to everything else.
+- The core, installed for everyone without a question: Ghostty, herdr, the zsh config, starship, neovim, btop, mise, and the tools the aliases and LazyVim need (eza, bat, zoxide, fzf, ripgrep, fd, lazygit, tree-sitter-cli). "Nothing pre-selected" applies to everything else.
 - The first run asks for a theme (all 13 of omawsl's themes, nothing pre-selected) and applies it, so the user sees it on first opening Ghostty.
 - mise is the one exception to "Homebrew is the only record": it manages language runtimes; Homebrew manages apps and tools, herdr included.
 - Docker is one choice with nothing pre-selected: colima, OrbStack, Docker Desktop or none. OrbStack is not also listed under Developer apps.
@@ -288,7 +290,8 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - `omamac doctor` is a doctor, not an alarm: ✓, ✗ or ℹ per check, each with why and the one fix; it only reports.
 - Everything omamac prints is polished and visual, and as short as possible.
 - Ghostty's built-in font; no font installed or set.
-- Languages and cloud CLIs as omawsl offers them; Terraform from HashiCorp's official tap; `gh` with the cloud CLIs.
+- Languages and cloud CLIs as omawsl offers them, except PHP for now; Terraform from HashiCorp's official tap; `gh` with the cloud CLIs.
+- A tool with one config file and no include (herdr, starship) uses omamac's file only when the user has none; a user's own is left alone and doctor explains. The user's own mise pins win.
 - The v1 app catalog is the 17 apps in the table plus Wispr Flow; an app that isn't a clean cask is dropped.
 - Gatekeeper and permission prompts stay with the user, one line each in the summary, built from each app's catalog file.
 - First-run question order: theme, desktop apps, Wispr Flow, desktops, window margins, Dock, Dock auto-hide, languages, cloud CLIs, Docker; adoption questions come as apps are picked; one summary and "Install?" at the end.
@@ -334,6 +337,8 @@ Ideas Tuna wants kept in view but not built yet. Nothing here is a commitment; e
 - Whether Termius is named in the README as a suggested client, or left to the user.
 - Tailscale sign-in and account stay with the app; omamac never asks for them.
 - What this means for the "Safe with the user's files" and "Files omamac never creates or modifies" rules (`~/.ssh/**` is on that list).
+
+**PHP.** mise builds PHP from source on macOS, which needs about ten Homebrew build libraries that nothing would own, upgrade or remove. PHP comes back when there's a clean way to install it.
 
 **More dictation apps.** Superwhisper, VoiceInk and the like could join Wispr Flow (the question then becomes single choice). No criteria yet; decide when someone actually asks.
 
@@ -426,3 +431,6 @@ One line per decision: date, question, answer, who decided. Move the item out of
 - 2026-11-16 — Licence — MIT; chosen knowing it allows commercial use — Tuna
 - 2026-11-16 — Gate files — written by the agent, changed only in gate-purpose PRs that CI flags; Tuna merges, doesn't write code; agents may build the image and run VMs — Tuna
 - 2026-11-17 — Merging — the agent merges PRs itself once `bats` and `vm` are green and review is done; it raises to Tuna only what needs Tuna's judgment — Tuna
+- 2026-11-17 — Core tools for the aliases and LazyVim — eza, bat, zoxide, fzf, ripgrep, fd, lazygit and tree-sitter-cli join the core, as on omawsl — Tuna
+- 2026-11-17 — A user's own herdr or starship config (no include possible) — left untouched, doctor explains; omamac's file is used only when there is none; the user's mise pins win — Tuna
+- 2026-11-17 — PHP — dropped from the languages for now (mise compiles it on macOS); in the Backlog — Tuna

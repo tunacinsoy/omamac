@@ -14,6 +14,8 @@ source "$OMAMAC_CHECKOUT/lib/ui.sh"
 source "$OMAMAC_CHECKOUT/lib/questions.sh"
 # shellcheck source=lib/choices.sh
 source "$OMAMAC_CHECKOUT/lib/choices.sh"
+# shellcheck source=lib/core.sh
+source "$OMAMAC_CHECKOUT/lib/core.sh"
 # shellcheck source=lib/doctor.sh
 source "$OMAMAC_CHECKOUT/lib/doctor.sh"
 
@@ -29,12 +31,35 @@ Usage: omamac <command>
 USAGE
 }
 
+# omamac_update: pull the new code, then run its update.sh. exec, so the steps
+# that run are the new ones, not this old copy's.
+omamac_update() {
+  local fix="omamac couldn't update its code. Fix: check your internet connection, or run git -C ~/.local/share/omamac status to see why."
+  # pull --ff-only keeps local edits the new commits don't touch, so check
+  # first: a checkout with local edits is left as it is.
+  if [ -n "$(git -C "$OMAMAC_HOME" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
+    ui_fail "omamac's code has local edits, so update stopped. Fix: git -C ~/.local/share/omamac status, to see them."
+    return 1
+  fi
+  # update.sh starts the run's real log; this one holds only git's output.
+  # Not mktemp -t: on macOS it ignores TMPDIR. %/ drops TMPDIR's trailing slash.
+  local OMAMAC_LOG tmp=${TMPDIR:-/tmp}
+  OMAMAC_LOG=$(mktemp "${tmp%/}/omamac-pull.XXXXXX")
+  if ! GIT_TERMINAL_PROMPT=0 ui_run "Updating omamac" git -C "$OMAMAC_HOME" pull --ff-only; then
+    ui_fail "$fix"
+    return 1
+  fi
+  rm -f "$OMAMAC_LOG"
+  exec "$OMAMAC_BREW_PREFIX/bin/bash" "$OMAMAC_HOME/update.sh"
+}
+
 omamac_main() {
   local cmd=${1:-help}
   case "$cmd" in
     help | -h | --help) omamac_usage ;;
     doctor) doctor_run ;;
-    install | update | theme | uninstall)
+    update) omamac_update ;;
+    install | theme | uninstall)
       echo "omamac $cmd isn't available yet." >&2
       return 1
       ;;

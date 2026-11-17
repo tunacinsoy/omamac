@@ -56,6 +56,8 @@ test/vm.sh <branch> <fixture>
 
 It runs the one-liner twice in a throwaway VM, checks that the second run changed nothing, and posts `vm` on the commit. Fixtures live in `test/fixtures/`. The log goes to `test/logs/`.
 
+A fixture may have a `<name>.steps.sh`. Its commands run in the VM after the two runs, in `zsh -eux` with stdin closed. A "Remove …?" prompt is answered y; any other prompt fails the run.
+
 ## Questions and fixtures
 
 The first-run questions live in one table, `lib/questions.sh`: one `question` line each, with its key, kind, text and options. Each key is a line in `choices.env`; values are ids that later code relies on, so never rename one.

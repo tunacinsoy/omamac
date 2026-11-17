@@ -11,6 +11,9 @@ healthy_mac() {
   install_fake_brew
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install bash
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gum
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli
+  mkdir -p "$HOME/.config/nvim/lua/plugins"
+  : > "$HOME/.config/nvim/lua/plugins/omamac.lua"
   CHECKOUT="$HOME/.local/share/omamac"
   mkdir -p "$CHECKOUT" "$HOME/.config/omamac"
   git -C "$CHECKOUT" init -q
@@ -38,7 +41,7 @@ expect_fail() {
   healthy_mac
   run doctor
   [ "$status" -eq 0 ]
-  [ "$(printf '%s\n' "$output" | grep -c '^✓')" -eq 9 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^✓')" -eq 11 ]
 }
 
 @test "Homebrew missing" {
@@ -93,8 +96,19 @@ expect_fail() {
 
 @test "checkout has local changes" {
   healthy_mac
-  : > "$CHECKOUT/stray"
+  echo a > "$CHECKOUT/tracked"
+  git -C "$CHECKOUT" add tracked
+  git -C "$CHECKOUT" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m tracked
+  echo b > "$CHECKOUT/tracked"
   expect_fail "Checkout is clean" "git -C ~/.local/share/omamac status"
+}
+
+@test "an untracked file in the checkout still passes" {
+  healthy_mac
+  : > "$CHECKOUT/.DS_Store"
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ Checkout is clean"* ]]
 }
 
 @test "Homebrew line missing" {
@@ -120,6 +134,56 @@ expect_fail() {
   healthy_mac
   rm "$HOME/.config/omamac/zshrc"
   expect_fail "omamac's zsh file" "Run the one-liner again"
+}
+
+@test "core formula missing" {
+  healthy_mac
+  rm -r "$OMAMAC_TEST_BREW_PREFIX/Cellar/eza"
+  expect_fail "Core tools" "brew install eza"
+}
+
+@test "core formulas missing are all named" {
+  healthy_mac
+  rm -r "$OMAMAC_TEST_BREW_PREFIX/Cellar/eza" "$OMAMAC_TEST_BREW_PREFIX/Cellar/bat"
+  expect_fail "Core tools" "brew install eza bat"
+}
+
+@test "core check is skipped when Homebrew is missing" {
+  healthy_mac
+  rm "$OMAMAC_TEST_BREW_PREFIX/bin/brew"
+  run doctor
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"ℹ Core tools — skipped"* ]]
+  [[ "$output" == *"neovim config"* ]]
+}
+
+@test "core check is skipped when brew can't list" {
+  healthy_mac
+  T_BREW_LIST_FAIL=1 run doctor
+  [[ "$output" == *"ℹ Core tools — skipped"* ]]
+}
+
+@test "user's own neovim config is kept" {
+  healthy_mac
+  rm "$HOME/.config/nvim/lua/plugins/omamac.lua"
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ neovim config — your own neovim config is kept"* ]]
+}
+
+@test "a dangling neovim symlink counts as the user's own" {
+  healthy_mac
+  rm -r "$HOME/.config/nvim"
+  ln -s "$BATS_TEST_TMPDIR/nowhere" "$HOME/.config/nvim"
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ neovim config"* ]]
+}
+
+@test "neovim config missing" {
+  healthy_mac
+  rm -r "$HOME/.config/nvim"
+  expect_fail "neovim config" "Run the one-liner again"
 }
 
 @test "doctor is read-only" {

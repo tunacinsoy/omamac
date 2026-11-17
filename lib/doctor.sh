@@ -69,7 +69,8 @@ doctor_check_clean() {
     return 0
   fi
   # No optional locks: a read-only check must not take git's index lock.
-  changes=$(GIT_OPTIONAL_LOCKS=0 git -C "$OMAMAC_HOME" status --porcelain 2>/dev/null) || changes=unknown
+  # Untracked files (a .DS_Store) don't block update, so they don't count here either.
+  changes=$(GIT_OPTIONAL_LOCKS=0 git -C "$OMAMAC_HOME" status --porcelain --untracked-files=no 2>/dev/null) || changes=unknown
   if [ -z "$changes" ]; then
     doctor_report ok "$what"
   else
@@ -92,6 +93,31 @@ doctor_check_zsh_file() {
     doctor_report ok "omamac's zsh file"
   else
     doctor_report fail "omamac's zsh file" "~/.config/omamac/zshrc is missing" "Run the one-liner again"
+  fi
+}
+
+doctor_check_core() {
+  local what="Core tools" missing names
+  # Homebrew's own ✗ is reported above; here a failed list only skips the check.
+  if ! missing=$(core_missing 2>/dev/null); then
+    doctor_report info "$what" "skipped, Homebrew can't list its formulas"
+  elif [ -z "$missing" ]; then
+    doctor_report ok "$what"
+  else
+    names=${missing//$'\n'/ }
+    doctor_report fail "$what" "$names missing, and omamac's shell and editor need them" \
+      "brew install $names"
+  fi
+}
+
+doctor_check_neovim() {
+  local what="neovim config"
+  if [ -e "$OMAMAC_NVIM_MARKER" ]; then
+    doctor_report ok "$what"
+  elif [ -e "$OMAMAC_NVIM_DIR" ] || [ -L "$OMAMAC_NVIM_DIR" ]; then
+    doctor_report info "$what" "your own neovim config is kept"
+  else
+    doctor_report fail "$what" "~/.config/nvim is missing" "Run the one-liner again"
   fi
 }
 
@@ -123,6 +149,8 @@ doctor_run() {
   doctor_check_line "omamac line" "$HOME/.zshrc" "$OMAMAC_ZSHRC_LINE" \
     "~/.zshrc does not load omamac's settings" || status=1
   doctor_check_zsh_file || status=1
+  doctor_check_core || status=1
+  doctor_check_neovim || status=1
   doctor_check_choices || status=1
   return "$status"
 }
