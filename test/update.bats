@@ -249,6 +249,14 @@ choose() { sed -i '' "s/^$1=.*/$1=$2/" "$CHOICES_FILE"; }
   run ! grep -q '^brew' "$STUB_LOG"
 }
 
+@test "a failure inside a subshell says omamac stopped once" {
+  choose languages go
+  T_MISE_UPGRADE_FAIL=1 run update
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"omamac stopped while upgrading your languages."* ]]
+  [ "$(grep -c 'omamac stopped' <<< "$output")" -eq 1 ]
+}
+
 @test "a failing step names itself and says to run update again" {
   rm -rf "${OMAMAC_TEST_BREW_PREFIX:?}/Cellar/eza"
   T_BREW_FAIL=1 run update

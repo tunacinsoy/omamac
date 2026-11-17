@@ -39,6 +39,8 @@ source "$OMAMAC_CHECKOUT/lib/apply.sh"
 OMAMAC_STEP='starting'
 
 update_failed() {
+  # With set -E the trap also runs inside ( … ) and $( … ); let only the main shell speak.
+  [ "$BASHPID" -eq "$$" ] || exit 1
   ui_fail "omamac stopped while $OMAMAC_STEP."
   ui_fail "Fix the problem and run omamac update again."
   exit 1

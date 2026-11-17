@@ -20,6 +20,7 @@ case "${1:-}" in
     [ ! -e "$state/$4" ] || echo "$4 1.0"
     ;;
   upgrade)
+    [ "${T_MISE_UPGRADE_FAIL:-0}" != 1 ] || { echo "mise ERROR upgrade failed" >&2; exit 1; }
     ;;
   prune)
     [ "${2:-}" = --tools ] && [ $# -ge 3 ] || { echo "fake-mise: prune needs --tools <tools>" >&2; exit 1; }
