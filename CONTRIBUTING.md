@@ -61,7 +61,7 @@ Tests that need mise use a fake, `test/helpers/fake-mise`. Its `T_*` knobs (for 
 
 A change to languages or CLIs runs the `bare`, `languages` and `cloud` fixtures.
 
-A fixture may have a `<name>.steps.sh`. Its commands run in the VM after the two runs, in `zsh -eux` with stdin closed. A "Remove …?" prompt is answered y; any other prompt fails the run.
+A fixture may have a `<name>.steps.sh`. Its commands run in the VM after the two runs, in `zsh -eux` with stdin closed. A "Remove …?" prompt is answered y; any other prompt fails the run. Put every command that prompts before any `zsh -ic`: an interactive zsh takes the terminal and doesn't give it back, so a later prompt can't read the keyboard.
 
 ## Questions and fixtures
 

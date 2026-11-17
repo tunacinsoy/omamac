@@ -9,11 +9,13 @@ if [[ $before != "$after" ]]; then
   diff <(print -r -- "$before") <(print -r -- "$after")
   exit 1
 fi
-zsh -ic 'az version'
-zsh -ic 'aws --version'
-zsh -ic 'gcloud version'
-zsh -ic 'gh --version'
-zsh -ic 'terraform version'
+# Homebrew's bin is already on the PATH here. No zsh -ic: an interactive zsh
+# takes the terminal and doesn't give it back, so a later gum prompt fails.
+az version
+aws --version
+gcloud version
+gh --version
+terraform version
 # Uninstall terraform and gcloud, each twice: Homebrew no longer has it, and the second run changes nothing.
 omamac uninstall terraform
 if /opt/homebrew/bin/brew list --formula hashicorp/tap/terraform >/dev/null 2>&1; then exit 1; fi
