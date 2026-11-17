@@ -46,7 +46,7 @@ It updates omamac and what omamac installed, nothing else. It pulls omamac (and 
 - One line in `~/.zprofile` (skipped if it already sets up Homebrew) and one in `~/.zshrc`. Both end in `# added by omamac`.
 - `~/.local/share/omamac`: omamac itself.
 - `~/.config/omamac`: files omamac writes, including `zshrc` (aliases, history, completion, mise and the starship prompt), which the line in `~/.zshrc` loads. That file takes over EDITOR and VISUAL (nvim), history sizes (raised, never lowered), ↑/↓ history search, Ctrl-R (fzf), the prompt (starship), and the aliases `ls`, `lsa`, `ll`, `lt`, `lta`, `tree`, `cat`, `cd`, `ff`, `..`, `...`, `....`, `g`, `gcm`, `gcam`, `gcad`, `d`, `lzg`, `lzd`, `n` and `r`. It also sets `HERDR_CONFIG_PATH` when you have no herdr config.
-- `~/.config/omamac/herdr.toml`: omawsl's herdr config and key bindings. A `~/.config/herdr/config.toml` of your own is used instead and never touched (one holding only `onboarding = false` is herdr's own and doesn't count). `~/.local/state/omamac/herdr.toml.written` is omamac's copy of what it wrote.
+- `~/.config/omamac/herdr.toml`: omawsl's herdr config and key bindings. A `~/.config/herdr/config.toml` of your own is used instead and never touched (one holding only `onboarding = false` is herdr's own and doesn't count).
 - `~/.local/state/omamac`: logs and your saved answers (`choices.env`).
 
 There is no uninstall command yet. To undo by hand: delete the two lines ending in `# added by omamac`, delete the three folders, delete `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`), and, if omamac installed them, run `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`. To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
@@ -55,7 +55,9 @@ There is no uninstall command yet. To undo by hand: delete the two lines ending 
 
 Start it with `herdr` (Ghostty will do it in a later phase). Ctrl g is the prefix, then `p` pane, `t` tab, `r` resize, `m` move, `o` session, `s` scroll. Alt h/j/k/l move between panes, Alt n opens a new pane.
 
-herdr's first-run screen is skipped. Its settings are Ctrl g `,`. If you change herdr's settings (Ctrl g `,`) or edit `~/.config/omamac/herdr.toml` by hand, omamac leaves that file alone; `omamac doctor` says so. To get omamac's back, delete `~/.config/omamac/herdr.toml`, then run `omamac update`.
+herdr's first-run screen is skipped.
+
+> **omamac handles herdr's settings.** It writes `~/.config/omamac/herdr.toml` again on every update (and, later, every theme switch), so herdr always follows omamac's theme and key bindings. Changes made in herdr's own settings screen (Ctrl g `,`) or by hand to that file don't last. To use your own herdr config instead, write `~/.config/herdr/config.toml`: omamac never touches it, but then omamac's themes and key bindings don't reach herdr, and `omamac doctor` says so.
 
 ## Testing a branch
 

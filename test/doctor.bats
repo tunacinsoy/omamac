@@ -207,7 +207,7 @@ expect_fail() {
   echo mine > "$HOME/.config/herdr/config.toml"
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ herdr config — your own herdr config is kept, so omamac's key bindings don't reach herdr"* ]]
+  [[ "$output" == *"ℹ herdr config — your own herdr config is kept, so omamac's key bindings and themes don't reach herdr"* ]]
 }
 
 @test "herdr: herdr's own onboarding file is not the user's" {
@@ -219,12 +219,12 @@ expect_fail() {
   [[ "$output" == *"✓ herdr config"* ]]
 }
 
-@test "herdr: changed in herdr" {
+@test "herdr: changed in herdr is still omamac's" {
   healthy_mac
   echo '# changed' >> "$HOME/.config/omamac/herdr.toml"
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ herdr config — changed in herdr, so omamac's updates to it are skipped"* ]]
+  [[ "$output" == *"✓ herdr config"* ]]
 }
 
 @test "herdr: omamac's file missing" {
