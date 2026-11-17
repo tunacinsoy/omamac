@@ -95,7 +95,7 @@ for _ in $(seq 60); do
 done
 OMAMAC_VM_TIMEOUT=30 vm true
 
-# 3. The fixture, where Phase 2 will read it.
+# 3. The fixture, where install.sh reads it.
 step=fixture
 vm "mkdir -p ~/.local/state/omamac && curl -fsSL $raw/test/fixtures/$fixture.env -o ~/.local/state/omamac/choices.env"
 

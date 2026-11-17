@@ -7,7 +7,7 @@ set -euo pipefail
 head=$(git -C ~/.local/share/omamac rev-parse HEAD)
 {
   /opt/homebrew/bin/brew list --versions | sed 's/^/brew: /'
-  shasum -a 256 ~/.zprofile ~/.zshrc
+  shasum -a 256 ~/.zprofile ~/.zshrc ~/.local/state/omamac/choices.env
   find ~/.config/omamac -type f -exec shasum -a 256 {} +
   echo "checkout: $head"
 } | sort
