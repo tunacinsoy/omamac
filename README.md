@@ -2,7 +2,7 @@
 
 omamac sets up a fresh Mac for development in one command: Homebrew, a modern bash, your terminal, editor, apps and theme. After that, one command, `omamac`, keeps it all up to date. It is the sister project of [omawsl](https://github.com/tunacinsoy/omawsl).
 
-omamac is still being built. Today the one-liner installs Homebrew, bash, gum and the `omamac` command (with `omamac doctor`), and asks the first-run questions. It saves your answers but doesn't install your picks yet.
+omamac is still being built. Today the one-liner installs Homebrew, bash, gum, the `omamac` command and the core tools: starship, neovim with LazyVim, btop, mise, herdr, eza, bat, zoxide, fzf, ripgrep, fd, lazygit and tree-sitter-cli. It also asks the first-run questions and saves your answers, but your other picks (languages, cloud CLIs, apps and so on) aren't installed yet. `omamac doctor` and `omamac update` work; the other commands say "not available yet".
 
 ## Before you begin
 
@@ -28,18 +28,27 @@ Each run writes a log to `~/.local/state/omamac/logs/`. The newest 10 are kept.
 
 ## After install
 
-Open a new terminal window.
+Open a new terminal window. `nvim` downloads its plugins the first time it opens.
+
+## Keeping it up to date
+
+```
+omamac update
+```
+
+It updates omamac and what omamac installed, nothing else. It pulls omamac (and stops if you edited its files), rewrites the files omamac writes, installs any core tool that is missing, then upgrades only omamac's formulas: the core tools, bash and gum. The log goes to `~/.local/state/omamac/logs/`.
 
 ## What it changes
 
 - Homebrew, in `/opt/homebrew`. It brings Apple's Command Line Tools.
-- bash and gum, installed with Homebrew.
+- bash, gum and the core tools (`starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli`), installed with Homebrew.
+- `~/.config/nvim`: LazyVim's starter, only if you don't have one. Yours is kept. If omamac made it, it holds `lua/plugins/omamac.lua`.
 - One line in `~/.zprofile` (skipped if it already sets up Homebrew) and one in `~/.zshrc`. Both end in `# added by omamac`.
 - `~/.local/share/omamac`: omamac itself.
-- `~/.config/omamac`: files omamac writes.
+- `~/.config/omamac`: files omamac writes, including `zshrc` (aliases, history, completion, mise and the starship prompt), which the line in `~/.zshrc` loads.
 - `~/.local/state/omamac`: logs and your saved answers (`choices.env`).
 
-There is no uninstall command yet. To undo by hand: delete the two lines ending in `# added by omamac`, delete the three folders, and, if omamac installed them, run `brew uninstall gum bash`. To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
+There is no uninstall command yet. To undo by hand: delete the two lines ending in `# added by omamac`, delete the three folders, delete `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`), and, if omamac installed them, run `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli`. To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
 
 ## Testing a branch
 
