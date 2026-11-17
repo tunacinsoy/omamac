@@ -8,6 +8,14 @@ setup() {
   # shellcheck disable=SC2016 # the stub expands these itself
   stub ssh 'n=${T_PROMPTS:-1}
 while [ "$n" -gt 0 ]; do printf "Password:"; read -r _; n=$((n - 1)); done
+[ -z "${T_SIZE:-}" ] || echo "size:$(stty size)"
+if [ -n "${T_INSTALL:-}" ]; then
+  i=$T_INSTALL
+  while [ "$i" -gt 0 ]; do printf "Install?\n"; i=$((i - 1)); done
+  read -r -n1 k; echo "got:$k"
+  if read -r -t 2 -n1 extra; then echo "extra:$extra"; fi
+fi
+if [ -n "${T_ASK:-}" ]; then printf "%s " "$T_ASK"; read -r _; fi
 [ -z "${T_KILL:-}" ] || kill -TERM $$
 exit "${T_EXIT:-0}"'
   export OMAMAC_VM_TIMEOUT=10
@@ -41,4 +49,23 @@ vm_exp() { run /usr/bin/expect -f "$REPO_ROOT/test/vm.exp" 192.0.2.1 true; }
 @test "a command killed by a signal fails" {
   T_KILL=1 vm_exp
   [ "$status" -eq 1 ]
+}
+
+@test "the terminal has a size, so gum draws" {
+  T_SIZE=1 vm_exp
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"size:50 120"* ]]
+}
+
+@test "Install? is answered with one y, redraws ignored" {
+  T_INSTALL=2 vm_exp
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"got:y"* ]]
+  [[ "$output" != *"extra:"* ]]
+}
+
+@test "any other y/n prompt still fails" {
+  T_ASK='Continue? (y/n)' vm_exp
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"unexpected prompt"* ]]
 }

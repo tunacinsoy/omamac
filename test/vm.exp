@@ -2,7 +2,8 @@
 # test/vm.exp <ip> <command>: run one command in a test VM over SSH, typing the
 # VM's password at each password prompt. Exits with the command's exit status.
 # More prompts than OMAMAC_VM_MAX_PASSWORDS (default 1, the ssh login) fail the
-# run: omamac may ask for the password only once.
+# run: omamac may ask for the password only once. It answers omamac's one
+# "Install?" with y; any other y/n prompt fails the run.
 #
 # Host key checks are off: the VM is new every time and only ever reached at
 # its local IP, so there is no known key to check against.
@@ -21,7 +22,11 @@ if {[info exists env(OMAMAC_VM_TIMEOUT)]} { set timeout $env(OMAMAC_VM_TIMEOUT) 
 set max_passwords 1
 if {[info exists env(OMAMAC_VM_MAX_PASSWORDS)]} { set max_passwords $env(OMAMAC_VM_MAX_PASSWORDS) }
 set passwords 0
+set answered 0
 
+# gum draws nothing in a 0x0 terminal (expect's default), and ssh -t passes
+# this size on to the VM, so give it a real one.
+set stty_init "rows 50 cols 120"
 spawn ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null admin@$ip $command
 
 # The y/n pattern is an alternation on purpose: a bracket class holding \[ or
@@ -34,6 +39,15 @@ expect {
       exit 1
     }
     send -- "$password\r"
+    exp_continue
+  }
+  -re {Install\?} {
+    # omamac's one confirm prompt. gum redraws it, so only the first sighting
+    # is answered; a y sent to a redraw would reach whatever reads next.
+    if {!$answered} {
+      set answered 1
+      send -- "y"
+    }
     exp_continue
   }
   -re {\([yY]/[nN]\)|\[[yY]/[nN]\]} { puts stderr "\nvm.exp: unexpected prompt"; exit 1 }
