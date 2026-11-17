@@ -144,11 +144,14 @@ The include lines in `~/.zprofile` and `~/.zshrc` stay in `install.sh` only. If 
 
 ### herdr's config (3b)
 
-- `config/herdr.toml` is omawsl's `configs/herdr.toml` with `@OMAWSL_ROOT@/bin/omawsl-herdr-mode` replaced by `@OMAMAC_HELPER@`, and comments about zellij or omawsl reworded to stand on their own. Key bindings and settings are unchanged.
-- omamac writes it to `~/.config/omamac/herdr.toml` (compare-then-move), with `@OMAMAC_HELPER@` replaced by the absolute path of `bin/omamac-herdr-mode` under `$HOME`.
+- `config/herdr.toml` is omawsl's `configs/herdr.toml` with `@OMAWSL_ROOT@/bin/omawsl-herdr-mode` replaced by `@OMAMAC_HELPER@`, and comments about zellij or omawsl reworded to stand on their own. Key bindings and settings are unchanged, plus one line, `onboarding = false` (see "What herdr writes" below).
+- omamac writes it to `~/.config/omamac/herdr.toml` (compare-then-move), with `@OMAMAC_HELPER@` replaced by the absolute path of `bin/omamac-herdr-mode` under `$HOME`, and keeps a copy of what it wrote in `~/.local/state/omamac/herdr.toml.written`.
 - omamac's zshrc exports `HERDR_CONFIG_PATH` to that file only if the variable is unset and `~/.config/herdr/config.toml` doesn't exist. Otherwise the user's config is used; the installer and doctor say so (ℹ).
 - `bin/omamac-herdr-mode` is written fresh to do what omawsl's helper does: the pane, tab, resize, move and session modes behind Ctrl g p/t/r/m/o, and the direct Alt chords. It calls `/opt/homebrew/bin/herdr` and `/opt/homebrew/bin/jq` by full path, runs under `/opt/homebrew/bin/bash`, and talks to herdr's socket with `nc -U` (no `-q`). Each mode's keys match omawsl's `docs/keys.md`.
-- The builder checks whether herdr writes its config file itself (on first start or from its settings screen). If it writes to `HERDR_CONFIG_PATH`, `update` would overwrite those changes; if it creates `~/.config/herdr/config.toml`, omamac's config would stop being used. Either way the finding goes into this spec and the README before 3b merges.
+- **What herdr writes** (checked in herdr 0.9.5's source, 2026-11-17): herdr writes to the file `HERDR_CONFIG_PATH` names, never to `~/.config/herdr/config.toml` when the variable is set. It writes `onboarding = false` when its first-run screen is closed, and theme, sound, toast and status-icon choices from its settings screen (Ctrl g ,). So:
+  - omamac's file sets `onboarding = false`. Otherwise every user's first herdr start would change the file. herdr's first-run screen only opens its settings, which stay one key away.
+  - If omamac's file differs from both the copy omamac last wrote and the file omamac would write now, herdr's settings screen or the user changed it. omamac then leaves it as it is and says so (ℹ), naming the fix: delete the file and run `omamac update`. Matching the new render too covers a run stopped between writing the file and its copy. Overwriting it would silently undo the user's choices; that is the vision's rule for the user's own files (`~/.config/nvim`), applied to a file they changed. The cost: omamac's later changes to herdr's config (Phase 4's theme) don't reach that user, and doctor says so.
+  - Dropped: overwriting with a backup (still undoes their choices on every update), and merging herdr's keys back into omamac's file (a TOML merge in bash, for a few settings).
 - Phase 4 starts herdr from Ghostty, where zsh may not run first, so Phase 4 passes `HERDR_CONFIG_PATH` itself (Ghostty's `env`).
 
 ### Languages (3c)
@@ -204,7 +207,7 @@ New checks, same ✓ ✗ ℹ format:
 
 - **Core tools** (3a): ✗ lists the missing formulas, fix `brew install <them>`.
 - **neovim config** (3a): ℹ only when `~/.config/nvim` exists without `lua/plugins/omamac.lua`: "your own neovim config is kept". Missing folder: ✗, fix "run the one-liner".
-- **herdr config** (3b): ✓ omamac's file present and in use; ℹ when the user's own config is used.
+- **herdr config** (3b): ✓ omamac's file present and in use; ℹ when the user's own config is used; ℹ when omamac's file was changed in herdr (omamac's updates to it are skipped); ✗ when omamac's file is missing, fix `omamac update`.
 - **mise drop-in** (3c): ✗ if `conf.d/omamac.toml` doesn't match the choices, fix "omamac update".
 - **Chosen languages and cloud CLIs** (3c): ✗ for each one Homebrew or mise no longer has.
 
@@ -257,4 +260,4 @@ All decided by Tuna on 2026-11-17, recorded in "Settled decisions" and the "Deci
 
 - Exact wording of messages and the summary.
 - Whether any language needs a mise setting to finish within the time budget.
-- The herdr helper's internal structure, and what herdr does with its config file (above).
+- The herdr helper's internal structure.
