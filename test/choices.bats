@@ -58,6 +58,12 @@ expect_bad() {
   [ "${output// /}" = 17 ]
 }
 
+@test "languages has no php" {
+  in_lib 'echo $(question_values languages)'
+  [ "$output" = "ruby node go python elixir rust java" ]
+  expect_bad 1 $'languages=php\n'
+}
+
 @test "yes/no questions allow yes and no" {
   in_lib 'question_values dock'
   [ "$output" = "yes
@@ -148,6 +154,27 @@ no" ]
   printf 'apps_browsers=firefox brave\n' > "$FILE"
   in_lib 'choices_load "$FILE"; echo "${CHOICES[apps_browsers]}"'
   [ "$output" = "brave firefox" ]
+}
+
+@test "choices_add keeps table order and skips repeats" {
+  in_lib 'CHOICES[languages]="node rust"
+    choices_add languages java go node
+    echo "${CHOICES[languages]}"'
+  [ "$status" -eq 0 ]
+  [ "$output" = "node go rust java" ]
+}
+
+@test "choices_drop of the last id leaves an empty answer" {
+  in_lib 'CHOICES[cloud_clis]="aws gh"
+    choices_drop cloud_clis aws
+    echo "1=${CHOICES[cloud_clis]}"
+    choices_drop cloud_clis gh
+    echo "2=${CHOICES[cloud_clis]+set}=${CHOICES[cloud_clis]}"
+    choices_render'
+  [ "$status" -eq 0 ]
+  [ "${lines[0]}" = "1=gh" ]
+  [ "${lines[1]}" = "2=set=" ]
+  grep -qx "cloud_clis=" <<< "$output"
 }
 
 @test "render puts keys in table order" {

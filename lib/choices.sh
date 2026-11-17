@@ -76,6 +76,30 @@ choices_missing() {
   done
 }
 
+# choices_add <key> <id>…: add the ids to a multi answer, in table order;
+# repeats are skipped. Returns 1 if an id isn't an answer to key.
+choices_add() {
+  local key=$1 v normal words=() all=()
+  local -A seen=()
+  shift
+  read -ra words <<< "${CHOICES[$key]:-}"
+  for v in "${words[@]}" "$@"; do
+    [ -n "${seen[$v]:-}" ] || all+=("$v")
+    seen[$v]=1
+  done
+  normal=$(choices_normalise "$key" "${all[*]}") || return 1
+  CHOICES[$key]=$normal
+}
+
+# choices_drop <key> <id>: take the id out of a multi answer. Dropping the
+# last one leaves an empty answer, not a missing one.
+choices_drop() {
+  local key=$1 v words=() kept=()
+  read -ra words <<< "${CHOICES[$key]:-}"
+  for v in "${words[@]}"; do [ "$v" = "$2" ] || kept+=("$v"); done
+  CHOICES[$key]=${kept[*]}
+}
+
 # choices_render: the file's text, every answer in table order.
 choices_render() {
   local key

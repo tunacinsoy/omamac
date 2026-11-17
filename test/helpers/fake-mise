@@ -1,0 +1,45 @@
+#!/bin/bash
+# Test double for mise. Bash 3.2 safe. An installed tool (or the rails gem) is
+# a file in $OMAMAC_TEST_BREW_PREFIX/mise.
+state="${OMAMAC_TEST_BREW_PREFIX:?fake-mise needs OMAMAC_TEST_BREW_PREFIX}/mise"
+[ -z "${STUB_LOG:-}" ] || echo "mise $*" >> "$STUB_LOG"
+# omamac runs mise from HOME, so a project's mise.toml is never read or trusted.
+[ "$PWD" = "$HOME" ] || { echo "fake-mise: not run from HOME" >&2; exit 97; }
+mkdir -p "$state"
+
+case "${1:-}" in
+  install)
+    [ "${T_MISE_FAIL:-0}" != 1 ] || { echo "mise ERROR install failed" >&2; exit 1; }
+    shift
+    [ $# -ge 1 ] || { echo "fake-mise: install needs a tool" >&2; exit 1; }
+    for t in "$@"; do touch "$state/$t"; done
+    ;;
+  ls)
+    [ "${T_MISE_WARN:-0}" != 1 ] || echo "mise WARN a warning" >&2
+    [ "${2:-} ${3:-}" = "--installed --no-header" ] && [ -n "${4:-}" ] ||
+      { echo "fake-mise: use ls --installed --no-header <tool>" >&2; exit 1; }
+    [ ! -e "$state/$4" ] || echo "$4 1.0"
+    ;;
+  upgrade)
+    [ "${T_MISE_UPGRADE_FAIL:-0}" != 1 ] || { echo "mise ERROR upgrade failed" >&2; exit 1; }
+    ;;
+  prune)
+    [ "${2:-}" = --tools ] && [ $# -ge 3 ] || { echo "fake-mise: prune needs --tools <tools>" >&2; exit 1; }
+    shift 2
+    for t in "$@"; do
+      case " ${T_MISE_KEEP:-} " in
+        *" $t "*) ;;
+        *) rm -f "$state/$t" ;;
+      esac
+    done
+    ;;
+  exec)
+    # exec ruby -- gem list|install … rails
+    case "${4:-} ${5:-}" in
+      'gem list') [ -e "$state/rails" ]; exit ;;
+      'gem install') touch "$state/rails" ;;
+      *) echo "fake-mise: unknown exec $*" >&2; exit 1 ;;
+    esac
+    ;;
+esac
+exit 0

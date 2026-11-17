@@ -149,6 +149,85 @@ snapshot() {
   [ "$(git -C "$CHECKOUT" rev-parse HEAD)" = "$head" ]
 }
 
+# choose <key> <value>: set one saved answer.
+choose() { sed -i '' "s/^$1=.*/$1=$2/" "$CHOICES_FILE"; }
+
+@test "upgrades chosen cloud formulas by full name" {
+  choose cloud_clis 'terraform gh'
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(grep '^brew upgrade' "$STUB_LOG")" = "brew upgrade $OMAMAC_FORMULAS gh hashicorp/tap/terraform" ]
+}
+
+@test "a pinned cloud formula is left out by its short name" {
+  choose cloud_clis 'terraform gh'
+  echo terraform > "$OMAMAC_TEST_BREW_PREFIX/pinned"
+  run update
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Kept hashicorp/tap/terraform at the pinned version."* ]]
+  run ! grep -E '^brew upgrade.*terraform' "$STUB_LOG"
+}
+
+@test "gcloud: one greedy cask upgrade" {
+  choose cloud_clis 'gcloud'
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^brew upgrade --cask' "$STUB_LOG")" -eq 1 ]
+  grep -qx 'brew upgrade --cask --greedy gcloud-cli' "$STUB_LOG"
+}
+
+@test "azure and gcloud: both casks in one greedy call" {
+  choose cloud_clis 'azure gcloud'
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^brew upgrade --cask' "$STUB_LOG")" -eq 1 ]
+  grep -qx 'brew upgrade --cask --greedy azure-cli gcloud-cli' "$STUB_LOG"
+}
+
+@test "no gcloud: no cask upgrade" {
+  choose cloud_clis 'gh'
+  run update
+  [ "$status" -eq 0 ]
+  run ! grep -q '^brew upgrade --cask' "$STUB_LOG"
+}
+
+@test "languages: mise upgrade, prune, then rails" {
+  choose languages 'ruby go'
+  run update
+  [ "$status" -eq 0 ]
+  up=$(grep -n '^mise upgrade ruby go$' "$STUB_LOG" | cut -d: -f1)
+  pr=$(grep -n '^mise prune --tools ruby go$' "$STUB_LOG" | cut -d: -f1)
+  rl=$(grep -n '^mise exec ruby -- gem list' "$STUB_LOG" | tail -1 | cut -d: -f1)
+  [ -n "$up" ] && [ -n "$pr" ] && [ -n "$rl" ]
+  [ "$up" -lt "$pr" ]
+  [ "$pr" -lt "$rl" ]
+}
+
+@test "elixir upgrades both its tools" {
+  choose languages 'elixir'
+  run update
+  [ "$status" -eq 0 ]
+  grep -qx 'mise upgrade erlang elixir' "$STUB_LOG"
+  grep -qx 'mise prune --tools erlang elixir' "$STUB_LOG"
+}
+
+@test "no languages: no mise call at all" {
+  run update
+  [ "$status" -eq 0 ]
+  run ! grep -q '^mise' "$STUB_LOG"
+}
+
+@test "a second update changes no file, with languages chosen" {
+  choose languages 'ruby go'
+  run update
+  [ "$status" -eq 0 ]
+  first=$(snapshot)
+  sleep 1.1
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(snapshot)" = "$first" ]
+}
+
 @test "logs to a new file" {
   run update
   [ "$status" -eq 0 ]
@@ -176,6 +255,14 @@ snapshot() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"✗ omamac doesn't know your answers. Fix: run the one-liner."* ]]
   run ! grep -q '^brew' "$STUB_LOG"
+}
+
+@test "a failure inside a subshell says omamac stopped once" {
+  choose languages go
+  T_MISE_UPGRADE_FAIL=1 run update
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"omamac stopped while upgrading your languages."* ]]
+  [ "$(grep -c 'omamac stopped' <<< "$output")" -eq 1 ]
 }
 
 @test "a failing step names itself and says to run update again" {

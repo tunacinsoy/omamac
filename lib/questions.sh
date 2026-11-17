@@ -46,7 +46,7 @@ question dock yesno "Dock cleanup" "Clean up the Dock?"
 question_help dock "Apple's apps and Downloads leave the Dock (not your Mac), and the apps omamac installs take their place."
 question dock_autohide yesno "Dock auto-hide" "Hide the Dock when you're not using it?"
 question languages multi Languages "Programming languages" \
-  "Ruby on Rails:ruby" Node.js:node Go:go PHP:php Python:python Elixir:elixir Rust:rust Java:java
+  "Ruby on Rails:ruby" Node.js:node Go:go Python:python Elixir:elixir Rust:rust Java:java
 question cloud_clis multi "Cloud CLIs" "Cloud command-line tools" \
   "Azure CLI:azure" "AWS CLI:aws" "Google Cloud CLI:gcloud" "GitHub CLI:gh" Terraform:terraform
 # "No Docker" comes first: Enter picks the option under the cursor, and Enter

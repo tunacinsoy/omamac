@@ -1,7 +1,8 @@
 #!/opt/homebrew/bin/bash
 # Everything after the restart. First the questions and "Install?", so nothing
 # is written before the user says yes; then omamac's zsh file, herdr's config,
-# the core tools and LazyVim, the two guarded lines and a summary.
+# mise's drop-in, the core tools, LazyVim, the languages, the cloud CLIs, the
+# two guarded lines and a summary.
 # shellcheck source-path=SCRIPTDIR
 set -Eeuo pipefail
 
@@ -30,12 +31,18 @@ source "$OMAMAC_CHECKOUT/lib/core.sh"
 source "$OMAMAC_CHECKOUT/lib/neovim.sh"
 # shellcheck source=lib/herdr.sh
 source "$OMAMAC_CHECKOUT/lib/herdr.sh"
+# shellcheck source=lib/languages.sh
+source "$OMAMAC_CHECKOUT/lib/languages.sh"
+# shellcheck source=lib/clis.sh
+source "$OMAMAC_CHECKOUT/lib/clis.sh"
 # shellcheck source=lib/apply.sh
 source "$OMAMAC_CHECKOUT/lib/apply.sh"
 
 OMAMAC_STEP='starting'
 
 install_failed() {
+  # With set -E the trap also runs inside ( … ) and $( … ); let only the main shell speak.
+  [ "$BASHPID" -eq "$$" ] || exit 1
   ui_fail "omamac stopped while $OMAMAC_STEP."
   ui_fail "Fix the problem and run the one-liner again; it picks up where it stopped."
   exit 1
@@ -53,7 +60,7 @@ install_questions() {
   unanswered=$(choices_missing)
   ask_missing
   ask_summary
-  if ! ask_install; then
+  if ! ask_yes "Install?"; then
     # Saved answers stay: changing one later is uninstalling one thing and
     # installing another, not answering again.
     if [ -n "$unanswered" ]; then
@@ -79,7 +86,8 @@ install_lines() {
 
 install_summary() {
   OMAMAC_STEP='printing the summary'
-  ui_box "Installed: Homebrew, bash, gum, omamac and the core tools" "Log: $OMAMAC_LOG" "Open a new terminal window, then run omamac."
+  # Two lines, so the box fits an 80-column terminal.
+  ui_box "Installed: Homebrew, bash, gum, omamac, the core tools" "and the languages and cloud CLIs you chose." "Log: $OMAMAC_LOG" "Open a new terminal window, then run omamac."
 }
 
 install_main() {

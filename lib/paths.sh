@@ -16,6 +16,8 @@ OMAMAC_CHOICES_FILE=$OMAMAC_STATE_DIR/choices.env
 OMAMAC_HERDR_FILE=$OMAMAC_CONFIG_DIR/herdr.toml
 OMAMAC_HERDR_USER_FILE=$HOME/.config/herdr/config.toml
 OMAMAC_HERDR_HELPER=$OMAMAC_HOME/bin/omamac-herdr-mode
+OMAMAC_MISE_DROPIN=$HOME/.config/mise/conf.d/omamac.toml
+OMAMAC_MISE_USER_FILE=$HOME/.config/mise/config.toml
 # Prompts read the terminal: after boot.sh's exec, stdin is the spent curl pipe.
 OMAMAC_TTY=${OMAMAC_TEST_TTY:-/dev/tty}
 # shellcheck disable=SC2016 # literal text for the user's file, not expanded here
