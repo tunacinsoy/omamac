@@ -105,7 +105,7 @@ starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitte
 `config/zshrc` replaces the heredoc in `install.sh`. Its content is omawsl's `configs/bashrc`, translated to zsh, keeping only what applies on a Mac:
 
 1. omamac's `bin` on the PATH (as today).
-2. History: `HISTSIZE=10000`, `SAVEHIST=20000`, `setopt append_history hist_ignore_dups hist_ignore_space`.
+2. History: `HISTSIZE` and `SAVEHIST` raised to at least 10000 and 20000 (never lowered), `setopt append_history hist_ignore_dups hist_ignore_space`.
 3. `EDITOR` and `VISUAL` are `nvim` when it exists.
 4. Completion: Homebrew's `share/zsh/site-functions` on `fpath`, then `compinit`, only if nothing ran it yet. Case-insensitive completion and ↑/↓ prefix history search, from omawsl's `inputrc`.
 5. omawsl's aliases, each guarded on its tool as in omawsl: `ls`, `lsa`, `ll`, `lt`, `lta`, `tree` (eza); `cat` (`bat --paging=never`); `ff` (fzf with bat preview); zoxide with `cd=z`; `..`, `...`, `....`; fzf's key bindings (`source <(fzf --zsh)`); `g`, `gcm`, `gcam`, `gcad`; `d`; `lzg`, `lzd`; `n`; `r` after mise.

@@ -42,6 +42,13 @@ zrc() { run zsh -f -i -c "source $REPO_ROOT/config/zshrc; $1" < /dev/null; }
   [[ "$output" == *"10000 20000"* ]]
 }
 
+@test "history sizes are only raised, never lowered" {
+  run zsh -f -i -c "HISTSIZE=50000 SAVEHIST=100000; source $REPO_ROOT/config/zshrc; echo \"\$HISTSIZE \$SAVEHIST\"" < /dev/null
+  [[ "$output" == *"50000 100000"* ]]
+  run zsh -f -i -c "HISTSIZE=100 SAVEHIST=200; source $REPO_ROOT/config/zshrc; echo \"\$HISTSIZE \$SAVEHIST\"" < /dev/null
+  [[ "$output" == *"10000 20000"* ]]
+}
+
 @test "starship and mise init only when present" {
   zrc 'true'
   [ ! -s "$STUB_LOG" ]
