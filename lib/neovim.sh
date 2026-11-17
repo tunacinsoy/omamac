@@ -10,6 +10,8 @@ neovim_setup() {
     return 0
   fi
   mkdir -p "$HOME/.config"
+  # Leftovers of a Ctrl-C'd run (no ERR trap on signals). The name is omamac's, never the user's.
+  rm -rf "$HOME"/.config/nvim.omamac.*
   # Same folder as the target, so the final mv is one atomic rename.
   tmp=$(mktemp -d "$HOME/.config/nvim.omamac.XXXXXX")
   # Handle the status here so the temp folder is removed before the caller's ERR trap fires.

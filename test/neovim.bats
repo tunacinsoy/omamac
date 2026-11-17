@@ -24,6 +24,13 @@ in_lib() {
   [ -z "$(ls -d "$HOME"/.config/nvim.omamac.* 2>/dev/null)" ]
 }
 
+@test "a leftover temp folder from an earlier run is removed" {
+  mkdir -p "$HOME/.config/nvim.omamac.old"
+  in_lib neovim_setup
+  [ "$status" -eq 0 ]
+  [ ! -e "$HOME/.config/nvim.omamac.old" ]
+}
+
 @test "existing folder: untouched, says so" {
   mkdir -p "$HOME/.config/nvim"
   echo mine > "$HOME/.config/nvim/init.lua"
