@@ -55,7 +55,7 @@ There is no uninstall command yet. To undo by hand: delete the two lines ending 
 
 Start it with `herdr` (Ghostty will do it in a later phase). Ctrl g is the prefix, then `p` pane, `t` tab, `r` resize, `m` move, `o` session, `s` scroll. Alt h/j/k/l move between panes, Alt n opens a new pane.
 
-herdr's first-run screen is skipped. Its settings are Ctrl g `,`. Once herdr's settings or you change that file, omamac leaves its herdr config alone; `omamac doctor` says so. To get omamac's back, delete `~/.config/omamac/herdr.toml`, then run `omamac update`.
+herdr's first-run screen is skipped. Its settings are Ctrl g `,`. If you change herdr's settings (Ctrl g `,`) or edit `~/.config/omamac/herdr.toml` by hand, omamac leaves that file alone; `omamac doctor` says so. To get omamac's back, delete `~/.config/omamac/herdr.toml`, then run `omamac update`.
 
 ## Testing a branch
 
