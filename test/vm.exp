@@ -3,7 +3,8 @@
 # VM's password at each password prompt. Exits with the command's exit status.
 # More prompts than OMAMAC_VM_MAX_PASSWORDS (default 1, the ssh login) fail the
 # run: omamac may ask for the password only once. It answers omamac's one
-# "Install?" with y; any other y/n prompt fails the run.
+# "Install?" and each "Remove ...?" once with y; any other y/n prompt fails
+# the run.
 #
 # Host key checks are off: the VM is new every time and only ever reached at
 # its local IP, so there is no known key to check against.
@@ -23,6 +24,7 @@ set max_passwords 1
 if {[info exists env(OMAMAC_VM_MAX_PASSWORDS)]} { set max_passwords $env(OMAMAC_VM_MAX_PASSWORDS) }
 set passwords 0
 set answered 0
+array set removed {}
 
 # gum draws nothing in a 0x0 terminal (expect's default), and ssh -t passes
 # this size on to the VM, so give it a real one.
@@ -46,6 +48,15 @@ expect {
     # is answered; a y sent to a redraw would reach whatever reads next.
     if {!$answered} {
       set answered 1
+      send -- "y"
+    }
+    exp_continue
+  }
+  -re {Remove [^?]*\?} {
+    # One y per distinct prompt text; a redraw repeats the text and gets none.
+    set text $expect_out(0,string)
+    if {![info exists removed($text)]} {
+      set removed($text) 1
       send -- "y"
     }
     exp_continue

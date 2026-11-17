@@ -15,6 +15,18 @@ if [ -n "${T_INSTALL:-}" ]; then
   read -r -n1 k; echo "got:$k"
   if read -r -t 2 -n1 extra; then echo "extra:$extra"; fi
 fi
+if [ -n "${T_REMOVE:-}" ]; then
+  IFS="|" read -ra texts <<< "$T_REMOVE"
+  last=""
+  for t in "${texts[@]}"; do
+    printf "%s\n" "$t"
+    # a repeat is a redraw: gum reads no new key for it
+    [ "$t" != "$last" ] || continue
+    last=$t
+    read -r -n1 k; echo "got:$k"
+  done
+  if read -r -t 2 -n1 extra; then echo "extra:$extra"; fi
+fi
 if [ -n "${T_ASK:-}" ]; then printf "%s " "$T_ASK"; read -r _; fi
 [ -z "${T_KILL:-}" ] || kill -TERM $$
 exit "${T_EXIT:-0}"'
@@ -68,4 +80,11 @@ vm_exp() { run /usr/bin/expect -f "$REPO_ROOT/test/vm.exp" 192.0.2.1 true; }
   T_ASK='Continue? (y/n)' vm_exp
   [ "$status" -eq 1 ]
   [[ "$output" == *"unexpected prompt"* ]]
+}
+
+@test "each Remove …? prompt is answered once" {
+  T_REMOVE='Remove Go?|Remove Go?|Remove Rust?' vm_exp
+  [ "$status" -eq 0 ]
+  [ "$(grep -c 'got:y' <<< "$output")" -eq 2 ]
+  [[ "$output" != *"extra:"* ]]
 }
