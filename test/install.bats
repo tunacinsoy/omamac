@@ -222,9 +222,9 @@ snapshot() {
   run install
   [ "$status" -eq 0 ]
   [ "$(grep -c '^brew install' "$STUB_LOG")" = 1 ]  # only setup's gum
-  ! grep -q '^brew install .*starship' "$STUB_LOG"
   [ ! -e "$HOME/.config/omamac/zshrc" ]
   [ ! -e "$HOME/.config/nvim" ]
+  run ! grep -q '^brew install .*starship' "$STUB_LOG"
 }
 
 @test "a re-run calls no brew upgrade" {

@@ -50,13 +50,10 @@ update_choices() {
 
 # update_upgrade: upgrade, by name, the installed formulas omamac installs.
 update_upgrade() {
-  local formula installed=()
+  local list installed=()
   OMAMAC_STEP='upgrading your tools'
-  for formula in "${CORE_FORMULAS[@]}" bash gum; do
-    if "$OMAMAC_BREW_PREFIX/bin/brew" list --formula "$formula" >/dev/null 2>&1; then
-      installed+=("$formula")
-    fi
-  done
+  list=$(core_where installed "${CORE_FORMULAS[@]}" bash gum)
+  [ -z "$list" ] || mapfile -t installed <<< "$list"
   # A bare brew upgrade would upgrade everything the user has.
   [ "${#installed[@]}" -gt 0 ] || return 0
   ui_run "Upgrading your tools" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade "${installed[@]}"

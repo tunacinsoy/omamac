@@ -69,7 +69,8 @@ doctor_check_clean() {
     return 0
   fi
   # No optional locks: a read-only check must not take git's index lock.
-  changes=$(GIT_OPTIONAL_LOCKS=0 git -C "$OMAMAC_HOME" status --porcelain 2>/dev/null) || changes=unknown
+  # Untracked files (a .DS_Store) don't block update, so they don't count here either.
+  changes=$(GIT_OPTIONAL_LOCKS=0 git -C "$OMAMAC_HOME" status --porcelain --untracked-files=no 2>/dev/null) || changes=unknown
   if [ -z "$changes" ]; then
     doctor_report ok "$what"
   else

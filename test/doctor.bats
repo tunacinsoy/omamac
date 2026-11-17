@@ -93,8 +93,19 @@ expect_fail() {
 
 @test "checkout has local changes" {
   healthy_mac
-  : > "$CHECKOUT/stray"
+  echo a > "$CHECKOUT/tracked"
+  git -C "$CHECKOUT" add tracked
+  git -C "$CHECKOUT" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m tracked
+  echo b > "$CHECKOUT/tracked"
   expect_fail "Checkout is clean" "git -C ~/.local/share/omamac status"
+}
+
+@test "an untracked file in the checkout still passes" {
+  healthy_mac
+  : > "$CHECKOUT/.DS_Store"
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ Checkout is clean"* ]]
 }
 
 @test "Homebrew line missing" {

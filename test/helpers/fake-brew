@@ -9,7 +9,16 @@ case "${1:-}" in
     ;;
   list)
     if [ "${2:-}" = "--formula" ]; then
-      [ -e "$prefix/Cellar/${3:-}" ]; exit
+      [ "${T_BREW_LIST_FAIL:-0}" != 1 ] || { echo "Error: brew list failed" >&2; exit 1; }
+      case "${3:-}" in
+        '' | -1)
+          for d in "$prefix"/Cellar/*; do
+            [ -e "$d" ] && basename "$d"
+          done
+          exit 0
+          ;;
+        *) [ -e "$prefix/Cellar/$3" ]; exit ;;
+      esac
     elif [ "${2:-}" = "--versions" ]; then
       for d in "$prefix"/Cellar/*; do
         [ -e "$d" ] && echo "$(basename "$d") 1.0"

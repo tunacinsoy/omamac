@@ -33,6 +33,7 @@ have() { local f; for f in "$@"; do mkdir -p "$OMAMAC_TEST_BREW_PREFIX/Cellar/$f
   [[ "$output" == *"Core tools are installed"* ]]
   [ "$(grep -c '^brew install' "$STUB_LOG")" -eq 1 ]
   grep -qx "brew install $ALL" "$STUB_LOG"
+  [ "$(grep -c '^brew list' "$STUB_LOG")" -eq 1 ]
 }
 
 @test "all present: no brew install at all" {
@@ -54,6 +55,13 @@ have() { local f; for f in "$@"; do mkdir -p "$OMAMAC_TEST_BREW_PREFIX/Cellar/$f
   [ "$status" -eq 0 ]
   grep -qx "brew install eza" "$STUB_LOG"
   [ "$(grep -c '^brew install' "$STUB_LOG")" -eq 1 ]
+}
+
+@test "brew can't list: fails, installs nothing" {
+  T_BREW_LIST_FAIL=1 in_lib 'core_install'
+  [ "$status" -ne 0 ]
+  [[ "$output" != *"Core tools are installed"* ]]
+  run ! grep -q '^brew install' "$STUB_LOG"
 }
 
 @test "a brew failure returns non-zero and shows the log" {

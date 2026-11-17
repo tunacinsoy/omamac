@@ -40,8 +40,9 @@ omamac_update() {
     return 1
   fi
   # update.sh starts the run's real log; this one holds only git's output.
-  local OMAMAC_LOG
-  OMAMAC_LOG=$(mktemp "${TMPDIR:-/tmp}/omamac-pull.XXXXXX")
+  # Not mktemp -t: on macOS it ignores TMPDIR. %/ drops TMPDIR's trailing slash.
+  local OMAMAC_LOG tmp=${TMPDIR:-/tmp}
+  OMAMAC_LOG=$(mktemp "${tmp%/}/omamac-pull.XXXXXX")
   if ! GIT_TERMINAL_PROMPT=0 ui_run "Updating omamac" git -C "$OMAMAC_HOME" pull --ff-only; then
     ui_fail "$fix"
     return 1

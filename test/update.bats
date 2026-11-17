@@ -33,7 +33,14 @@ commit_all() {
   git -C "$1" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m "$2"
 }
 
-update() { "$BASH5" "$REPO_ROOT/bin/omamac" update; }
+# update: omamac update, only ever in the sandbox, never on the real Mac.
+update() {
+  if [ -z "${BATS_TEST_TMPDIR:-}" ] || [[ $HOME != "$BATS_TEST_TMPDIR"/* ]]; then
+    echo "update.bats: HOME isn't the sandbox; not running omamac update" >&2
+    return 1
+  fi
+  "$BASH5" "$REPO_ROOT/bin/omamac" update
+}
 
 # Every file under HOME with its checksum and mtime, except the logs and
 # git's own files (a pull rewrites FETCH_HEAD); the checkout's HEAD is checked apart.
@@ -61,14 +68,23 @@ snapshot() {
   [ ! -e "$HOME/.local/state/omamac/logs" ]
 }
 
+@test "an untracked file doesn't block it" {
+  : > "$CHECKOUT/.DS_Store"
+  run update
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"omamac and your tools are up to date."* ]]
+}
+
 @test "a diverged branch stops it before any change" {
   echo '# theirs' >> "$ORIGIN/config/zshrc"
   commit_all "$ORIGIN" theirs
   echo '# mine' >> "$CHECKOUT/config/zshrc"
   commit_all "$CHECKOUT" mine
-  run update
+  # macOS's TMPDIR ends in a slash; the log path must not show "//".
+  TMPDIR="$BATS_TEST_TMPDIR/" run update
   [ "$status" -eq 1 ]
   [[ "$output" == *"git -C ~/.local/share/omamac status"* ]]
+  [[ "$output" == *"✗ Log: $BATS_TEST_TMPDIR/omamac-pull."* ]]
   run ! grep -q '^brew' "$STUB_LOG"
   [ ! -e "$HOME/.config/omamac" ]
 }
@@ -81,8 +97,15 @@ snapshot() {
   [ "$(grep '^brew upgrade' "$STUB_LOG")" = "brew upgrade $OMAMAC_FORMULAS" ]
 }
 
+@test "asks Homebrew for its list once per step, not per formula" {
+  run update
+  [ "$status" -eq 0 ]
+  # One for the core install, one for the upgrade.
+  [ "$(grep -c '^brew list' "$STUB_LOG")" -eq 2 ]
+}
+
 @test "a removed core formula comes back first" {
-  rm -rf "$OMAMAC_TEST_BREW_PREFIX/Cellar/eza"
+  rm -rf "${OMAMAC_TEST_BREW_PREFIX:?}/Cellar/eza"
   run update
   [ "$status" -eq 0 ]
   install_line=$(grep -n '^brew install eza$' "$STUB_LOG" | cut -d: -f1)
@@ -140,7 +163,7 @@ snapshot() {
 }
 
 @test "a failing step names itself and says to run update again" {
-  rm -rf "$OMAMAC_TEST_BREW_PREFIX/Cellar/eza"
+  rm -rf "${OMAMAC_TEST_BREW_PREFIX:?}/Cellar/eza"
   T_BREW_FAIL=1 run update
   [ "$status" -eq 1 ]
   [[ "$output" == *"omamac stopped while installing the core tools."* ]]
