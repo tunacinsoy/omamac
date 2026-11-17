@@ -1,9 +1,9 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2004 # CHOICES is associative (lib/choices.sh), so $key is needed
-# Asking the first-run questions, the summary and "Install?". Sourced after
-# lib/ui.sh, lib/questions.sh and lib/choices.sh. Every prompt reads the
-# terminal, and each exit status is caught where it happens, so a "no" or a
-# Ctrl-C never reaches the caller's ERR trap.
+# Asking the first-run questions, the summary, "Install?" and omamac's other
+# prompts. Sourced after lib/ui.sh, lib/questions.sh and lib/choices.sh. Every
+# prompt reads the terminal, and each exit status is caught where it happens,
+# so a "no" or a Ctrl-C never reaches the caller's ERR trap.
 
 # gum exits 130 on Ctrl-C. Homebrew and omamac may already be in place, hence "else".
 ask_stopped() {
@@ -25,9 +25,12 @@ ask_broken() {
   exit 1
 }
 
-# ask_one <key>: ask one question and set CHOICES[key].
+# ask_one <key> [<value>…]: ask one question and set CHOICES[key]. With values,
+# only those options are offered (in table order), and CHOICES[key] is the picks.
 ask_one() {
-  local key=$1 status=0 out normal options=() limit=()
+  local key=$1 status=0 out normal option options=() kept=() limit=()
+  local -A only=()
+  shift
   [ -z "${QUESTION_HELP[$key]:-}" ] || ui_info "${QUESTION_HELP[$key]}"
   if [ "${QUESTION_KIND[$key]}" = yesno ]; then
     "$UI_GUM" confirm --default=false "${QUESTION_TEXT[$key]}" < "$OMAMAC_TTY" || status=$?
@@ -40,6 +43,11 @@ ask_one() {
     return 0
   fi
   mapfile -t options <<< "${QUESTION_OPTIONS[$key]}"
+  if [ "$#" -gt 0 ]; then
+    for option in "$@"; do only[$option]=1; done
+    for option in "${options[@]}"; do [ -z "${only[${option##*:}]:-}" ] || kept+=("$option"); done
+    options=("${kept[@]}")
+  fi
   [ "${QUESTION_KIND[$key]}" = single ] || limit=(--no-limit)
   out=$("$UI_GUM" choose "${limit[@]}" --header "${QUESTION_TEXT[$key]}" --label-delimiter=: \
     "${options[@]}" < "$OMAMAC_TTY") || status=$?
@@ -82,14 +90,27 @@ ask_summary() {
   ui_box "${lines[@]}"
 }
 
-# ask_install: 0 on yes, 1 on no. Enter alone is no.
-ask_install() {
+# ask_yes <text>: 0 on yes, 1 on no. Enter alone is no.
+ask_yes() {
   local status=0
   ask_need_tty
-  "$UI_GUM" confirm --default=false "Install?" < "$OMAMAC_TTY" || status=$?
+  "$UI_GUM" confirm --default=false "$1" < "$OMAMAC_TTY" || status=$?
   case $status in
     0 | 1) return "$status" ;;
     130) ask_stopped ;;
-    *) ask_broken "Install?" ;;
+    *) ask_broken "$1" ;;
   esac
+}
+
+# ask_choose <header> <Label:value>…: one pick; sets ASK_PICKED to its value.
+# Not printed for $(…): there, ask_stopped would leave only the subshell, not the script.
+ask_choose() {
+  local header=$1 status=0 out
+  shift
+  ask_need_tty
+  out=$("$UI_GUM" choose --header "$header" --label-delimiter=: "$@" < "$OMAMAC_TTY") || status=$?
+  [ "$status" -ne 130 ] || ask_stopped
+  [ "$status" -eq 0 ] || ask_broken "$header"
+  # shellcheck disable=SC2034 # read by the caller
+  ASK_PICKED=$out
 }

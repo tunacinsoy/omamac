@@ -90,7 +90,7 @@ prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
 @test "prompts read the tty, not stdin" {
   # After boot.sh's exec, stdin is the spent curl pipe. A decoy there must not matter.
   gum_answers "${FRESH_ANSWERS[@]}" yes
-  in_ask 'ask_missing; ask_install' <<< decoy
+  in_ask 'ask_missing; ask_yes "Install?"' <<< decoy
   [ "$status" -eq 0 ]
   : > "$OMAMAC_TEST_TTY"
   gum_answers "${FRESH_ANSWERS[@]}"
@@ -119,18 +119,41 @@ prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
   [ "$(grep -c ': ' <<< "$output")" = 16 ]
 }
 
-@test "Install? yes returns 0, no returns 1, Ctrl-C exits 130" {
+@test "ask_yes: yes 0, no 1, Ctrl-C 130" {
   gum_answers yes
-  in_ask 'ask_install'
+  in_ask 'ask_yes "Install?"'
   [ "$status" -eq 0 ]
   grep -qx 'gum confirm --default=false Install?' "$STUB_LOG"
   gum_answers no
-  in_ask 'ask_install'
+  in_ask 'ask_yes "Install?"'
   [ "$status" -eq 1 ]
   gum_answers "exit 130"
-  in_ask 'ask_install'
+  in_ask 'ask_yes "Install?"'
   [ "$status" -eq 130 ]
   [[ "$output" == *"Stopped. Nothing else was changed."* ]]
+}
+
+@test "ask_one with values offers only those" {
+  gum_answers "go"
+  in_ask 'CHOICES[languages]=node
+    ask_one languages rust go
+    echo "languages=${CHOICES[languages]}"'
+  [ "$status" -eq 0 ]
+  [[ "$(prompts)" == *"--label-delimiter=: Go:go Rust:rust" ]]
+  [[ "$output" == *"languages=go"* ]]
+}
+
+@test "ask_choose sets ASK_PICKED; Ctrl-C exits 130" {
+  gum_answers rust
+  in_ask 'ask_choose "Remove which?" Go:go Rust:rust; echo "picked=$ASK_PICKED"'
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "gum choose --header Remove which? --label-delimiter=: Go:go Rust:rust" ]
+  [[ "$output" == *"picked=rust"* ]]
+  gum_answers "exit 130"
+  in_ask 'ask_choose "Remove which?" Go:go Rust:rust; echo "after"'
+  [ "$status" -eq 130 ]
+  [[ "$output" == *"Stopped. Nothing else was changed."* ]]
+  [[ "$output" != *after* ]]
 }
 
 @test "the help line comes before its question" {
@@ -161,6 +184,6 @@ prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
   [ "$status" -eq 1 ]
   [[ "$output" == *"needs a terminal"* ]]
   [ -z "$(prompts)" ]
-  in_ask 'ask_install'
+  in_ask 'ask_yes "Install?"'
   [ "$status" -eq 1 ]
 }

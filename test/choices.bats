@@ -156,6 +156,27 @@ no" ]
   [ "$output" = "brave firefox" ]
 }
 
+@test "choices_add keeps table order and skips repeats" {
+  in_lib 'CHOICES[languages]="node rust"
+    choices_add languages java go node
+    echo "${CHOICES[languages]}"'
+  [ "$status" -eq 0 ]
+  [ "$output" = "node go rust java" ]
+}
+
+@test "choices_drop of the last id leaves an empty answer" {
+  in_lib 'CHOICES[cloud_clis]="aws gh"
+    choices_drop cloud_clis aws
+    echo "1=${CHOICES[cloud_clis]}"
+    choices_drop cloud_clis gh
+    echo "2=${CHOICES[cloud_clis]+set}=${CHOICES[cloud_clis]}"
+    choices_render'
+  [ "$status" -eq 0 ]
+  [ "${lines[0]}" = "1=gh" ]
+  [ "${lines[1]}" = "2=set=" ]
+  grep -qx "cloud_clis=" <<< "$output"
+}
+
 @test "render puts keys in table order" {
   # bare.env reversed (header last) renders back to bare.env.
   tail -r "$REPO_ROOT/test/fixtures/bare.env" > "$FILE"

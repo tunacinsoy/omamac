@@ -58,7 +58,7 @@ install_questions() {
   unanswered=$(choices_missing)
   ask_missing
   ask_summary
-  if ! ask_install; then
+  if ! ask_yes "Install?"; then
     # Saved answers stay: changing one later is uninstalling one thing and
     # installing another, not answering again.
     if [ -n "$unanswered" ]; then

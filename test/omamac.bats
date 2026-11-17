@@ -23,12 +23,10 @@ omamac() { "$BASH5" "$REPO_ROOT/bin/omamac" "$@"; }
 }
 
 @test "commands not built yet say so" {
-  for c in install theme uninstall; do
-    run --separate-stderr omamac "$c"
-    [ "$status" -eq 1 ]
-    [ "$output" = "" ]
-    [ "$stderr" = "omamac $c isn't available yet." ]
-  done
+  run --separate-stderr omamac theme
+  [ "$status" -eq 1 ]
+  [ "$output" = "" ]
+  [ "$stderr" = "omamac theme isn't available yet." ]
 }
 
 @test "unknown command" {

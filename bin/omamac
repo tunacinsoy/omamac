@@ -14,12 +14,48 @@ source "$OMAMAC_CHECKOUT/lib/ui.sh"
 source "$OMAMAC_CHECKOUT/lib/questions.sh"
 # shellcheck source=lib/choices.sh
 source "$OMAMAC_CHECKOUT/lib/choices.sh"
+# shellcheck source=lib/ask.sh
+source "$OMAMAC_CHECKOUT/lib/ask.sh"
+# shellcheck source=lib/log.sh
+source "$OMAMAC_CHECKOUT/lib/log.sh"
 # shellcheck source=lib/core.sh
 source "$OMAMAC_CHECKOUT/lib/core.sh"
+# shellcheck source=lib/neovim.sh
+source "$OMAMAC_CHECKOUT/lib/neovim.sh"
 # shellcheck source=lib/herdr.sh
 source "$OMAMAC_CHECKOUT/lib/herdr.sh"
+# shellcheck source=lib/languages.sh
+source "$OMAMAC_CHECKOUT/lib/languages.sh"
+# shellcheck source=lib/clis.sh
+source "$OMAMAC_CHECKOUT/lib/clis.sh"
+# shellcheck source=lib/apply.sh
+source "$OMAMAC_CHECKOUT/lib/apply.sh"
+# shellcheck source=lib/add.sh
+source "$OMAMAC_CHECKOUT/lib/add.sh"
 # shellcheck source=lib/doctor.sh
 source "$OMAMAC_CHECKOUT/lib/doctor.sh"
+
+OMAMAC_STEP='starting'
+OMAMAC_CMD=''
+
+# The ERR trap for install and uninstall. Not for doctor: it returns 1 on a ✗.
+omamac_failed() {
+  ui_fail "omamac stopped while $OMAMAC_STEP."
+  ui_fail "Fix the problem and run omamac $OMAMAC_CMD again."
+  exit 1
+}
+
+# omamac_choices: load the saved answers, or stop. choices_load reads a
+# missing file as no answers, but these commands have no first-run questions.
+omamac_choices() {
+  OMAMAC_STEP='reading your saved answers'
+  if [ ! -e "$OMAMAC_CHOICES_FILE" ]; then
+    ui_fail "omamac doesn't know your answers. Fix: run the one-liner."
+    exit 1
+  fi
+  # choices_load has said what's wrong and how to fix it.
+  choices_load "$OMAMAC_CHOICES_FILE" || exit 1
+}
 
 omamac_usage() {
   cat <<'USAGE'
@@ -61,7 +97,17 @@ omamac_main() {
     help | -h | --help) omamac_usage ;;
     doctor) doctor_run ;;
     update) omamac_update ;;
-    install | theme | uninstall)
+    install)
+      if [ "$#" -gt 1 ]; then
+        omamac_usage >&2
+        return 2
+      fi
+      OMAMAC_CMD=install
+      trap omamac_failed ERR
+      omamac_choices
+      add_run
+      ;;
+    theme | uninstall)
       echo "omamac $cmd isn't available yet." >&2
       return 1
       ;;
