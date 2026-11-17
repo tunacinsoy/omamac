@@ -16,6 +16,8 @@ source "$OMAMAC_CHECKOUT/lib/questions.sh"
 source "$OMAMAC_CHECKOUT/lib/choices.sh"
 # shellcheck source=lib/core.sh
 source "$OMAMAC_CHECKOUT/lib/core.sh"
+# shellcheck source=lib/herdr.sh
+source "$OMAMAC_CHECKOUT/lib/herdr.sh"
 # shellcheck source=lib/doctor.sh
 source "$OMAMAC_CHECKOUT/lib/doctor.sh"
 

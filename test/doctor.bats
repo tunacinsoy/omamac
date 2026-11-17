@@ -27,6 +27,14 @@ healthy_mac() {
   CHOICES_FILE="$HOME/.local/state/omamac/choices.env"
   mkdir -p "$(dirname "$CHOICES_FILE")"
   cp "$REPO_ROOT/test/fixtures/bare.env" "$CHOICES_FILE"
+  # omamac's herdr file and its copy, written the way install writes them.
+  "$BASH5" -c "set -Eeuo pipefail
+    OMAMAC_CHECKOUT='$REPO_ROOT'
+    source '$REPO_ROOT/lib/paths.sh'
+    source '$REPO_ROOT/lib/ui.sh'
+    source '$REPO_ROOT/lib/herdr.sh'
+    source '$REPO_ROOT/lib/apply.sh'
+    herdr_config_apply" >/dev/null
 }
 
 # expect_fail <what> <fix>: doctor exits 1 and prints a ✗ line with the fix.
@@ -41,7 +49,7 @@ expect_fail() {
   healthy_mac
   run doctor
   [ "$status" -eq 0 ]
-  [ "$(printf '%s\n' "$output" | grep -c '^✓')" -eq 11 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^✓')" -eq 12 ]
 }
 
 @test "Homebrew missing" {
@@ -184,6 +192,37 @@ expect_fail() {
   healthy_mac
   rm -r "$HOME/.config/nvim"
   expect_fail "neovim config" "Run the one-liner again"
+}
+
+@test "herdr: omamac's config" {
+  healthy_mac
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ herdr config"* ]]
+}
+
+@test "herdr: the user's own config" {
+  healthy_mac
+  mkdir -p "$HOME/.config/herdr"
+  echo mine > "$HOME/.config/herdr/config.toml"
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ herdr config — your own herdr config is kept, so omamac's key bindings don't reach herdr"* ]]
+}
+
+@test "herdr: changed in herdr" {
+  healthy_mac
+  echo '# changed' >> "$HOME/.config/omamac/herdr.toml"
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ herdr config — changed in herdr, so omamac's updates to it are skipped"* ]]
+}
+
+@test "herdr: omamac's file missing" {
+  healthy_mac
+  rm "$HOME/.config/omamac/herdr.toml"
+  expect_fail "herdr config" "omamac update"
+  [[ "$output" == *"~/.config/omamac/herdr.toml is missing"* ]]
 }
 
 @test "doctor is read-only" {
