@@ -22,8 +22,10 @@ herdr_changed() {
 }
 
 # herdr_user_config: herdr reads the user's own config, not omamac's.
+# A file holding only "onboarding = false" is one herdr wrote itself, not the user's.
 herdr_user_config() {
-  [ -e "$OMAMAC_HERDR_USER_FILE" ] || [ -L "$OMAMAC_HERDR_USER_FILE" ] ||
+  local f=$OMAMAC_HERDR_USER_FILE
+  [ -L "$f" ] || { [ -e "$f" ] && [ "$(<"$f")" != 'onboarding = false' ]; } ||
     { [ -n "${HERDR_CONFIG_PATH+set}" ] && [ "$HERDR_CONFIG_PATH" != "$OMAMAC_HERDR_FILE" ]; }
 }
 

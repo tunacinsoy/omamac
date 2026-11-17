@@ -12,7 +12,9 @@ if (( $+commands[nvim] )); then
 fi
 
 # herdr can't include another file, so point it at omamac's own when the user has none.
-if (( ! ${+HERDR_CONFIG_PATH} )) && [[ ! -e ~/.config/herdr/config.toml && ! -L ~/.config/herdr/config.toml ]]; then
+# A file holding only "onboarding = false" is one herdr wrote itself, not the user's.
+if (( ! ${+HERDR_CONFIG_PATH} )) && [[ ! -L ~/.config/herdr/config.toml ]] &&
+  [[ ! -e ~/.config/herdr/config.toml || $(<~/.config/herdr/config.toml) == 'onboarding = false' ]]; then
   export HERDR_CONFIG_PATH=~/.config/omamac/herdr.toml
 fi
 

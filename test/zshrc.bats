@@ -76,6 +76,28 @@ zrc() { run zsh -f -i -c "source $REPO_ROOT/config/zshrc; $1" < /dev/null; }
   [ -z "$output" ]
 }
 
+@test "herdr's own onboarding file still gets omamac's path" {
+  mkdir -p "$HOME/.config/herdr"
+  printf 'onboarding = false\n' > "$HOME/.config/herdr/config.toml"
+  zrc 'print -r -- $HERDR_CONFIG_PATH'
+  [ "$output" = "$HOME/.config/omamac/herdr.toml" ]
+}
+
+@test "onboarding = false plus a line of the user's counts as theirs" {
+  mkdir -p "$HOME/.config/herdr"
+  printf 'onboarding = false\n[ui]\n' > "$HOME/.config/herdr/config.toml"
+  zrc 'print -r -- $HERDR_CONFIG_PATH'
+  [ -z "$output" ]
+}
+
+@test "a dangling herdr config symlink counts as the user's" {
+  mkdir -p "$HOME/.config/herdr"
+  ln -s "$BATS_TEST_TMPDIR/nowhere" "$HOME/.config/herdr/config.toml"
+  zrc 'print -r -- $HERDR_CONFIG_PATH'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "a HERDR_CONFIG_PATH the user set is kept" {
   HERDR_CONFIG_PATH=/x zrc 'print -r -- $HERDR_CONFIG_PATH'
   [ "$output" = "/x" ]

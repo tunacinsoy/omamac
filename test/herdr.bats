@@ -114,6 +114,16 @@ in_lib() {
   [ "$(shasum < "$HOME/.config/herdr/config.toml") $(stat -f %m "$HOME/.config/herdr/config.toml")" = "$before" ]
 }
 
+@test "herdr's own onboarding file is not the user's" {
+  mkdir -p "$HOME/.config/herdr"
+  printf 'onboarding = false\n' > "$HOME/.config/herdr/config.toml"
+  in_lib herdr_config_apply
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ herdr's config is in place"* ]]
+  [[ "$output" != *"Your own herdr config is kept."* ]]
+  [ "$(<"$HOME/.config/herdr/config.toml")" = 'onboarding = false' ]
+}
+
 @test "the user's own HERDR_CONFIG_PATH: ℹ" {
   export HERDR_CONFIG_PATH="$HOME/mine.toml"
   in_lib herdr_config_apply

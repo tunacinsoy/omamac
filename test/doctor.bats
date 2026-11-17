@@ -210,6 +210,15 @@ expect_fail() {
   [[ "$output" == *"ℹ herdr config — your own herdr config is kept, so omamac's key bindings don't reach herdr"* ]]
 }
 
+@test "herdr: herdr's own onboarding file is not the user's" {
+  healthy_mac
+  mkdir -p "$HOME/.config/herdr"
+  printf 'onboarding = false\n' > "$HOME/.config/herdr/config.toml"
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ herdr config"* ]]
+}
+
 @test "herdr: changed in herdr" {
   healthy_mac
   echo '# changed' >> "$HOME/.config/omamac/herdr.toml"
