@@ -41,6 +41,7 @@ snapshot() {
   run install
   [ "$status" -eq 0 ]
   cmp "$HOME/.config/omamac/zshrc" "$REPO_ROOT/config/zshrc"
+  [ -f "$HOME/.config/omamac/herdr.toml" ]
   # shellcheck disable=SC2016
   [ "$(cat "$HOME/.zprofile")" = 'eval "$(/opt/homebrew/bin/brew shellenv)" # added by omamac' ]
   [ "$(cat "$HOME/.zshrc")" = '[[ -r ~/.config/omamac/zshrc ]] && source ~/.config/omamac/zshrc # added by omamac' ]
@@ -84,11 +85,15 @@ snapshot() {
 }
 
 @test "never-touch list stays untouched" {
+  mkdir -p "$HOME/.config/herdr"
+  echo 'mine' > "$HOME/.config/herdr/config.toml"
+  herdr_before="$(shasum < "$HOME/.config/herdr/config.toml") $(stat -f %m "$HOME/.config/herdr/config.toml")"
   run install
   [ "$status" -eq 0 ]
   for p in .ssh .gitconfig .npmrc .m2/settings.xml .curlrc; do
     [ ! -e "$HOME/$p" ]
   done
+  [ "$(shasum < "$HOME/.config/herdr/config.toml") $(stat -f %m "$HOME/.config/herdr/config.toml")" = "$herdr_before" ]
   run grep -rnE '/etc/|/Library/' "$REPO_ROOT/install.sh" "$REPO_ROOT/lib"
   # Only comment lines may match.
   [ -z "$(grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' <<< "$output")" ]

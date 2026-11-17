@@ -27,6 +27,8 @@ source "$OMAMAC_CHECKOUT/lib/choices.sh"
 source "$OMAMAC_CHECKOUT/lib/core.sh"
 # shellcheck source=lib/neovim.sh
 source "$OMAMAC_CHECKOUT/lib/neovim.sh"
+# shellcheck source=lib/herdr.sh
+source "$OMAMAC_CHECKOUT/lib/herdr.sh"
 # shellcheck source=lib/apply.sh
 source "$OMAMAC_CHECKOUT/lib/apply.sh"
 
