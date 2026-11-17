@@ -38,7 +38,7 @@ omamac_update() {
   # pull --ff-only keeps local edits the new commits don't touch, so check
   # first: a checkout with local edits is left as it is.
   if [ -n "$(git -C "$OMAMAC_HOME" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
-    ui_fail "$fix"
+    ui_fail "omamac's code has local edits, so update stopped. Fix: git -C ~/.local/share/omamac status, to see them."
     return 1
   fi
   # update.sh starts the run's real log; this one holds only git's output.

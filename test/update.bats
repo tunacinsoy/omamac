@@ -62,7 +62,7 @@ snapshot() {
   echo '# mine' >> "$CHECKOUT/config/zshrc"
   run update
   [ "$status" -eq 1 ]
-  [[ "$output" == *"✗ omamac couldn't update its code. Fix: check your internet connection, or run git -C ~/.local/share/omamac status to see why."* ]]
+  [[ "$output" == *"✗ omamac's code has local edits, so update stopped. Fix: git -C ~/.local/share/omamac status, to see them."* ]]
   run ! grep -q '^brew' "$STUB_LOG"
   [ ! -e "$HOME/.config/omamac" ]
   [ ! -e "$HOME/.local/state/omamac/logs" ]
@@ -83,7 +83,7 @@ snapshot() {
   # macOS's TMPDIR ends in a slash; the log path must not show "//".
   TMPDIR="$BATS_TEST_TMPDIR/" run update
   [ "$status" -eq 1 ]
-  [[ "$output" == *"git -C ~/.local/share/omamac status"* ]]
+  [[ "$output" == *"✗ omamac couldn't update its code. Fix: check your internet connection, or run git -C ~/.local/share/omamac status to see why."* ]]
   [[ "$output" == *"✗ Log: $BATS_TEST_TMPDIR/omamac-pull."* ]]
   run ! grep -q '^brew' "$STUB_LOG"
   [ ! -e "$HOME/.config/omamac" ]
