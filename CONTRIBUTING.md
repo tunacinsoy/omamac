@@ -34,7 +34,8 @@ If brew asks you to trust the tap first, run `brew trust --formula openai/tools/
 Shellcheck and the bats suite, as CI runs them:
 
 ```
-git ls-files '*.sh' '*.bash' bin/omamac test/helpers/fake-* | xargs shellcheck
+# CI's shellcheck line skips bin/omamac-herdr-mode; test/hygiene.bats checks it.
+git ls-files '*.sh' '*.bash' bin/omamac bin/omamac-herdr-mode test/helpers/fake-* | xargs shellcheck
 bats test/
 ```
 
