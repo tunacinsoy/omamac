@@ -1,6 +1,8 @@
 #!/opt/homebrew/bin/bash
 # omamac update, after bin/omamac pulled the new code: with the saved answers
 # and no questions, put back what's missing, then upgrade what omamac installed.
+# An older bin/omamac execs this file with no arguments after pulling, so it
+# must keep working when started that way.
 # shellcheck source-path=SCRIPTDIR
 set -Eeuo pipefail
 
@@ -50,10 +52,21 @@ update_choices() {
 
 # update_upgrade: upgrade, by name, the installed formulas omamac installs.
 update_upgrade() {
-  local list installed=()
+  local list pinned_list installed=() pinned=() kept=() name
+  local -A is_pinned=()
   OMAMAC_STEP='upgrading your tools'
   list=$(core_where installed "${CORE_FORMULAS[@]}" bash gum)
   [ -z "$list" ] || mapfile -t installed <<< "$list"
+  # brew upgrade fails when a named formula is pinned, so leave those out.
+  pinned_list=$("$OMAMAC_BREW_PREFIX/bin/brew" list --pinned)
+  [ -z "$pinned_list" ] || mapfile -t pinned <<< "$pinned_list"
+  for name in "${pinned[@]}"; do is_pinned[$name]=1; done
+  list=("${installed[@]}")
+  installed=()
+  for name in "${list[@]}"; do
+    if [ -n "${is_pinned[$name]:-}" ]; then kept+=("$name"); else installed+=("$name"); fi
+  done
+  [ "${#kept[@]}" -eq 0 ] || ui_info "Kept ${kept[*]} at the pinned version."
   # A bare brew upgrade would upgrade everything the user has.
   [ "${#installed[@]}" -gt 0 ] || return 0
   ui_run "Upgrading your tools" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade "${installed[@]}"

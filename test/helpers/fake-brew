@@ -19,6 +19,9 @@ case "${1:-}" in
           ;;
         *) [ -e "$prefix/Cellar/$3" ]; exit ;;
       esac
+    elif [ "${2:-}" = "--pinned" ]; then
+      [ ! -f "$prefix/pinned" ] || cat "$prefix/pinned"
+      exit 0
     elif [ "${2:-}" = "--versions" ]; then
       for d in "$prefix"/Cellar/*; do
         [ -e "$d" ] && echo "$(basename "$d") 1.0"

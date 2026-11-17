@@ -62,7 +62,7 @@ snapshot() {
   echo '# mine' >> "$CHECKOUT/config/zshrc"
   run update
   [ "$status" -eq 1 ]
-  [[ "$output" == *"✗ omamac couldn't update its code. Fix: git -C ~/.local/share/omamac status, to see why."* ]]
+  [[ "$output" == *"✗ omamac couldn't update its code. Fix: check your internet connection, or run git -C ~/.local/share/omamac status to see why."* ]]
   run ! grep -q '^brew' "$STUB_LOG"
   [ ! -e "$HOME/.config/omamac" ]
   [ ! -e "$HOME/.local/state/omamac/logs" ]
@@ -97,11 +97,20 @@ snapshot() {
   [ "$(grep '^brew upgrade' "$STUB_LOG")" = "brew upgrade $OMAMAC_FORMULAS" ]
 }
 
+@test "a pinned core formula is left out of the upgrade" {
+  echo neovim > "$OMAMAC_TEST_BREW_PREFIX/pinned"
+  run update
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Kept neovim at the pinned version."* ]]
+  run ! grep -E '^brew upgrade.*neovim' "$STUB_LOG"
+  grep -q '^brew upgrade starship ' "$STUB_LOG"
+}
+
 @test "asks Homebrew for its list once per step, not per formula" {
   run update
   [ "$status" -eq 0 ]
   # One for the core install, one for the upgrade.
-  [ "$(grep -c '^brew list' "$STUB_LOG")" -eq 2 ]
+  [ "$(grep -c '^brew list --formula' "$STUB_LOG")" -eq 2 ]
 }
 
 @test "a removed core formula comes back first" {
