@@ -30,14 +30,14 @@ herdr_user_config() {
 }
 
 herdr_config_apply() {
-  local tmp
+  local tmp changed=no
   ui_step "herdr's config"
   mkdir -p "$OMAMAC_CONFIG_DIR" "$OMAMAC_STATE_DIR"
   tmp=$(mktemp "$OMAMAC_CONFIG_DIR/herdr.toml.XXXXXX")
   herdr_render "$tmp"
   if herdr_changed "$tmp"; then
     rm -f "$tmp"
-    ui_info "herdr's config was changed in herdr, so omamac leaves it. To use omamac's again: delete ~/.config/omamac/herdr.toml, then run omamac update."
+    changed=yes
   else
     # The file first, then the copy: a stop between them leaves the file
     # equal to the new render, which herdr_changed doesn't count as a change.
@@ -46,8 +46,11 @@ herdr_config_apply() {
     cp "$OMAMAC_HERDR_FILE" "$tmp"
     apply_put "$tmp" "$OMAMAC_HERDR_WRITTEN"
   fi
+  # One line only: the undo advice is no use to someone whose own config is in use.
   if herdr_user_config; then
     ui_info "Your own herdr config is kept."
+  elif [ "$changed" = yes ]; then
+    ui_info "herdr's config was changed in herdr, so omamac leaves it. To use omamac's again: delete ~/.config/omamac/herdr.toml, then run omamac update."
   else
     ui_ok "herdr's config is in place"
   fi
