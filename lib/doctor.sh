@@ -1,6 +1,7 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2088 # the ~ in messages is shown to the user, not expanded
-# omamac doctor. Sourced. Read-only: it only looks and reports.
+# omamac doctor. Sourced after the libraries it checks. It reports, then offers
+# fixes as questions: only for a chosen language or cloud CLI that is gone.
 
 # doctor_report <ok|fail|info> <what> [<why>] [<fix>]. Returns 1 for fail so callers can count it.
 doctor_report() {
@@ -132,8 +133,10 @@ doctor_check_herdr() {
   fi
 }
 
+# Sets DOCTOR_HAS_CHOICES so the checks after it know CHOICES is loaded.
 doctor_check_choices() {
   local what="Saved answers" message
+  DOCTOR_HAS_CHOICES=0
   if [ ! -e "$OMAMAC_CHOICES_FILE" ]; then
     doctor_report fail "$what" "omamac doesn't know your answers" "Run the one-liner"
   elif ! choices_load "$OMAMAC_CHOICES_FILE" 2>/dev/null; then
@@ -143,8 +146,100 @@ doctor_check_choices() {
   elif [ -n "$(choices_missing)" ]; then
     doctor_report fail "$what" "a question has no answer yet" "Run the one-liner; it asks only that one"
   else
+    DOCTOR_HAS_CHOICES=1
     doctor_report ok "$what"
   fi
+}
+
+doctor_check_mise_dropin() {
+  local what="mise drop-in"
+  if [ "$DOCTOR_HAS_CHOICES" -ne 1 ]; then
+    doctor_report info "$what" "skipped, your saved answers can't be read"
+  elif [ -f "$OMAMAC_MISE_DROPIN" ] && cmp -s "$OMAMAC_MISE_DROPIN" <(languages_render); then
+    doctor_report ok "$what"
+  else
+    doctor_report fail "$what" "~/.config/mise/conf.d/omamac.toml doesn't match your answers" "omamac update"
+  fi
+}
+
+# doctor_key <id>: the question a language or cloud CLI id answers.
+doctor_key() { if [ -n "${LANGUAGE_TOOLS[$1]:-}" ]; then echo languages; else echo cloud_clis; fi; }
+
+# Sets DOCTOR_GONE to the chosen language and CLI ids that are gone, for doctor_offer.
+doctor_check_chosen() {
+  local what="Languages and cloud CLIs" id tool status=0 out key result=0 tools=() langs=() clis=() skipped=()
+  DOCTOR_GONE=()
+  if [ "$DOCTOR_HAS_CHOICES" -ne 1 ]; then
+    doctor_report info "$what" "skipped, your saved answers can't be read"
+    return 0
+  fi
+  read -ra langs <<< "${CHOICES[languages]:-}"
+  read -ra clis <<< "${CHOICES[cloud_clis]:-}"
+  # A language is gone when any of its tools is. A missing or failing mise
+  # skips them all; the core check names a missing mise.
+  for id in "${langs[@]}"; do
+    read -ra tools <<< "${LANGUAGE_TOOLS[$id]}"
+    for tool in "${tools[@]}"; do
+      status=0
+      languages_has "$tool" 2>/dev/null || status=$?
+      if [ "$status" -ne 0 ]; then break; fi
+    done
+    case $status in
+      1) DOCTOR_GONE+=("$id") ;;
+      2)
+        DOCTOR_GONE=()
+        skipped+=(mise)
+        break
+        ;;
+    esac
+  done
+  if [ "${#clis[@]}" -gt 0 ]; then
+    if out=$(clis_where missing "${clis[@]}" 2>/dev/null); then
+      [ -z "$out" ] || mapfile -t -O "${#DOCTOR_GONE[@]}" DOCTOR_GONE <<< "$out"
+    else
+      skipped+=(Homebrew)
+    fi
+  fi
+  for tool in "${skipped[@]}"; do
+    doctor_report info "$what" "skipped, $tool can't list what's installed"
+  done
+  for id in "${DOCTOR_GONE[@]}"; do
+    key=$(doctor_key "$id") tool=Homebrew
+    [ "$key" != languages ] || tool=mise
+    doctor_report fail "$(question_label "$key" "$id")" "you chose it, but $tool no longer has it" \
+      "omamac update puts it back; omamac uninstall $id drops it" || result=1
+  done
+  if [ "${#skipped[@]}" -eq 0 ] && [ "$result" -eq 0 ]; then doctor_report ok "$what"; fi
+  return "$result"
+}
+
+# doctor_offer: for each gone choice, ask what to do, when a terminal is there.
+# A failed reinstall is said and the next one is asked; the report's status stays doctor's.
+doctor_offer() {
+  local id key label logged=0
+  if [ "${#DOCTOR_GONE[@]}" -eq 0 ] || [ ! -r "$OMAMAC_TTY" ]; then return 0; fi
+  for id in "${DOCTOR_GONE[@]}"; do
+    key=$(doctor_key "$id")
+    label=$(question_label "$key" "$id")
+    ask_choose "$label is gone. What should omamac do?" \
+      "Leave it:leave" "Reinstall it:reinstall" "Remove it from my answers:drop"
+    case $ASK_PICKED in
+      reinstall)
+        [ "$logged" -eq 1 ] || { log_start; logged=1; }
+        if [ "$key" = languages ]; then
+          languages_install "$id" || ui_fail "omamac couldn't reinstall $label."
+        else
+          clis_install "$id" || ui_fail "omamac couldn't reinstall $label."
+        fi
+        ;;
+      drop)
+        choices_drop "$key" "$id"
+        choices_save "$OMAMAC_CHOICES_FILE"
+        [ "$key" != languages ] || languages_write_dropin
+        ui_ok "$label is dropped from your answers"
+        ;;
+    esac
+  done
 }
 
 # Prints one line per check; returns 1 if any is a ✗.
@@ -164,5 +259,8 @@ doctor_run() {
   doctor_check_neovim || status=1
   doctor_check_herdr || status=1
   doctor_check_choices || status=1
+  doctor_check_mise_dropin || status=1
+  doctor_check_chosen || status=1
+  doctor_offer
   return "$status"
 }
