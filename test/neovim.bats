@@ -71,3 +71,17 @@ in_lib() {
   [ ! -e "$HOME/.config/nvim" ]
   [ -z "$(ls -d "$HOME"/.config/nvim.omamac.* 2>/dev/null)" ]
 }
+
+@test "a failed marker write leaves nothing" {
+  local repo="$BATS_TEST_TMPDIR/bad-starter"
+  mkdir -p "$repo/lua"
+  echo x > "$repo/lua/plugins"   # a file where the folder must go
+  git -C "$repo" init -q
+  git -C "$repo" add -A
+  git -C "$repo" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m bad
+  export OMAMAC_TEST_LAZYVIM_URL="file://$repo"
+  in_lib neovim_setup
+  [ "$status" -ne 0 ]
+  [ ! -e "$HOME/.config/nvim" ]
+  [ -z "$(ls -d "$HOME"/.config/nvim.omamac.* 2>/dev/null)" ]
+}

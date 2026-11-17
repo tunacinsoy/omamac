@@ -18,11 +18,12 @@ neovim_setup() {
     rm -rf "$tmp"
     return "$status"
   fi
+  # && because errexit is off inside { } ||: only the last status would count.
   # A failure here must remove the temp folder before the caller's ERR trap fires.
   {
-    rm -rf "$tmp/.git"
-    mkdir -p "$tmp/lua/plugins"
-    printf -- '-- Set up by omamac.\nreturn {}\n' > "$tmp/lua/plugins/omamac.lua"
+    rm -rf "$tmp/.git" &&
+    mkdir -p "$tmp/lua/plugins" &&
+    printf -- '-- Set up by omamac.\nreturn {}\n' > "$tmp/lua/plugins/omamac.lua" &&
     mv "$tmp" "$OMAMAC_NVIM_DIR"
   } || { rm -rf "$tmp"; return 1; }
   ui_ok "neovim is set up with LazyVim"
