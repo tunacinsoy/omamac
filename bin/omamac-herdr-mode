@@ -311,12 +311,24 @@ mode_session() {
 
 # ---------------------------------------------------------------- start
 
+usage() {
+  echo "usage: omamac-herdr-mode pane|tab|resize|move|session|quit|new-pane|grow|shrink|focus-or-tab <left|right>" >&2
+  exit 2
+}
+
+# The argument is checked first, so a typo never calls herdr.
+case ${1:-} in
+  pane | tab | resize | move | session | quit | new-pane | grow | shrink) ;;
+  focus-or-tab) [[ ${2:-} == left || ${2:-} == right ]] || usage ;;
+  *) usage ;;
+esac
+
 [[ -x $prefix/bin/jq ]] || fail "jq is missing. Fix: brew install jq"
 refresh
 [[ -n $pane ]] || fail "herdr isn't running."
 
-case ${1:-} in
-  focus-or-tab) focus_or_tab "${2:?direction}" ;;
+case $1 in
+  focus-or-tab) focus_or_tab "$2" ;;
   new-pane) new_pane ;;
   grow) grow_all ;;
   shrink) shrink_all ;;
@@ -329,9 +341,5 @@ case ${1:-} in
       "mode_$mode"
       refresh
     done
-    ;;
-  *)
-    echo "usage: omamac-herdr-mode pane|tab|resize|move|session|quit|new-pane|grow|shrink|focus-or-tab <left|right>" >&2
-    exit 2
     ;;
 esac

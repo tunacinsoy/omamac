@@ -232,3 +232,18 @@ keys() {
   [[ "$output" == *"brew install jq"* ]]
   [ ! -s "$STUB_LOG" ]
 }
+
+@test "a bad argument gets usage before herdr is called" {
+  export STUB_NO_PANE=1
+  run "$BASH5" "$MODE" bogus
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"usage: omamac-herdr-mode"* ]]
+  [ ! -s "$STUB_LOG" ]
+}
+
+@test "focus-or-tab takes only left or right" {
+  run "$BASH5" "$MODE" focus-or-tab up
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"usage: omamac-herdr-mode"* ]]
+  [ ! -s "$STUB_LOG" ]
+}
