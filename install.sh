@@ -1,5 +1,7 @@
 #!/opt/homebrew/bin/bash
-# Everything after the restart: omamac's zsh file, the two guarded lines, a summary.
+# Everything after the restart. First the questions and "Install?", so nothing
+# is written before the user says yes; then omamac's zsh file, the two guarded
+# lines and a summary.
 # shellcheck source-path=SCRIPTDIR
 set -Eeuo pipefail
 
@@ -16,6 +18,12 @@ source "$OMAMAC_CHECKOUT/lib/paths.sh"
 source "$OMAMAC_CHECKOUT/lib/lines.sh"
 # shellcheck source=lib/ui.sh
 source "$OMAMAC_CHECKOUT/lib/ui.sh"
+# shellcheck source=lib/questions.sh
+source "$OMAMAC_CHECKOUT/lib/questions.sh"
+# shellcheck source=lib/choices.sh
+source "$OMAMAC_CHECKOUT/lib/choices.sh"
+# shellcheck source=lib/ask.sh
+source "$OMAMAC_CHECKOUT/lib/ask.sh"
 
 OMAMAC_STEP='starting'
 
@@ -25,6 +33,24 @@ install_failed() {
   exit 1
 }
 trap install_failed ERR
+
+# Ask only what has no saved answer, show every answer, and save them only
+# after "Install?" is answered yes: a "no" must leave the next run free to ask again.
+install_questions() {
+  OMAMAC_STEP='reading your saved answers'
+  # choices_load has said what's wrong and how to fix it.
+  choices_load "$OMAMAC_CHOICES_FILE" || exit 1
+  OMAMAC_STEP='asking the questions'
+  ask_missing
+  ask_summary
+  if ! ask_install; then
+    ui_info "Stopped. Nothing else was changed. Run the one-liner again to start over."
+    exit 0
+  fi
+  OMAMAC_STEP='saving your answers'
+  choices_save "$OMAMAC_CHOICES_FILE"
+  ui_ok "Your answers are saved"
+}
 
 # The file's text is exactly what the spec says; the quotes keep $PATH and $HOME literal.
 install_zsh_file() {
@@ -61,6 +87,7 @@ install_summary() {
 }
 
 install_main() {
+  install_questions
   install_zsh_file
   install_lines
   install_summary
