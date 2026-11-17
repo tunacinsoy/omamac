@@ -32,6 +32,8 @@ source "$OMAMAC_CHECKOUT/lib/clis.sh"
 source "$OMAMAC_CHECKOUT/lib/apply.sh"
 # shellcheck source=lib/add.sh
 source "$OMAMAC_CHECKOUT/lib/add.sh"
+# shellcheck source=lib/remove.sh
+source "$OMAMAC_CHECKOUT/lib/remove.sh"
 # shellcheck source=lib/doctor.sh
 source "$OMAMAC_CHECKOUT/lib/doctor.sh"
 
@@ -107,7 +109,17 @@ omamac_main() {
       omamac_choices
       add_run
       ;;
-    theme | uninstall)
+    uninstall)
+      if [ "$#" -gt 2 ]; then
+        omamac_usage >&2
+        return 2
+      fi
+      OMAMAC_CMD=uninstall
+      trap omamac_failed ERR
+      omamac_choices
+      remove_run "${@:2}"
+      ;;
+    theme)
       echo "omamac $cmd isn't available yet." >&2
       return 1
       ;;
