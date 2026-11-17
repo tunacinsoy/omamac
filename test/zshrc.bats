@@ -59,8 +59,26 @@ zrc() { run zsh -f -i -c "source $REPO_ROOT/config/zshrc; $1" < /dev/null; }
 }
 
 @test "no zellij, apt names or multiplexer start" {
-  run grep -E 'zellij|batcat|fdfind|herdr' "$REPO_ROOT/config/zshrc"
+  # Comments are skipped, so one may name herdr; a command or its start may not.
+  run bash -c "grep -v '^[[:space:]]*#' '$REPO_ROOT/config/zshrc' | grep -E 'zellij|batcat|fdfind|herdr( |\$)'"
   [ "$status" -eq 1 ]
+}
+
+@test "HERDR_CONFIG_PATH points at omamac's file" {
+  zrc 'print -r -- $HERDR_CONFIG_PATH'
+  [ "$output" = "$HOME/.config/omamac/herdr.toml" ]
+}
+
+@test "the user's own herdr config wins" {
+  mkdir -p "$HOME/.config/herdr"
+  touch "$HOME/.config/herdr/config.toml"
+  zrc 'print -r -- $HERDR_CONFIG_PATH'
+  [ -z "$output" ]
+}
+
+@test "a HERDR_CONFIG_PATH the user set is kept" {
+  HERDR_CONFIG_PATH=/x zrc 'print -r -- $HERDR_CONFIG_PATH'
+  [ "$output" = "/x" ]
 }
 
 @test "a user alias n does not break the file" {

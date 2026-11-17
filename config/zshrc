@@ -11,6 +11,11 @@ if (( $+commands[nvim] )); then
   export VISUAL=nvim
 fi
 
+# herdr can't include another file, so point it at omamac's own when the user has none.
+if (( ! ${+HERDR_CONFIG_PATH} )) && [[ ! -e ~/.config/herdr/config.toml && ! -L ~/.config/herdr/config.toml ]]; then
+  export HERDR_CONFIG_PATH=~/.config/omamac/herdr.toml
+fi
+
 # Homebrew's completions only load if their folder is on fpath before compinit.
 (( ${fpath[(Ie)/opt/homebrew/share/zsh/site-functions]} )) || fpath=(/opt/homebrew/share/zsh/site-functions $fpath)
 # Skip compinit when the user's own ~/.zshrc already ran it.
