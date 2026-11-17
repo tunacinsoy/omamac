@@ -14,6 +14,9 @@ setup_sandbox() {
   mkdir -p "$HOME" "$STUB_DIR"
   : > "$STUB_LOG"
   ln -sf "$HELPERS_DIR/fake-gum" "$STUB_DIR/gum"
+  # The terminal prompts read. fake-gum checks for this first line.
+  echo fake-tty > "$BATS_TEST_TMPDIR/tty"
+  export OMAMAC_TEST_TTY="$BATS_TEST_TMPDIR/tty"
   export PATH="$STUB_DIR:$PATH"
   [ -x "$BASH5" ] || { echo "missing $BASH5" >&2; return 1; }
   # shellcheck disable=SC2016 # the single quotes are meant: bash 5 expands it
@@ -35,6 +38,19 @@ stub() {
 
 stub_calls() { cat "$STUB_LOG"; }
 
+# gum_answers <line>…: fake-gum's answers, one per prompt, in order. A
+# choose answer is its values separated by spaces ('' for none); a confirm
+# answer is yes or no; "exit <n>" makes that prompt exit with n.
+gum_answers() {
+  export T_GUM_ANSWERS="$BATS_TEST_TMPDIR/gum-answers"
+  rm -f "$T_GUM_ANSWERS.pos"
+  if [ $# -eq 0 ]; then : > "$T_GUM_ANSWERS"; else printf '%s\n' "$@" > "$T_GUM_ANSWERS"; fi
+}
+
+# shellcheck disable=SC2034 # used by the .bats files
+# The 16 answers bats uses for a fresh run, in table order.
+FRESH_ANSWERS=(tokyo-night "firefox brave" "" "" cap "" "" "" no yes no no yes "node python" gh none)
+
 install_fake_brew() {
   mkdir -p "$OMAMAC_TEST_BREW_PREFIX/bin"
   cp "$HELPERS_DIR/fake-brew" "$OMAMAC_TEST_BREW_PREFIX/bin/brew"
@@ -48,7 +64,5 @@ stub_healthy_mac() {
   stub sysctl 'case "$2" in hw.optional.arm64) echo "${T_ARM64:-1}";; sysctl.proc_translated) echo "${T_TRANSLATED:-0}";; esac'
   stub sw_vers 'echo "${T_MACOS:-27.1}"'
   stub dscl 'echo "UserShell: ${T_SHELL:-/bin/zsh}"'
-  : > "$BATS_TEST_TMPDIR/tty"
-  export OMAMAC_TEST_TTY="$BATS_TEST_TMPDIR/tty"
   export OMAMAC_TEST_USR_LOCAL_BREW="$BATS_TEST_TMPDIR/usr/local/bin/brew"
 }
