@@ -57,6 +57,10 @@ test/vm.sh <branch> <fixture>
 
 It runs the one-liner twice in a throwaway VM, checks that the second run changed nothing, and posts `vm` on the commit. Fixtures live in `test/fixtures/`. The log goes to `test/logs/`.
 
+Tests that need mise use a fake, `test/helpers/fake-mise`. Its `T_*` knobs (for example `T_MISE_KEEP`) set what it reports and which tools it keeps.
+
+A change to languages or CLIs runs the `bare`, `languages` and `cloud` fixtures.
+
 A fixture may have a `<name>.steps.sh`. Its commands run in the VM after the two runs, in `zsh -eux` with stdin closed. A "Remove …?" prompt is answered y; any other prompt fails the run.
 
 ## Questions and fixtures

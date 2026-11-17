@@ -2,7 +2,7 @@
 
 omamac sets up a fresh Mac for development in one command: Homebrew, a modern bash, your terminal, editor, apps and theme. After that, one command, `omamac`, keeps it all up to date. It is the sister project of [omawsl](https://github.com/tunacinsoy/omawsl).
 
-omamac is still being built. Today the one-liner installs Homebrew, bash, gum, the `omamac` command and the core tools: starship, neovim with LazyVim, btop, mise, herdr, eza, bat, zoxide, fzf, ripgrep, fd, lazygit, tree-sitter-cli and jq. It also asks the first-run questions and saves your answers, but your other picks (languages, cloud CLIs, apps and so on) aren't installed yet. `omamac doctor` and `omamac update` work; the other commands say "not available yet".
+omamac is still being built. Today the one-liner installs Homebrew, bash, gum, the `omamac` command and the core tools: starship, neovim with LazyVim, btop, mise, herdr, eza, bat, zoxide, fzf, ripgrep, fd, lazygit, tree-sitter-cli and jq. It asks the first-run questions, saves your answers, and installs the languages and cloud CLIs you picked. Apps, Docker and macOS settings come later. `omamac install`, `uninstall`, `doctor` and `update` work; `omamac theme` says "not available yet".
 
 ## Before you begin
 
@@ -42,6 +42,8 @@ It updates omamac and what omamac installed, nothing else. It pulls omamac (and 
 
 - Homebrew, in `/opt/homebrew`. It brings Apple's Command Line Tools.
 - bash, gum and the core tools (`starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`), installed with Homebrew.
+- The languages you chose (Ruby on Rails, Node.js, Go, Python, Elixir, Rust, Java), installed with mise, and the cloud CLIs you chose (Azure, AWS, Google Cloud, GitHub, Terraform), installed with Homebrew. Terraform comes from `hashicorp/tap`.
+- `~/.config/mise/conf.d/omamac.toml`: the languages, written by omamac again on every run. Your own pins in `~/.config/mise/config.toml` win and are never touched.
 - `~/.config/nvim`: LazyVim's starter, only if you don't have one. Yours is kept. If omamac made it, it holds `lua/plugins/omamac.lua`.
 - One line in `~/.zprofile` (skipped if it already sets up Homebrew) and one in `~/.zshrc`. Both end in `# added by omamac`.
 - `~/.local/share/omamac`: omamac itself.
@@ -49,7 +51,9 @@ It updates omamac and what omamac installed, nothing else. It pulls omamac (and 
 - `~/.config/omamac/herdr.toml`: omawsl's herdr config and key bindings. A `~/.config/herdr/config.toml` of your own is used instead and never touched (one holding only `onboarding = false` is herdr's own and doesn't count).
 - `~/.local/state/omamac`: logs and your saved answers (`choices.env`).
 
-There is no uninstall command yet. To undo by hand: delete the two lines ending in `# added by omamac`, delete the three folders, delete `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`), and, if omamac installed them, run `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`. To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
+`omamac install` adds the languages and cloud CLIs you didn't pick before. `omamac uninstall <name>` removes one, after asking; a version another mise config uses stays, and Homebrew taps stay.
+
+`omamac uninstall` removes your picks one at a time. For the rest, undo by hand: delete the two lines ending in `# added by omamac`, delete the three folders, delete `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`), and, if omamac installed them, run `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`. To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
 
 ## herdr
 
