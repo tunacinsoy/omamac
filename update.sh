@@ -56,21 +56,31 @@ update_choices() {
   choices_load "$OMAMAC_CHOICES_FILE" || exit 1
 }
 
-# update_upgrade: upgrade, by name, the installed formulas omamac installs.
+# update_upgrade: upgrade, by name, the installed formulas omamac installs:
+# the core, bash, gum and the chosen cloud CLIs (full names).
 update_upgrade() {
-  local list pinned_list installed=() pinned=() kept=() name
+  local list pinned_list installed=() pinned=() kept=() name ids=() chosen=()
   local -A is_pinned=()
   OMAMAC_STEP='upgrading your tools'
   list=$(core_where installed "${CORE_FORMULAS[@]}" bash gum)
   [ -z "$list" ] || mapfile -t installed <<< "$list"
+  read -ra ids <<< "${CHOICES[cloud_clis]:-}"
+  if [ "${#ids[@]}" -gt 0 ]; then
+    list=$(clis_where installed "${ids[@]}")
+    [ -z "$list" ] || mapfile -t chosen <<< "$list"
+    for name in "${chosen[@]}"; do
+      [ -z "${CLI_FORMULA[$name]:-}" ] || installed+=("${CLI_FORMULA[$name]}")
+    done
+  fi
   # brew upgrade fails when a named formula is pinned, so leave those out.
+  # brew list --pinned prints short names, so compare the last / part.
   pinned_list=$("$OMAMAC_BREW_PREFIX/bin/brew" list --pinned)
   [ -z "$pinned_list" ] || mapfile -t pinned <<< "$pinned_list"
   for name in "${pinned[@]}"; do is_pinned[$name]=1; done
   list=("${installed[@]}")
   installed=()
   for name in "${list[@]}"; do
-    if [ -n "${is_pinned[$name]:-}" ]; then kept+=("$name"); else installed+=("$name"); fi
+    if [ -n "${is_pinned[${name##*/}]:-}" ]; then kept+=("$name"); else installed+=("$name"); fi
   done
   [ "${#kept[@]}" -eq 0 ] || ui_info "Kept ${kept[*]} at the pinned version."
   # A bare brew upgrade would upgrade everything the user has.
@@ -78,11 +88,41 @@ update_upgrade() {
   ui_run "Upgrading your tools" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade "${installed[@]}"
 }
 
+# update_upgrade_casks: gcloud, when chosen and installed. Greedy, as the cask
+# updates itself and brew would otherwise skip it.
+update_upgrade_casks() {
+  local list
+  [[ " ${CHOICES[cloud_clis]:-} " == *" gcloud "* ]] || return 0
+  OMAMAC_STEP='upgrading the Google Cloud CLI'
+  list=$(clis_where installed gcloud)
+  [ -n "$list" ] || return 0
+  ui_run "Upgrading the Google Cloud CLI" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask --greedy "${CLI_CASK[gcloud]}"
+}
+
+# update_upgrade_languages: the chosen languages to their newest versions, old
+# ones pruned, then the rails gem.
+update_upgrade_languages() {
+  local ids=() id tools=() t
+  read -ra ids <<< "${CHOICES[languages]:-}"
+  [ "${#ids[@]}" -gt 0 ] || return 0
+  OMAMAC_STEP='upgrading your languages'
+  for id in "${ids[@]}"; do
+    read -ra t <<< "${LANGUAGE_TOOLS[$id]}"
+    tools+=("${t[@]}")
+  done
+  (cd "$HOME" && ui_run "Upgrading your languages" "$OMAMAC_BREW_PREFIX/bin/mise" upgrade "${tools[@]}")
+  # Prune may ask before removing each old version; choosing update is the yes.
+  (cd "$HOME" && MISE_YES=1 ui_run "Removing old language versions" "$OMAMAC_BREW_PREFIX/bin/mise" prune --tools "${tools[@]}")
+  if [[ " ${ids[*]} " == *" ruby "* ]]; then languages_rails; fi
+}
+
 update_main() {
   log_start
   update_choices
   apply_all
   update_upgrade
+  update_upgrade_casks
+  update_upgrade_languages
   OMAMAC_STEP='printing the summary'
   ui_box "omamac and your tools are up to date." "Log: $OMAMAC_LOG"
 }
