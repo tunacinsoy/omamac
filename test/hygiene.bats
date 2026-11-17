@@ -5,7 +5,7 @@ setup() { setup_sandbox; }
 @test "users never see apt, Windows or WSL" {
   # grep exits 2 on missing paths, so only search paths that exist.
   local files=() p
-  for p in README.md CONTRIBUTING.md boot.sh install.sh bin lib; do
+  for p in README.md CONTRIBUTING.md boot.sh install.sh update.sh bin lib config; do
     [ ! -e "$REPO_ROOT/$p" ] || files+=("$REPO_ROOT/$p")
   done
   [ "${#files[@]}" -eq 0 ] && return 0
@@ -22,7 +22,7 @@ setup() { setup_sandbox; }
 }
 
 @test "every bash 5 script parses" {
-  for f in "$REPO_ROOT"/install.sh "$REPO_ROOT"/bin/omamac "$REPO_ROOT"/lib/*.sh; do
+  for f in "$REPO_ROOT"/install.sh "$REPO_ROOT"/update.sh "$REPO_ROOT"/bin/omamac "$REPO_ROOT"/lib/*.sh; do
     [ ! -e "$f" ] || "$BASH5" -n "$f"
   done
 }
