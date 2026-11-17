@@ -49,13 +49,13 @@ It updates omamac and what omamac installed, nothing else. It pulls omamac (and 
 - `~/.config/omamac/herdr.toml`: omawsl's herdr config and key bindings. A `~/.config/herdr/config.toml` of your own is used instead and never touched. `~/.local/state/omamac/herdr.toml.written` is omamac's copy of what it wrote.
 - `~/.local/state/omamac`: logs and your saved answers (`choices.env`).
 
+There is no uninstall command yet. To undo by hand: delete the two lines ending in `# added by omamac`, delete the three folders, delete `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`), and, if omamac installed them, run `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`. To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
+
 ## herdr
 
 Start it with `herdr` (Ghostty will do it in a later phase). Ctrl g is the prefix, then `p` pane, `t` tab, `r` resize, `m` move, `o` session, `s` scroll. Alt h/j/k/l move between panes, Alt n opens a new pane.
 
-herdr's first-run screen is skipped. Its settings are Ctrl g `,`. Once you change settings there, omamac leaves its herdr config alone; `omamac doctor` says so. To get omamac's back, delete `~/.config/omamac/herdr.toml`, then run `omamac update`.
-
-There is no uninstall command yet. To undo by hand: delete the two lines ending in `# added by omamac`, delete the three folders, delete `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`), and, if omamac installed them, run `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`. To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
+herdr's first-run screen is skipped. Its settings are Ctrl g `,`. Once herdr's settings or you change that file, omamac leaves its herdr config alone; `omamac doctor` says so. To get omamac's back, delete `~/.config/omamac/herdr.toml`, then run `omamac update`.
 
 ## Testing a branch
 
