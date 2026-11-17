@@ -58,6 +58,12 @@ expect_bad() {
   [ "${output// /}" = 17 ]
 }
 
+@test "languages has no php" {
+  in_lib 'echo $(question_values languages)'
+  [ "$output" = "ruby node go python elixir rust java" ]
+  expect_bad 1 $'languages=php\n'
+}
+
 @test "yes/no questions allow yes and no" {
   in_lib 'question_values dock'
   [ "$output" = "yes

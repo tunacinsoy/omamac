@@ -85,15 +85,21 @@ snapshot() {
 }
 
 @test "never-touch list stays untouched" {
-  mkdir -p "$HOME/.config/herdr"
-  echo 'mine' > "$HOME/.config/herdr/config.toml"
-  herdr_before="$(shasum < "$HOME/.config/herdr/config.toml") $(stat -f %m "$HOME/.config/herdr/config.toml")"
+  local mine=(.config/herdr/config.toml .config/mise/config.toml .config/starship.toml) f before=''
+  for f in "${mine[@]}"; do
+    mkdir -p "$(dirname "$HOME/$f")"
+    echo 'mine' > "$HOME/$f"
+    before+="$(shasum < "$HOME/$f") $(stat -f %m "$HOME/$f");"
+  done
+  fresh_answers yes
   run install
   [ "$status" -eq 0 ]
   for p in .ssh .gitconfig .npmrc .m2/settings.xml .curlrc; do
     [ ! -e "$HOME/$p" ]
   done
-  [ "$(shasum < "$HOME/.config/herdr/config.toml") $(stat -f %m "$HOME/.config/herdr/config.toml")" = "$herdr_before" ]
+  local after=''
+  for f in "${mine[@]}"; do after+="$(shasum < "$HOME/$f") $(stat -f %m "$HOME/$f");"; done
+  [ "$after" = "$before" ]
   run grep -rnE '/etc/|/Library/' "$REPO_ROOT/install.sh" "$REPO_ROOT/lib"
   # Only comment lines may match.
   [ -z "$(grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' <<< "$output")" ]
@@ -220,6 +226,14 @@ snapshot() {
   [ "$(grep -c '^brew install .*starship' "$STUB_LOG")" = 1 ]
   [ -f "$HOME/.config/nvim/lua/plugins/omamac.lua" ]
   [[ "$output" == *"Installed: Homebrew, bash, gum, omamac and the core tools"* ]]
+}
+
+@test "installs the chosen languages after Install?" {
+  fresh_answers yes
+  run install
+  [ "$status" -eq 0 ]
+  grep -qx 'mise install node python' "$STUB_LOG"
+  [ "$(grep -c '^mise install' "$STUB_LOG")" = 1 ]
 }
 
 @test "Install? no: no brew install, no nvim" {
