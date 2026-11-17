@@ -2,7 +2,7 @@ load helpers/common
 
 bats_require_minimum_version 1.5.0
 
-ALL="starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli"
+ALL="starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq"
 
 setup() {
   setup_sandbox

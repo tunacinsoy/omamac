@@ -13,6 +13,10 @@ OMAMAC_NVIM_DIR=$HOME/.config/nvim
 OMAMAC_NVIM_MARKER=$OMAMAC_NVIM_DIR/lua/plugins/omamac.lua
 OMAMAC_LAZYVIM_URL=${OMAMAC_TEST_LAZYVIM_URL:-https://github.com/LazyVim/starter}
 OMAMAC_CHOICES_FILE=$OMAMAC_STATE_DIR/choices.env
+OMAMAC_HERDR_FILE=$OMAMAC_CONFIG_DIR/herdr.toml
+OMAMAC_HERDR_WRITTEN=$OMAMAC_STATE_DIR/herdr.toml.written
+OMAMAC_HERDR_USER_FILE=$HOME/.config/herdr/config.toml
+OMAMAC_HERDR_HELPER=$OMAMAC_HOME/bin/omamac-herdr-mode
 # Prompts read the terminal: after boot.sh's exec, stdin is the spent curl pipe.
 OMAMAC_TTY=${OMAMAC_TEST_TTY:-/dev/tty}
 # shellcheck disable=SC2016 # literal text for the user's file, not expanded here

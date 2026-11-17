@@ -121,6 +121,25 @@ doctor_check_neovim() {
   fi
 }
 
+doctor_check_herdr() {
+  local what="herdr config" rendered changed=1
+  if herdr_user_config; then
+    doctor_report info "$what" "your own herdr config is kept, so omamac's key bindings don't reach herdr"
+  elif [ ! -e "$OMAMAC_HERDR_FILE" ]; then
+    doctor_report fail "$what" "~/.config/omamac/herdr.toml is missing" "omamac update"
+  else
+    # Read-only: the render goes to the temp dir, not omamac's folders, and is removed.
+    rendered=$(mktemp "${TMPDIR:-/tmp}/omamac-doctor.XXXXXX")
+    herdr_render "$rendered" && herdr_changed "$rendered" && changed=0
+    rm -f "$rendered"
+    if [ "$changed" -eq 0 ]; then
+      doctor_report info "$what" "changed in herdr, so omamac's updates to it are skipped"
+    else
+      doctor_report ok "$what"
+    fi
+  fi
+}
+
 doctor_check_choices() {
   local what="Saved answers" message
   if [ ! -e "$OMAMAC_CHOICES_FILE" ]; then
@@ -151,6 +170,7 @@ doctor_run() {
   doctor_check_zsh_file || status=1
   doctor_check_core || status=1
   doctor_check_neovim || status=1
+  doctor_check_herdr || status=1
   doctor_check_choices || status=1
   return "$status"
 }

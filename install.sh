@@ -1,7 +1,7 @@
 #!/opt/homebrew/bin/bash
 # Everything after the restart. First the questions and "Install?", so nothing
-# is written before the user says yes; then omamac's zsh file, the core tools
-# and LazyVim, the two guarded lines and a summary.
+# is written before the user says yes; then omamac's zsh file, herdr's config,
+# the core tools and LazyVim, the two guarded lines and a summary.
 # shellcheck source-path=SCRIPTDIR
 set -Eeuo pipefail
 
@@ -28,6 +28,8 @@ source "$OMAMAC_CHECKOUT/lib/ask.sh"
 source "$OMAMAC_CHECKOUT/lib/core.sh"
 # shellcheck source=lib/neovim.sh
 source "$OMAMAC_CHECKOUT/lib/neovim.sh"
+# shellcheck source=lib/herdr.sh
+source "$OMAMAC_CHECKOUT/lib/herdr.sh"
 # shellcheck source=lib/apply.sh
 source "$OMAMAC_CHECKOUT/lib/apply.sh"
 
