@@ -11,6 +11,14 @@ case "${1:-}" in
     if [ "${2:-}" = "--formula" ]; then
       [ "${T_BREW_LIST_FAIL:-0}" != 1 ] || { echo "Error: brew list failed" >&2; exit 1; }
       case "${3:-}" in
+        --full-name)
+          # A formula installed as a/b/c lists as a/b/c; its tap is in Cellar/c/.tap.
+          for d in "$prefix"/Cellar/*; do
+            [ -e "$d" ] || continue
+            if [ -f "$d/.tap" ]; then echo "$(cat "$d/.tap")/$(basename "$d")"; else basename "$d"; fi
+          done
+          exit 0
+          ;;
         '' | -1)
           for d in "$prefix"/Cellar/*; do
             [ -e "$d" ] && basename "$d"
@@ -19,6 +27,12 @@ case "${1:-}" in
           ;;
         *) [ -e "$prefix/Cellar/$3" ]; exit ;;
       esac
+    elif [ "${2:-}" = "--cask" ]; then
+      [ "${T_BREW_LIST_FAIL:-0}" != 1 ] || { echo "Error: brew list failed" >&2; exit 1; }
+      for d in "$prefix"/Caskroom/*; do
+        [ -e "$d" ] && basename "$d"
+      done
+      exit 0
     elif [ "${2:-}" = "--pinned" ]; then
       [ ! -f "$prefix/pinned" ] || cat "$prefix/pinned"
       exit 0
@@ -33,13 +47,39 @@ case "${1:-}" in
     [ "${T_BREW_FAIL:-0}" != 1 ] || { echo "Error: brew install failed" >&2; exit 1; }
     [ $# -ge 2 ] || { echo "brew install needs a formula" >&2; exit 1; }
     shift
+    root=Cellar
+    if [ "${1:-}" = "--cask" ]; then root=Caskroom; shift; fi
     for f in "$@"; do
+      if [ "$root" = Caskroom ]; then mkdir -p "$prefix/Caskroom/$f"; continue; fi
+      case "$f" in
+        */*/*)
+          mkdir -p "$prefix/Cellar/${f##*/}"
+          echo "${f%/*}" > "$prefix/Cellar/${f##*/}/.tap"
+          continue
+          ;;
+      esac
       mkdir -p "$prefix/Cellar/$f" "$prefix/bin"
       case "$f" in
         bash) ln -sf "${BASH5:-/opt/homebrew/bin/bash}" "$prefix/bin/bash" ;;
         gum)  ln -sf "${HELPERS_DIR:?fake-brew needs HELPERS_DIR}/fake-gum" "$prefix/bin/gum" ;;
         mise) ln -sf "${HELPERS_DIR:?fake-brew needs HELPERS_DIR}/fake-mise" "$prefix/bin/mise" ;;
       esac
+    done
+    ;;
+  tap)
+    if [ $# -eq 1 ]; then
+      [ ! -f "$prefix/taps" ] || cat "$prefix/taps"
+    else
+      echo "$2" >> "$prefix/taps"
+    fi
+    ;;
+  uninstall)
+    shift
+    root=Cellar
+    if [ "${1:-}" = "--cask" ]; then root=Caskroom; shift; fi
+    for f in "$@"; do
+      [ "${T_BREW_UNINSTALL_FAIL:-0}" != 1 ] || { echo "Error: $f is required by other" >&2; exit 1; }
+      rm -rf "${prefix:?}/$root/${f##*/}"
     done
     ;;
   upgrade)

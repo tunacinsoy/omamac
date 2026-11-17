@@ -236,6 +236,14 @@ snapshot() {
   [ "$(grep -c '^mise install' "$STUB_LOG")" = 1 ]
 }
 
+@test "installs the chosen cloud CLIs after Install?" {
+  fresh_answers yes
+  run install
+  [ "$status" -eq 0 ]
+  grep -qx 'brew install gh' "$STUB_LOG"
+  [[ "$output" == *"✓ Cloud CLIs are installed"* ]]
+}
+
 @test "Install? no: no brew install, no nvim" {
   fresh_answers no
   run install

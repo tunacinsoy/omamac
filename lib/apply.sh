@@ -1,6 +1,6 @@
 # shellcheck shell=bash disable=SC2034 # OMAMAC_STEP is read by install.sh's ERR trap
 # The steps the one-liner and omamac update share. Sourced after lib/core.sh,
-# lib/neovim.sh, lib/herdr.sh and lib/languages.sh; sets the caller's OMAMAC_STEP so a failure names its step.
+# lib/neovim.sh, lib/herdr.sh and lib/languages.sh and lib/clis.sh; sets the caller's OMAMAC_STEP so a failure names its step.
 
 # apply_put <tmp> <dest>: move tmp into place only if different, so a second
 # run leaves dest (and its mtime) alone. tmp should sit in dest's folder, so
@@ -38,4 +38,6 @@ apply_all() {
   neovim_setup
   OMAMAC_STEP='installing your languages'
   languages_install
+  OMAMAC_STEP='installing your cloud CLIs'
+  clis_install
 }

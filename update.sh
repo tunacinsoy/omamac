@@ -31,6 +31,8 @@ source "$OMAMAC_CHECKOUT/lib/neovim.sh"
 source "$OMAMAC_CHECKOUT/lib/herdr.sh"
 # shellcheck source=lib/languages.sh
 source "$OMAMAC_CHECKOUT/lib/languages.sh"
+# shellcheck source=lib/clis.sh
+source "$OMAMAC_CHECKOUT/lib/clis.sh"
 # shellcheck source=lib/apply.sh
 source "$OMAMAC_CHECKOUT/lib/apply.sh"
 
