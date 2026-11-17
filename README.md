@@ -36,7 +36,7 @@ Open a new terminal window. `nvim` downloads its plugins the first time it opens
 omamac update
 ```
 
-It updates omamac and what omamac installed, nothing else. It pulls omamac (and stops if you edited its files), rewrites the files omamac writes, installs any core tool that is missing, then upgrades only omamac's formulas: the core tools, bash and gum. The log goes to `~/.local/state/omamac/logs/`.
+It updates omamac and what omamac installed, nothing else. It pulls omamac (and stops if you edited its files), rewrites the files omamac writes, puts back any core tool, language or cloud CLI that is missing, then upgrades only what omamac installed: the core tools, bash, gum, the cloud CLIs you chose (Google Cloud's cask with `--greedy`) and the languages you chose. After that, `mise prune` deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`. The log goes to `~/.local/state/omamac/logs/`.
 
 ## What it changes
 
@@ -53,7 +53,7 @@ It updates omamac and what omamac installed, nothing else. It pulls omamac (and 
 
 `omamac install` adds the languages and cloud CLIs you didn't pick before. `omamac uninstall <name>` removes one, after asking; a version another mise config uses stays, and Homebrew taps stay.
 
-`omamac uninstall` removes your picks one at a time. For the rest, undo by hand: delete the two lines ending in `# added by omamac`, delete the three folders, delete `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`), and, if omamac installed them, run `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`. To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
+`omamac uninstall` removes your picks one at a time. For the rest, undo by hand: delete the two lines ending in `# added by omamac`, delete the three folders and `~/.config/mise/conf.d/omamac.toml`, delete `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`), and, if omamac installed them, run `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`. To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
 
 ## herdr
 
