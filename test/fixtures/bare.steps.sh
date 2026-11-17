@@ -5,7 +5,11 @@ omamac update
 before=$(fp)
 omamac update
 after=$(fp)
-[[ $before == "$after" ]]
-nvim --headless +qa
+if [[ $before != "$after" ]]; then
+  diff <(print -r -- "$before") <(print -r -- "$after")
+  exit 1
+fi
+out=$(nvim --headless "+Lazy! sync" +qa 2>&1)
+if print -r -- "$out" | grep -Eq 'Error detected|E5108'; then print -r -- "$out"; exit 1; fi
 [[ $(zsh -ic 'alias ls') == *eza* ]]
 omamac doctor
