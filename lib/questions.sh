@@ -66,8 +66,11 @@ question_values() {
 
 # question_has <key> <value>: 0 if value is an allowed answer.
 question_has() {
-  local value
-  while IFS= read -r value; do [ "$value" != "$2" ] || return 0; done < <(question_values "$1")
+  local value values
+  # Read every value first: returning mid-read would leave question_values
+  # writing into a closed pipe, which prints an error where SIGPIPE is ignored (CI).
+  mapfile -t values < <(question_values "$1")
+  for value in "${values[@]}"; do [ "$value" != "$2" ] || return 0; done
   return 1
 }
 
