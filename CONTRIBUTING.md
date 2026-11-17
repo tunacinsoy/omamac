@@ -56,6 +56,12 @@ test/vm.sh <branch> <fixture>
 
 It runs the one-liner twice in a throwaway VM, checks that the second run changed nothing, and posts `vm` on the commit. Fixtures live in `test/fixtures/`. The log goes to `test/logs/`.
 
+## Questions and fixtures
+
+The first-run questions live in one table, `lib/questions.sh`: one `question` line each, with its key, kind, text and options. Each key is a line in `choices.env`; values are ids that later code relies on, so never rename one.
+
+Adding a question means one line in the table and an answer for it in every `test/fixtures/*.env`. The bats suite fails on a fixture with a missing or wrong answer; in the VM, a missing answer would leave a question waiting until the run times out.
+
 ## Changing the ruleset
 
 The ruleset lives in `.github/rulesets/main.json`. It was applied once with:
