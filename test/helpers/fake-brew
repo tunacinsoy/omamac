@@ -18,12 +18,18 @@ case "${1:-}" in
     fi
     ;;
   install)
-    f="${2:?brew install needs a formula}"
-    mkdir -p "$prefix/Cellar/$f" "$prefix/bin"
-    case "$f" in
-      bash) ln -sf "${BASH5:-/opt/homebrew/bin/bash}" "$prefix/bin/bash" ;;
-      gum)  ln -sf "${HELPERS_DIR:?fake-brew needs HELPERS_DIR}/fake-gum" "$prefix/bin/gum" ;;
-    esac
+    [ "${T_BREW_FAIL:-0}" != 1 ] || { echo "Error: brew install failed" >&2; exit 1; }
+    [ $# -ge 2 ] || { echo "brew install needs a formula" >&2; exit 1; }
+    shift
+    for f in "$@"; do
+      mkdir -p "$prefix/Cellar/$f" "$prefix/bin"
+      case "$f" in
+        bash) ln -sf "${BASH5:-/opt/homebrew/bin/bash}" "$prefix/bin/bash" ;;
+        gum)  ln -sf "${HELPERS_DIR:?fake-brew needs HELPERS_DIR}/fake-gum" "$prefix/bin/gum" ;;
+      esac
+    done
+    ;;
+  upgrade)
     ;;
 esac
 exit 0
