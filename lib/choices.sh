@@ -33,10 +33,11 @@ choices_normalise() {
 # answers. On a bad line, says which and how to fix it, and returns 1.
 choices_load() {
   local file=$1 line key value normal problem n=0
+  local shown=${file/#"$HOME"/\~}
   CHOICES=()
   [ -e "$file" ] || return 0
   if [ ! -f "$file" ] || [ ! -r "$file" ]; then
-    echo "omamac can't read $file. Fix: move it aside and run the one-liner again." >&2
+    echo "omamac can't read $shown. Fix: move it aside and run the one-liner again." >&2
     return 1
   fi
   # The || keeps a last line that has no newline.
@@ -61,7 +62,7 @@ choices_load() {
       fi
     fi
     if [ -n "$problem" ]; then
-      echo "$file, line $n: $problem. Fix: delete that line and run the one-liner again; omamac asks that question again." >&2
+      echo "$shown, line $n: $problem. Fix: delete that line and run the one-liner again; omamac asks that question again." >&2
       return 1
     fi
   done < "$file"

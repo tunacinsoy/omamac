@@ -10,6 +10,10 @@ source "$OMAMAC_CHECKOUT/lib/paths.sh"
 source "$OMAMAC_CHECKOUT/lib/lines.sh"
 # shellcheck source=lib/ui.sh
 source "$OMAMAC_CHECKOUT/lib/ui.sh"
+# shellcheck source=lib/questions.sh
+source "$OMAMAC_CHECKOUT/lib/questions.sh"
+# shellcheck source=lib/choices.sh
+source "$OMAMAC_CHECKOUT/lib/choices.sh"
 # shellcheck source=lib/doctor.sh
 source "$OMAMAC_CHECKOUT/lib/doctor.sh"
 
