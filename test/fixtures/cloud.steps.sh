@@ -11,7 +11,9 @@ if [[ $before != "$after" ]]; then
 fi
 # Homebrew's bin is already on the PATH here. No zsh -ic: an interactive zsh
 # takes the terminal and doesn't give it back, so a later gum prompt fails.
-az version
+# Not az version: its first run waits for macOS's first-open confirmation, which nobody can click in the VM.
+/opt/homebrew/bin/brew list --cask azure-cli >/dev/null
+[[ -x /opt/homebrew/bin/az ]]
 aws --version
 gcloud version
 gh --version

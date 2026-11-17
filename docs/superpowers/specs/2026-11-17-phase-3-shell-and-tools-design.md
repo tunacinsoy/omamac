@@ -45,7 +45,7 @@ It is done when: each tool installs, updates and uninstalls idempotently in the 
 - Every install is a Homebrew formula or cask, except languages, which mise installs.
 - Gate files change only in a PR about the gate.
 - Facts checked on 2026-11-17:
-  - Homebrew has bottles for `eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli neovim btop starship mise herdr gh jq azure-cli awscli`; `gcloud-cli` is a cask; Terraform needs `hashicorp/tap`.
+  - Homebrew has bottles for `eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli neovim btop starship mise herdr gh jq awscli`; azure-cli and gcloud-cli are casks (azure-cli's formula is gone, checked 2026-11-17); Terraform needs `hashicorp/tap`.
   - herdr reads `~/.config/herdr/config.toml`, or the file in `HERDR_CONFIG_PATH`. Its config has no include. omawsl notes herdr runs custom commands without the shell's PATH additions.
   - mise loads `~/.config/mise/conf.d/*.toml` before `~/.config/mise/config.toml`, so the user's file wins over omamac's.
   - mise also reads config from the current folder and its parents; an untrusted one there stops some commands.
@@ -175,7 +175,7 @@ Each tool is `"latest"`. Applying: write the file (compare-then-move), then `mis
 
 | id | Homebrew |
 | --- | --- |
-| `azure` | `azure-cli` |
+| `azure` | cask `azure-cli` |
 | `aws` | `awscli` |
 | `gcloud` | cask `gcloud-cli` |
 | `gh` | `gh` |

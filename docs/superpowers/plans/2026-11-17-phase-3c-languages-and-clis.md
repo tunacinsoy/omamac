@@ -16,7 +16,7 @@
 - bash 5, `set -Eeuo pipefail`; `install.sh`, `update.sh` and `bin/omamac install|uninstall` run under an `ERR` trap that names `OMAMAC_STEP`. `boot.sh` is not touched.
 - Languages question, exactly: `"Ruby on Rails:ruby" Node.js:node Go:go Python:python Elixir:elixir Rust:rust Java:java` (PHP is gone).
 - Language → mise tools: `ruby`→`ruby`, `node`→`node`, `go`→`go`, `python`→`python`, `elixir`→`erlang elixir`, `rust`→`rust`, `java`→`java`. Each `= "latest"`. Ruby also gets the `rails` gem.
-- Cloud CLI → Homebrew: `azure`→`azure-cli`, `aws`→`awscli`, `gh`→`gh`, `terraform`→`hashicorp/tap/terraform` (after `brew tap hashicorp/tap`, only when chosen and not tapped), `gcloud`→cask `gcloud-cli`.
+- Cloud CLI → Homebrew: `azure`→cask `azure-cli`, `aws`→`awscli`, `gh`→`gh`, `terraform`→`hashicorp/tap/terraform` (after `brew tap hashicorp/tap`, only when chosen and not tapped), `gcloud`→cask `gcloud-cli`.
 - Every mise call: `$OMAMAC_BREW_PREFIX/bin/mise`, run in a subshell that `cd`s to `$HOME` first, naming its tools. Never `mise use`, never a bare `mise install` or `mise prune`.
 - Never written: `~/.config/mise/config.toml`, `~/.config/nvim` when it existed, `~/.config/starship.toml`, `~/.config/herdr/config.toml`. Never called: `brew untap`, `brew autoremove`, a bare `brew upgrade`.
 - Apply only installs what's missing: a language whose tools mise already has is not passed to `mise install` (so a re-run never fetches a newer "latest"); upgrading is `update`'s job.
@@ -97,10 +97,10 @@
 
 **Interfaces:**
 - Produces:
-  - `declare -gA CLI_FORMULA=([azure]=azure-cli [aws]=awscli [gh]=gh [terraform]=hashicorp/tap/terraform)`, `declare -gA CLI_CASK=([gcloud]=gcloud-cli)`.
+  - `declare -gA CLI_FORMULA=([aws]=awscli [gh]=gh [terraform]=hashicorp/tap/terraform)`, `declare -gA CLI_CASK=([azure]=azure-cli [gcloud]=gcloud-cli)`.
   - `clis_where <installed|missing> <id>…`: ids in that state, one per line, in the given order. Formulas by full name from one `brew list --formula --full-name -1`, casks from one `brew list --cask -1`. Non-zero if Homebrew can't list.
   - `clis_install [<id>…]`: default the chosen ids. For the missing ones: `brew tap hashicorp/tap` if terraform is missing and `brew tap` doesn't list `hashicorp/tap`; one `brew install <formulas…>`; one `brew install --cask <casks…>`; each under `ui_run`. ✓ "Cloud CLIs are installed" when any id was given or chosen.
-  - `clis_what <id>`: `azure-cli`, `hashicorp/tap/terraform`, or `the gcloud-cli cask` (for uninstall's summary).
+  - `clis_what <id>`: `awscli`, `hashicorp/tap/terraform`, or `the azure-cli cask` (for uninstall's summary).
   - `apply_all`: cloud CLIs last (`OMAMAC_STEP='installing your cloud CLIs'`).
 - fake-brew learns: `install a/b/c` records `a/b` in `Cellar/c/.tap`; `list --formula --full-name -1` prints `a/b/c` for those and the plain name otherwise; `install --cask <c…>` / `list --cask -1` use `Caskroom/`; `tap` with no args prints `$prefix/taps` lines, `tap <name>` appends to it; `uninstall [--cask] <name>` removes the Cellar or Caskroom entry (by the last `/` part), and fails with "Error: <name> is required by other" when `T_BREW_UNINSTALL_FAIL=1`. Every call stays logged.
 

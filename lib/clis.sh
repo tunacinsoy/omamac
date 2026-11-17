@@ -3,8 +3,8 @@
 # lib/questions.sh, before lib/apply.sh.
 
 # Each CLI id's Homebrew formula (full name) or cask.
-declare -gA CLI_FORMULA=([azure]=azure-cli [aws]=awscli [gh]=gh [terraform]=hashicorp/tap/terraform)
-declare -gA CLI_CASK=([gcloud]=gcloud-cli)
+declare -gA CLI_FORMULA=([aws]=awscli [gh]=gh [terraform]=hashicorp/tap/terraform)
+declare -gA CLI_CASK=([azure]=azure-cli [gcloud]=gcloud-cli)
 
 # clis_where <installed|missing> <id>…: the ids in that state, one per line, in
 # the given order. One brew list for the formulas and one for the casks.

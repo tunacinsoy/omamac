@@ -21,6 +21,12 @@ in_lib() {
 
 installs() { grep '^brew install' "$STUB_LOG" || true; }
 
+@test "azure installs as a cask" {
+  in_lib 'azure' 'clis_install'
+  [ "$status" -eq 0 ]
+  [ "$(installs)" = "brew install --cask azure-cli" ]
+}
+
 @test "installs formulas in one call, the cask in another" {
   in_lib 'aws gcloud gh' 'clis_install'
   [ "$status" -eq 0 ]
@@ -98,10 +104,11 @@ aws" ]
 }
 
 @test "clis_what names what Homebrew installs" {
-  in_lib '' 'clis_what azure; clis_what terraform; clis_what gcloud'
-  [ "$output" = "azure-cli
+  in_lib '' 'clis_what aws; clis_what terraform; clis_what gcloud; clis_what azure'
+  [ "$output" = "awscli
 hashicorp/tap/terraform
-the gcloud-cli cask" ]
+the gcloud-cli cask
+the azure-cli cask" ]
 }
 
 @test "brew can't list: fails, installs nothing" {

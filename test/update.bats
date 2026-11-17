@@ -176,6 +176,14 @@ choose() { sed -i '' "s/^$1=.*/$1=$2/" "$CHOICES_FILE"; }
   grep -qx 'brew upgrade --cask --greedy gcloud-cli' "$STUB_LOG"
 }
 
+@test "azure and gcloud: both casks in one greedy call" {
+  choose cloud_clis 'azure gcloud'
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^brew upgrade --cask' "$STUB_LOG")" -eq 1 ]
+  grep -qx 'brew upgrade --cask --greedy azure-cli gcloud-cli' "$STUB_LOG"
+}
+
 @test "no gcloud: no cask upgrade" {
   choose cloud_clis 'gh'
   run update

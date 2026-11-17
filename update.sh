@@ -90,15 +90,21 @@ update_upgrade() {
   ui_run "Upgrading your tools" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade "${installed[@]}"
 }
 
-# update_upgrade_casks: gcloud, when chosen and installed. Greedy, as the cask
-# updates itself and brew would otherwise skip it.
+# update_upgrade_casks: the chosen CLIs that are casks and installed, in one
+# greedy call, as casks update themselves and brew would otherwise skip them.
 update_upgrade_casks() {
-  local list
-  [[ " ${CHOICES[cloud_clis]:-} " == *" gcloud "* ]] || return 0
-  OMAMAC_STEP='upgrading the Google Cloud CLI'
-  list=$(clis_where installed gcloud)
+  local ids=() id list casks=() names=()
+  read -ra ids <<< "${CHOICES[cloud_clis]:-}"
+  OMAMAC_STEP='upgrading the cloud CLI casks'
+  for id in "${ids[@]}"; do
+    [ -z "${CLI_CASK[$id]:-}" ] || casks+=("$id")
+  done
+  [ "${#casks[@]}" -gt 0 ] || return 0
+  list=$(clis_where installed "${casks[@]}") || return
   [ -n "$list" ] || return 0
-  ui_run "Upgrading the Google Cloud CLI" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask --greedy "${CLI_CASK[gcloud]}"
+  mapfile -t casks <<< "$list"
+  for id in "${casks[@]}"; do names+=("${CLI_CASK[$id]}"); done
+  ui_run "Upgrading the cloud CLIs that are casks" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask --greedy "${names[@]}"
 }
 
 # update_upgrade_languages: the chosen languages to their newest versions, old
