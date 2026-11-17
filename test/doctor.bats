@@ -21,6 +21,9 @@ healthy_mac() {
     echo '[[ -r ~/.config/omamac/zshrc ]] && source ~/.config/omamac/zshrc # added by omamac' > "$HOME/.zshrc"
   }
   : > "$HOME/.config/omamac/zshrc"
+  CHOICES_FILE="$HOME/.local/state/omamac/choices.env"
+  mkdir -p "$(dirname "$CHOICES_FILE")"
+  cp "$REPO_ROOT/test/fixtures/bare.env" "$CHOICES_FILE"
 }
 
 # expect_fail <what> <fix>: doctor exits 1 and prints a ✗ line with the fix.
@@ -35,7 +38,7 @@ expect_fail() {
   healthy_mac
   run doctor
   [ "$status" -eq 0 ]
-  [ "$(printf '%s\n' "$output" | grep -c '^✓')" -eq 8 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^✓')" -eq 9 ]
 }
 
 @test "Homebrew missing" {
@@ -128,4 +131,32 @@ expect_fail() {
   run doctor
   [ "$status" -eq 1 ]
   [ "$before" = "$(snap)" ]
+}
+
+@test "saved answers missing" {
+  healthy_mac
+  rm "$CHOICES_FILE"
+  expect_fail "Saved answers" "Run the one-liner"
+}
+
+@test "saved answers invalid" {
+  healthy_mac
+  echo 'colour=red' >> "$CHOICES_FILE"
+  expect_fail "Saved answers" "Delete that line"
+  [[ "$output" == *"line 18"* ]]
+}
+
+@test "saved answers incomplete" {
+  healthy_mac
+  sed -i '' '/^docker=/d' "$CHOICES_FILE"
+  expect_fail "Saved answers" "it asks only that one"
+}
+
+@test "git status takes no lock" {
+  healthy_mac
+  # shellcheck disable=SC2016 # the stub expands it
+  stub git 'echo "locks=${GIT_OPTIONAL_LOCKS:-unset}" >> "$STUB_LOG"; exec /usr/bin/git "$@"'
+  run doctor
+  [ "$status" -eq 0 ]
+  [ "$(grep -A1 'status --porcelain' "$STUB_LOG" | sed -n 2p)" = "locks=0" ]
 }

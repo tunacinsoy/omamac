@@ -6,7 +6,7 @@
 2. Open a pull request into `main`.
 3. CI runs `bats`: shellcheck, then the bats suite.
 4. Run `test/vm.sh <branch> <fixture>` on the PR's head commit. It posts the `vm` status.
-5. Tuna merges. Merging stays Tuna's only.
+5. The agent merges once `bats` and `vm` are green and review findings are fixed.
 
 Never run omamac on the development Mac. It runs only inside test VMs.
 
@@ -16,7 +16,7 @@ Never run omamac on the development Mac. It runs only inside test VMs.
 
 Never post `vm` by hand. Only `test/vm.sh` posts it, on a pass or a fail. Only a pass posts success.
 
-Gate files (the ruleset, the CI workflow, `test/vm.sh`, `test/vm.exp`, `test/fingerprint.sh`, `test/image.sh`) are written and changed by the agent, but only in a PR whose purpose is the gate itself, never to turn a red check green. CI flags every PR that touches them, so Tuna sees it before merging. Merging stays Tuna's only.
+Gate files (the ruleset, the CI workflow, `test/vm.sh`, `test/vm.exp`, `test/fingerprint.sh`, `test/image.sh`) are written and changed by the agent, but only in a PR whose purpose is the gate itself, never to turn a red check green. CI flags every PR that touches them, and the agent names them when it reports to Tuna. The agent merges a PR once `bats` and `vm` are green and review findings are fixed; anything that needs Tuna's judgment is raised to Tuna first.
 
 **Trust model.** GitHub can't prove a VM ran, or that the fixture covers what the PR touched. The gate stops accidental merges (stale commits, unpushed changes, a forgotten VM run), not deliberate fakes.
 
@@ -55,6 +55,12 @@ test/vm.sh <branch> <fixture>
 ```
 
 It runs the one-liner twice in a throwaway VM, checks that the second run changed nothing, and posts `vm` on the commit. Fixtures live in `test/fixtures/`. The log goes to `test/logs/`.
+
+## Questions and fixtures
+
+The first-run questions live in one table, `lib/questions.sh`: one `question` line each, with its key, kind, text and options. Each key is a line in `choices.env`; values are ids that later code relies on, so never rename one.
+
+Adding a question means one line in the table and an answer for it in every `test/fixtures/*.env`. The bats suite fails on a fixture with a missing or wrong answer; in the VM, a missing answer would leave a question waiting until the run times out.
 
 ## Changing the ruleset
 

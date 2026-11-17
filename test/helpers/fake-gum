@@ -14,5 +14,33 @@ case "${1:-}" in
     [ $# -eq 0 ] || shift
     "$@"
     ;;
+  choose | confirm)
+    # Log the call, check the prompt reads the (fake) terminal, then answer
+    # from the queue in T_GUM_ANSWERS: one line per prompt.
+    [ -z "${STUB_LOG:-}" ] || echo "gum $*" >> "$STUB_LOG"
+    IFS= read -r first || first=''
+    if [ "$first" != fake-tty ]; then
+      echo "fake-gum: prompt not reading the tty" >&2
+      exit 98
+    fi
+    queue="${T_GUM_ANSWERS:-/nonexistent}"
+    pos=$(cat "$queue.pos" 2>/dev/null || echo 0)
+    pos=$((pos + 1))
+    if [ ! -f "$queue" ] || [ "$pos" -gt "$(wc -l < "$queue")" ]; then
+      echo "fake-gum: no answer for prompt $pos" >&2
+      exit 99
+    fi
+    echo "$pos" > "$queue.pos"
+    answer=$(sed -n "${pos}p" "$queue")
+    case "$answer" in
+      "exit "*) exit "${answer#exit }" ;;
+    esac
+    if [ "$1" = confirm ]; then
+      [ "$answer" = yes ]
+      exit
+    fi
+    # choose prints one value per line; an empty answer prints nothing.
+    for v in $answer; do echo "$v"; done
+    ;;
   *) echo "$@" ;;
 esac

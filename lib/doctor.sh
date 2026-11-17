@@ -68,7 +68,8 @@ doctor_check_clean() {
     doctor_report info "$what" "skipped, there is no checkout"
     return 0
   fi
-  changes=$(git -C "$OMAMAC_HOME" status --porcelain 2>/dev/null) || changes=unknown
+  # No optional locks: a read-only check must not take git's index lock.
+  changes=$(GIT_OPTIONAL_LOCKS=0 git -C "$OMAMAC_HOME" status --porcelain 2>/dev/null) || changes=unknown
   if [ -z "$changes" ]; then
     doctor_report ok "$what"
   else
@@ -94,6 +95,21 @@ doctor_check_zsh_file() {
   fi
 }
 
+doctor_check_choices() {
+  local what="Saved answers" message
+  if [ ! -e "$OMAMAC_CHOICES_FILE" ]; then
+    doctor_report fail "$what" "omamac doesn't know your answers" "Run the one-liner"
+  elif ! choices_load "$OMAMAC_CHOICES_FILE" 2>/dev/null; then
+    # Load again for the message, "<problem>. Fix: <fix>", split into doctor's why and fix.
+    message=$(choices_load "$OMAMAC_CHOICES_FILE" 2>&1) || true
+    doctor_report fail "$what" "${message%%. Fix: *}" "${message#*. Fix: }"
+  elif [ -n "$(choices_missing)" ]; then
+    doctor_report fail "$what" "a question has no answer yet" "Run the one-liner; it asks only that one"
+  else
+    doctor_report ok "$what"
+  fi
+}
+
 # Prints one line per check; returns 1 if any is a ✗.
 doctor_run() {
   local status=0
@@ -107,5 +123,6 @@ doctor_run() {
   doctor_check_line "omamac line" "$HOME/.zshrc" "$OMAMAC_ZSHRC_LINE" \
     "~/.zshrc does not load omamac's settings" || status=1
   doctor_check_zsh_file || status=1
+  doctor_check_choices || status=1
   return "$status"
 }

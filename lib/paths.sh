@@ -9,6 +9,9 @@ OMAMAC_HOME=$HOME/.local/share/omamac
 OMAMAC_CONFIG_DIR=$HOME/.config/omamac
 OMAMAC_STATE_DIR=$HOME/.local/state/omamac
 OMAMAC_ZSH_FILE=$OMAMAC_CONFIG_DIR/zshrc
+OMAMAC_CHOICES_FILE=$OMAMAC_STATE_DIR/choices.env
+# Prompts read the terminal: after boot.sh's exec, stdin is the spent curl pipe.
+OMAMAC_TTY=${OMAMAC_TEST_TTY:-/dev/tty}
 # shellcheck disable=SC2016 # literal text for the user's file, not expanded here
 OMAMAC_ZPROFILE_LINE='eval "$(/opt/homebrew/bin/brew shellenv)" # added by omamac'
 # shellcheck disable=SC2016

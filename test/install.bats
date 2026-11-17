@@ -7,7 +7,21 @@ setup() {
   install_fake_brew
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gum
   export OMAMAC_LOG="$BATS_TEST_TMPDIR/run.log"
+  # Most tests are a run with saved answers, as the VM's fixture gives:
+  # no questions, then "Install?" answered yes (twice, for tests that re-run).
+  CHOICES_FILE="$HOME/.local/state/omamac/choices.env"
+  mkdir -p "$(dirname "$CHOICES_FILE")"
+  cp "$REPO_ROOT/test/fixtures/bare.env" "$CHOICES_FILE"
+  gum_answers yes yes
 }
+
+# A Mac where nothing was answered yet.
+fresh_answers() {
+  rm -f "$CHOICES_FILE"
+  gum_answers "${FRESH_ANSWERS[@]}" "$@"
+}
+
+prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
 
 install() { "$BASH5" "$REPO_ROOT/install.sh"; }
 
@@ -97,4 +111,103 @@ snapshot() {
   run install
   [ "$status" -eq 0 ]
   [[ "$output" == *"Open a new terminal window, then run omamac"* ]]
+}
+
+@test "fresh: asks, saves, then writes the Phase 1 files" {
+  fresh_answers yes
+  run install
+  [ "$status" -eq 0 ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 17 ]
+  grep -qx 'apps_browsers=brave firefox' "$CHOICES_FILE"
+  grep -qx 'docker=none' "$CHOICES_FILE"
+  [ "$(grep -c '=' "$CHOICES_FILE")" = 16 ]
+  [ -e "$HOME/.config/omamac/zshrc" ]
+  [[ "$output" == *"Theme: Tokyo Night"* ]]
+}
+
+@test "re-run: no questions, the summary, Install? once" {
+  run install
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "gum confirm --default=false Install?" ]
+  [[ "$output" == *"Docker: No Docker"* ]]
+  cmp "$CHOICES_FILE" "$REPO_ROOT/test/fixtures/bare.env"
+}
+
+@test "Install? no: exit 0, nothing written" {
+  fresh_answers no
+  run install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Stopped. Nothing else was changed."* ]]
+  [ ! -e "$CHOICES_FILE" ]
+  [ ! -e "$HOME/.config/omamac" ]
+  [ ! -e "$HOME/.zshrc" ]
+  [ ! -e "$HOME/.zprofile" ]
+}
+
+@test "Ctrl-C at a question: exit 130, nothing written" {
+  rm -f "$CHOICES_FILE"
+  gum_answers tokyo-night "exit 130"
+  run install
+  [ "$status" -eq 130 ]
+  [[ "$output" == *"Stopped. Nothing else was changed."* ]]
+  [[ "$output" != *"omamac stopped while"* ]]
+  [ ! -e "$CHOICES_FILE" ]
+  [ ! -e "$HOME/.zshrc" ]
+}
+
+@test "broken choices.env: stops before any question" {
+  printf 'theme=nord\ncolour=red\n' > "$CHOICES_FILE"
+  before=$(shasum < "$CHOICES_FILE")
+  run install
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"line 2"* ]]
+  [ -z "$(prompts)" ]
+  [ "$(shasum < "$CHOICES_FILE")" = "$before" ]
+  [ ! -e "$HOME/.zshrc" ]
+}
+
+@test "saving fails: stops naming it, no zsh file or lines" {
+  fresh_answers yes
+  chmod 555 "$(dirname "$CHOICES_FILE")"
+  run install
+  chmod 755 "$(dirname "$CHOICES_FILE")"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"saving your answers"* ]]
+  [ ! -e "$HOME/.config/omamac/zshrc" ]
+  [ ! -e "$HOME/.zshrc" ]
+}
+
+@test "Ctrl-C at Install?: exit 130, nothing written" {
+  fresh_answers "exit 130"
+  run install
+  [ "$status" -eq 130 ]
+  [ ! -e "$CHOICES_FILE" ]
+  [ ! -e "$HOME/.zshrc" ]
+}
+
+@test "partial file: only the new question is asked, saved answers kept" {
+  sed -i '' -e '/^docker=/d' -e 's/^apps_media=$/apps_media=vlc/' "$CHOICES_FILE"
+  gum_answers orbstack yes
+  run install
+  [ "$status" -eq 0 ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
+  grep -qx 'docker=orbstack' "$CHOICES_FILE"
+  grep -qx 'apps_media=vlc' "$CHOICES_FILE"
+  [ "$(grep -c '=' "$CHOICES_FILE")" = 16 ]
+}
+
+@test "no on a re-run keeps the saved answers and says nothing about asking again" {
+  gum_answers no
+  run install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Stopped. Nothing else was changed."* ]]
+  [[ "$output" != *"asks"* ]]
+  cmp "$CHOICES_FILE" "$REPO_ROOT/test/fixtures/bare.env"
+}
+
+@test "no on a first run says the next run asks again" {
+  fresh_answers no
+  run install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"The next run asks those questions again."* ]]
 }

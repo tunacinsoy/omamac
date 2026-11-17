@@ -1,6 +1,6 @@
 # omamac — vision
 
-Status: living document · Owner: Tuna Cinsoy · Started Nov 9, 2026 · Updated Nov 16, 2026
+Status: living document · Owner: Tuna Cinsoy · Started Nov 9, 2026 · Updated Nov 17, 2026
 
 What omamac is, who it's for and why, in as much detail as we have today.
 
@@ -206,7 +206,7 @@ This is why the repo is public from day one: the VM must fetch omamac with no cr
 
 **Answer fixtures are for tests only.** Users always answer the first-run questions interactively; the fixture mechanism is not documented for them in v1. A test copies its fixture to `~/.local/state/omamac/choices.env` before running the one-liner, so omamac finds the questions answered and skips them, the same path a re-run takes; it still shows the summary and "Install? (y/n)", which `expect` answers. The question screens themselves are covered by bats tests.
 
-**Who runs the tests.** Tuna or an agent (Claude) may run `test/vm.sh` on Tuna's Mac and post the result and a log summary on the PR. The agent may also install the test tools (Tart, bats, shellcheck) on that Mac, build the clean image and boot test VMs to debug; omamac itself still runs only inside VMs. Gate files (the ruleset, the CI workflow, `test/vm.sh`, `test/vm.exp`, `test/fingerprint.sh`, `test/image.sh`) are written and changed by the agent, but only in a PR whose purpose is the gate itself, never to turn a red check green. CI flags every PR that touches them, so Tuna sees it before merging. Merging stays Tuna's only.
+**Who runs the tests.** Tuna or an agent (Claude) may run `test/vm.sh` on Tuna's Mac and post the result and a log summary on the PR. The agent may also install the test tools (Tart, bats, shellcheck) on that Mac, build the clean image and boot test VMs to debug; omamac itself still runs only inside VMs. Gate files (the ruleset, the CI workflow, `test/vm.sh`, `test/vm.exp`, `test/fingerprint.sh`, `test/image.sh`) are written and changed by the agent, but only in a PR whose purpose is the gate itself, never to turn a red check green. CI flags every PR that touches them, and the agent names them when it reports to Tuna. The agent merges a PR once `bats` and `vm` are green and review findings are fixed; anything that needs Tuna's judgment is raised to Tuna first.
 
 **Gate A (end of Phase 1):** the one-liner works in a fresh VM, and a second run changes nothing.
 
@@ -218,8 +218,8 @@ Until Gate B, omamac never runs on Tuna's Mac. That Mac is the development machi
 
 - **Repo:** `tunacinsoy/omamac`, public, cloned at `~/git-repos/omamac`. omawsl is cloned read-only at `~/git-repos/omawsl` for inspiration.
 - **Tests:** a bats suite for logic, plus the VM loop for real installs.
-- **Branches and PRs:** each phase on its own branch, pushed so the VM can fetch it; a PR per phase, merged only by Tuna.
-- **Merge gate:** bats suite (GitHub Actions) and the VM loop (run on Tuna's Mac by Tuna or an agent, result recorded on the PR) green on the exact head commit of an up-to-date PR branch, enforced by a GitHub ruleset with no bypass, for admins and agents too. `bats` is pinned to GitHub Actions; `vm` is posted only by `test/vm.sh` on a pass. Gate files (the ruleset, the CI workflow, `test/vm.sh`, `test/vm.exp`, `test/fingerprint.sh`, `test/image.sh`) are written and changed by the agent, but only in a PR whose purpose is the gate itself, never to turn a red check green. CI flags every PR that touches them, so Tuna sees it before merging. Merging stays Tuna's only.
+- **Branches and PRs:** each phase on its own branch, pushed so the VM can fetch it; a PR per phase, merged by the agent once the gate is green.
+- **Merge gate:** bats suite (GitHub Actions) and the VM loop (run on Tuna's Mac by Tuna or an agent, result recorded on the PR) green on the exact head commit of an up-to-date PR branch, enforced by a GitHub ruleset with no bypass, for admins and agents too. `bats` is pinned to GitHub Actions; `vm` is posted only by `test/vm.sh` on a pass. Gate files (the ruleset, the CI workflow, `test/vm.sh`, `test/vm.exp`, `test/fingerprint.sh`, `test/image.sh`) are written and changed by the agent, but only in a PR whose purpose is the gate itself, never to turn a red check green. CI flags every PR that touches them, and the agent names them when it reports to Tuna. The agent merges a PR once `bats` and `vm` are green and review findings are fixed; anything that needs Tuna's judgment is raised to Tuna first.
 - **Conventions carried over from omawsl:** nothing pre-selected, config safety, idempotent scripts, migrations for changes to existing installs, comments that explain *why*. Carried over as rules; the code that follows them is omamac's own.
 
 ## Suggested roadmap
@@ -300,7 +300,7 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - `gum` draws all of omamac's output; the bootstrap installs it right after Homebrew, without a question.
 - doctor offers to move an existing `~/.config/nvim` aside (renamed to `~/.config/nvim.bak-<date>`, never deleted) so omamac can set up its own.
 - Test fixtures pre-fill the saved choices; `expect` answers the sudo password and the final "Install?"; bats covers the question screens.
-- Agents may run `test/vm.sh`, build the clean image and debug in VMs, and report on the PR. Tuna doesn't write code: the agent writes everything, gate files included, changing those only in PRs about the gate, which CI flags. Merging stays Tuna's.
+- Agents may run `test/vm.sh`, build the clean image and debug in VMs, and report on the PR. Tuna doesn't write code: the agent writes everything, gate files included, changing those only in PRs about the gate, which CI flags. The agent merges once the gate is green and raises to Tuna anything that needs Tuna's judgment.
 - Repo is public from day one (needed for the VM to fetch it without credentials).
 - Bootstrap is bash 3.2-safe; everything after the re-run requires Homebrew bash 5.
 - The user's zsh stays the login shell.
@@ -425,3 +425,4 @@ One line per decision: date, question, answer, who decided. Move the item out of
 - 2026-11-16 — Merge gate — enforced by a GitHub ruleset: `bats` and `vm` required on the exact head commit of an up-to-date branch, no bypass — Tuna
 - 2026-11-16 — Licence — MIT; chosen knowing it allows commercial use — Tuna
 - 2026-11-16 — Gate files — written by the agent, changed only in gate-purpose PRs that CI flags; Tuna merges, doesn't write code; agents may build the image and run VMs — Tuna
+- 2026-11-17 — Merging — the agent merges PRs itself once `bats` and `vm` are green and review is done; it raises to Tuna only what needs Tuna's judgment — Tuna
