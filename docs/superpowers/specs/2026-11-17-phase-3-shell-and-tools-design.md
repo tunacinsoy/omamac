@@ -181,7 +181,7 @@ Each tool is `"latest"`. Applying: write the file (compare-then-move), then `mis
 | `gh` | `gh` |
 | `terraform` | `hashicorp/tap/terraform` (tapped first, only when chosen) |
 
-Installed with one `brew install` per kind for whatever isn't installed, checked by full name (`hashicorp/tap/terraform`, so homebrew/core's old `terraform` doesn't count as it).
+Installed with one `brew install` per kind for whatever isn't installed, checked by full name (`hashicorp/tap/terraform`, so homebrew/core's old `terraform` doesn't count as it). Homebrew can't install both, so with homebrew/core's `terraform` installed omamac stops before installing anything: "Terraform from homebrew/core is installed, and omamac installs HashiCorp's. Fix: brew uninstall terraform, then run omamac update."
 
 ### `omamac install` (3c)
 

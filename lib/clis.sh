@@ -57,6 +57,11 @@ clis_install() {
       casks+=("${CLI_CASK[$id]}"); clabels+=("$(question_label cloud_clis "$id")")
     fi
   done
+  # Homebrew refuses a formula whose name another tap's formula already has.
+  if [[ " ${missing[*]} " == *" terraform "* ]] && "$brew" list --formula terraform > /dev/null 2>&1; then
+    ui_fail "Terraform from homebrew/core is installed, and omamac installs HashiCorp's. Fix: brew uninstall terraform, then run omamac update."
+    return 1
+  fi
   if [[ " ${missing[*]} " == *" terraform "* ]]; then
     # Read the list first: in a pipe a failing brew, or grep -q closing early, reads as "not tapped".
     taps=$("$brew" tap) || return

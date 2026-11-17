@@ -34,7 +34,7 @@
 2. **A choice removed behind omamac's back, then `omamac uninstall` of it** (`brew uninstall gh` by hand): uninstall skips the brew call, drops the choice, exits 0. Test in Task 5.
 3. **A failure halfway through uninstall** (`brew uninstall` refuses because another formula needs it): the choice stays saved, the run says what stopped, and doctor reports it. Test in Task 5.
 4. **`omamac install` with nothing picked, or "no" at Install?**: nothing saved, nothing installed, exit 0. Tests in Task 4.
-5. **homebrew/core's old `terraform` already installed**: it doesn't count as the chosen `hashicorp/tap/terraform`, so omamac installs the tap one and doctor doesn't call it present. Test in Task 2.
+5. **homebrew/core's old `terraform` already installed**: it doesn't count as the chosen `hashicorp/tap/terraform`, and Homebrew can't install both, so omamac stops before installing anything and says to `brew uninstall terraform`; doctor doesn't call it present. Test in Task 2.
 
 ---
 

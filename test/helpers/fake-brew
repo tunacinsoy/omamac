@@ -51,6 +51,13 @@ case "${1:-}" in
     if [ "${1:-}" = "--cask" ]; then root=Caskroom; shift; fi
     for f in "$@"; do
       if [ "$root" = Caskroom ]; then mkdir -p "$prefix/Caskroom/$f"; continue; fi
+      # Like Homebrew: no two formulas with the same name from different taps.
+      d="$prefix/Cellar/${f##*/}" tap=''
+      case "$f" in */*/*) tap=${f%/*} ;; esac
+      if [ -d "$d" ] && [ "$(cat "$d/.tap" 2>/dev/null)" != "$tap" ]; then
+        echo "Error: Formulae with the same name from different taps cannot be installed at the same time." >&2
+        exit 1
+      fi
       case "$f" in
         */*/*)
           mkdir -p "$prefix/Cellar/${f##*/}"

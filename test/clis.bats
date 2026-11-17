@@ -48,14 +48,22 @@ brew install hashicorp/tap/terraform" ]
   run ! grep -q '^brew tap' "$STUB_LOG"
 }
 
-@test "homebrew/core's terraform doesn't count" {
+@test "homebrew/core's terraform doesn't count, and stops the install" {
   mkdir -p "$P/Cellar/terraform"
-  in_lib terraform 'clis_install'
-  [ "$status" -eq 0 ]
-  [ "$(installs)" = "brew install hashicorp/tap/terraform" ]
-  in_lib terraform 'clis_where installed terraform'
+  in_lib 'gh terraform' 'clis_install'
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"✗ Terraform from homebrew/core is installed, and omamac installs HashiCorp's. Fix: brew uninstall terraform, then run omamac update."* ]]
+  [ -z "$(installs)" ]
+  run ! grep -q '^brew tap' "$STUB_LOG"
+  in_lib terraform 'clis_where missing terraform'
   [ "$status" -eq 0 ]
   [ "$output" = terraform ]
+}
+
+@test "fake brew refuses a same-name formula from another tap" {
+  mkdir -p "$P/Cellar/terraform"
+  run "$P/bin/brew" install hashicorp/tap/terraform
+  [ "$status" -eq 1 ]
 }
 
 @test "all present: no brew install" {
