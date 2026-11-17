@@ -186,7 +186,7 @@ Installed with one `brew install` per kind for whatever isn't installed, checked
 ### `omamac install` (3c)
 
 1. Load choices (stop if invalid).
-2. For `languages` and `cloud_clis`, ask the multi question with only the options not yet chosen. A question with nothing left is skipped. Nothing left anywhere: "Everything omamac offers here is installed." and exit 0.
+2. For `languages` and `cloud_clis`, ask the multi question with only the options not yet chosen. A question with nothing left is skipped. Nothing left anywhere: "You've picked everything omamac offers here." and exit 0.
 3. Show only the additions, then "Install?" (default No).
 4. On yes: save the merged choices, then `apply`. On no: nothing changes.
 

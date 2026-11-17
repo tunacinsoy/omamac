@@ -28,7 +28,7 @@ add_run() {
     CHOICES[$key]=${had[*]}
   done
   if [ -z "$asked" ]; then
-    ui_info "Everything omamac offers here is installed."
+    ui_info "You've picked everything omamac offers here."
     exit 0
   fi
   for key in "${ADD_KEYS[@]}"; do

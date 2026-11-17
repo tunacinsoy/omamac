@@ -54,7 +54,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   gum_answers
   run omamac_install
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Everything omamac offers here is installed."* ]]
+  [[ "$output" == *"You've picked everything omamac offers here."* ]]
   [ -z "$(prompts)" ]
   [ "$(choices_stamp)" = "$before" ]
   run ! grep -qE '^(brew|mise) install' "$STUB_LOG"
@@ -148,12 +148,12 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   [ -z "$(prompts)" ]
 }
 
-@test "a failing step names itself and says to run omamac install again" {
+@test "a failing step names itself and says to run omamac update" {
   gum_answers go "" yes
   T_MISE_FAIL=1 run omamac_install
   [ "$status" -eq 1 ]
   [[ "$output" == *"omamac stopped while installing your languages."* ]]
-  [[ "$output" == *"Fix the problem and run omamac install again."* ]]
+  [[ "$output" == *"Fix the problem and run omamac update."* ]]
 }
 
 @test "extra arguments: usage, exit 2" {

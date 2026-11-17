@@ -43,7 +43,12 @@ OMAMAC_CMD=''
 # The ERR trap for install and uninstall. Not for doctor: it returns 1 on a ✗.
 omamac_failed() {
   ui_fail "omamac stopped while $OMAMAC_STEP."
-  ui_fail "Fix the problem and run omamac $OMAMAC_CMD again."
+  # install has saved the picks by now, so running it again wouldn't offer them.
+  if [ "$OMAMAC_CMD" = install ]; then
+    ui_fail "Fix the problem and run omamac update."
+  else
+    ui_fail "Fix the problem and run omamac $OMAMAC_CMD again."
+  fi
   exit 1
 }
 
