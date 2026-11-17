@@ -45,7 +45,7 @@ It updates omamac and what omamac installed, nothing else. It pulls omamac (and 
 - `~/.config/nvim`: LazyVim's starter, only if you don't have one. Yours is kept. If omamac made it, it holds `lua/plugins/omamac.lua`.
 - One line in `~/.zprofile` (skipped if it already sets up Homebrew) and one in `~/.zshrc`. Both end in `# added by omamac`.
 - `~/.local/share/omamac`: omamac itself.
-- `~/.config/omamac`: files omamac writes, including `zshrc` (aliases, history, completion, mise and the starship prompt), which the line in `~/.zshrc` loads.
+- `~/.config/omamac`: files omamac writes, including `zshrc` (aliases, history, completion, mise and the starship prompt), which the line in `~/.zshrc` loads. That file takes over EDITOR and VISUAL (nvim), history sizes (raised, never lowered), ↑/↓ history search, Ctrl-R (fzf), the prompt (starship), and the aliases `ls`, `ll`, `lt`, `tree`, `cat`, `cd`, `ff`, `g`, `gcm`, `gcam`, `gcad`, `lzg` and `n`.
 - `~/.local/state/omamac`: logs and your saved answers (`choices.env`).
 
 There is no uninstall command yet. To undo by hand: delete the two lines ending in `# added by omamac`, delete the three folders, delete `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`), and, if omamac installed them, run `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli`. To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
