@@ -1,8 +1,8 @@
 #!/opt/homebrew/bin/bash
 # Everything after the restart. First the questions and "Install?", so nothing
 # is written before the user says yes; then omamac's zsh file, herdr's config,
-# mise's drop-in, the core tools, LazyVim, the languages, the two guarded lines
-# and a summary.
+# mise's drop-in, the core tools, LazyVim, the languages, the cloud CLIs, the
+# two guarded lines and a summary.
 # shellcheck source-path=SCRIPTDIR
 set -Eeuo pipefail
 
@@ -86,7 +86,8 @@ install_lines() {
 
 install_summary() {
   OMAMAC_STEP='printing the summary'
-  ui_box "Installed: Homebrew, bash, gum, omamac and the core tools" "Log: $OMAMAC_LOG" "Open a new terminal window, then run omamac."
+  # Two lines, so the box fits an 80-column terminal.
+  ui_box "Installed: Homebrew, bash, gum, omamac, the core tools" "and the languages and cloud CLIs you chose." "Log: $OMAMAC_LOG" "Open a new terminal window, then run omamac."
 }
 
 install_main() {

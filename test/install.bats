@@ -225,7 +225,8 @@ snapshot() {
   [ "$status" -eq 0 ]
   [ "$(grep -c '^brew install .*starship' "$STUB_LOG")" = 1 ]
   [ -f "$HOME/.config/nvim/lua/plugins/omamac.lua" ]
-  [[ "$output" == *"Installed: Homebrew, bash, gum, omamac and the core tools"* ]]
+  [[ "$output" == *"Installed: Homebrew, bash, gum, omamac, the core tools"* ]]
+  [[ "$output" == *"and the languages and cloud CLIs you chose."* ]]
 }
 
 @test "installs the chosen languages after Install?" {
