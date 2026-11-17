@@ -8,7 +8,6 @@ setup() {
   setup_sandbox
   export OMAMAC_LOG="$BATS_TEST_TMPDIR/omamac.log"
   FILE="$HOME/.config/omamac/herdr.toml"
-  WRITTEN="$HOME/.local/state/omamac/herdr.toml.written"
   # A test points this at a copy of the checkout to change the template.
   CHECKOUT=$REPO_ROOT
 }
@@ -24,10 +23,10 @@ in_lib() {
     $1"
 }
 
-# says <line>: the output holds this closing line and neither of the other two.
+# says <line>: the output holds this closing line and not the other one.
 says() {
   local line n=0
-  for line in "✓ herdr's config is in place" "ℹ herdr's config was changed in herdr" "ℹ Your own herdr config is kept."; do
+  for line in "✓ herdr's config is in place" "ℹ Your own herdr config is kept."; do
     if [[ "$output" == *"$line"* ]]; then n=$((n + 1)); fi
   done
   [ "$n" -eq 1 ]
@@ -52,12 +51,17 @@ says() {
   done
 }
 
-@test "fresh: writes the file and its copy" {
+# rendered: omamac's file as omamac would write it now, at $BATS_TEST_TMPDIR/rendered.toml.
+# It replaces $output, so check the output first.
+rendered() { in_lib "herdr_render '$BATS_TEST_TMPDIR/rendered.toml'"; [ "$status" -eq 0 ]; }
+
+@test "fresh: writes the file" {
   in_lib herdr_config_apply
   [ "$status" -eq 0 ]
-  cmp "$FILE" "$WRITTEN"
-  grep -qF "command = \"$HOME/.local/share/omamac/bin/omamac-herdr-mode pane\"" "$FILE"
   says "✓ herdr's config is in place"
+  rendered
+  cmp "$FILE" "$BATS_TEST_TMPDIR/rendered.toml"
+  grep -qF "command = \"$HOME/.local/share/omamac/bin/omamac-herdr-mode pane\"" "$FILE"
   run ! grep -q '@OMAMAC_HELPER@' "$FILE"
 }
 
@@ -69,14 +73,14 @@ says() {
   grep -qF "command = \"$HOME/.local/share/omamac/bin/omamac-herdr-mode pane\"" "$HOME/.config/omamac/herdr.toml"
 }
 
-@test "a second run leaves both files alone" {
+@test "a second run leaves the file alone" {
   in_lib herdr_config_apply
-  before="$(stat -f %m "$FILE") $(stat -f %m "$WRITTEN")"
+  before=$(stat -f %m "$FILE")
   sleep 1.1
   in_lib herdr_config_apply
   [ "$status" -eq 0 ]
-  [ "$(stat -f %m "$FILE") $(stat -f %m "$WRITTEN")" = "$before" ]
-  [ -z "$(find "$HOME/.config/omamac" "$HOME/.local/state/omamac" -name 'herdr.toml.*' -not -name '*.written')" ]
+  [ "$(stat -f %m "$FILE")" = "$before" ]
+  [ -z "$(find "$HOME/.config/omamac" -name 'herdr.toml.*')" ]
 }
 
 @test "a new template replaces omamac's unchanged file" {
@@ -87,31 +91,17 @@ says() {
   in_lib herdr_config_apply
   [ "$status" -eq 0 ]
   grep -qx '# a new line' "$FILE"
-  cmp "$FILE" "$WRITTEN"
 }
 
-@test "changed in herdr: left alone, says how to undo" {
+@test "changed in herdr: the next run writes omamac's file again" {
   in_lib herdr_config_apply
   awk '{ print } /^\[ui\]$/ { print "sound = false" }' "$FILE" > "$FILE.new"
   mv "$FILE.new" "$FILE"
-  before=$(shasum < "$FILE")
-  for _ in 1 2; do
-    in_lib herdr_config_apply
-    [ "$status" -eq 0 ]
-    [ "$(shasum < "$FILE")" = "$before" ]
-    says "ℹ herdr's config was changed in herdr"
-    [[ "$output" == *"delete ~/.config/omamac/herdr.toml"* ]]
-  done
-  grep -qx 'sound = false' "$FILE"
-}
-
-@test "stopped before the copy: finishes it quietly" {
-  in_lib herdr_config_apply
-  rm "$WRITTEN"
   in_lib herdr_config_apply
   [ "$status" -eq 0 ]
-  cmp "$FILE" "$WRITTEN"
   says "✓ herdr's config is in place"
+  rendered
+  cmp "$FILE" "$BATS_TEST_TMPDIR/rendered.toml"
 }
 
 @test "the user's own config: ℹ and never written" {
@@ -124,20 +114,19 @@ says() {
   says "ℹ Your own herdr config is kept."
   [ "$(shasum < "$HOME/.config/herdr/config.toml") $(stat -f %m "$HOME/.config/herdr/config.toml")" = "$before" ]
   # omamac's file is still kept up to date.
-  cmp "$FILE" "$WRITTEN"
+  rendered
+  cmp "$FILE" "$BATS_TEST_TMPDIR/rendered.toml"
 }
 
-@test "the user's own config and omamac's file changed: only ℹ kept" {
+@test "the user's own config and omamac's file changed: omamac's rewritten, only ℹ kept" {
   in_lib herdr_config_apply
   echo '# changed' >> "$FILE"
-  before=$(shasum < "$FILE")
   mkdir -p "$HOME/.config/herdr"
   echo 'mine' > "$HOME/.config/herdr/config.toml"
   in_lib herdr_config_apply
   [ "$status" -eq 0 ]
   says "ℹ Your own herdr config is kept."
-  [[ "$output" != *"delete ~/.config/omamac/herdr.toml"* ]]
-  [ "$(shasum < "$FILE")" = "$before" ]
+  run ! grep -qx '# changed' "$FILE"
 }
 
 @test "herdr's own onboarding file is not the user's" {

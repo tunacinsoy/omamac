@@ -145,14 +145,14 @@ The include lines in `~/.zprofile` and `~/.zshrc` stay in `install.sh` only. If 
 ### herdr's config (3b)
 
 - `config/herdr.toml` is omawsl's `configs/herdr.toml` with `@OMAWSL_ROOT@/bin/omawsl-herdr-mode` replaced by `@OMAMAC_HELPER@`, and comments about zellij or omawsl reworded to stand on their own. Key bindings and settings are unchanged, plus one line, `onboarding = false` (see "What herdr writes" below).
-- omamac writes it to `~/.config/omamac/herdr.toml` (compare-then-move), with `@OMAMAC_HELPER@` replaced by the absolute path of `bin/omamac-herdr-mode` under `$HOME`, and keeps a copy of what it wrote in `~/.local/state/omamac/herdr.toml.written`.
+- omamac writes it to `~/.config/omamac/herdr.toml` (compare-then-move), with `@OMAMAC_HELPER@` replaced by the absolute path of `bin/omamac-herdr-mode` under `$HOME`. The file is omamac's: every run that applies omamac's files (the one-liner, `omamac update`, later `omamac theme`) rewrites it.
 - omamac's zshrc exports `HERDR_CONFIG_PATH` to that file only if the variable is unset and `~/.config/herdr/config.toml` doesn't exist or is herdr's own (see "What herdr writes"). Otherwise the user's config is used; the installer and doctor say so (ℹ).
 - `bin/omamac-herdr-mode` is written fresh to do what omawsl's helper does: the pane, tab, resize, move and session modes behind Ctrl g p/t/r/m/o, and the direct Alt chords. It calls `/opt/homebrew/bin/herdr` and `/opt/homebrew/bin/jq` by full path, runs under `/opt/homebrew/bin/bash`, and talks to herdr's socket with `nc -U` (no `-q`). Each mode's keys match omawsl's `docs/keys.md`.
 - **What herdr writes** (checked in herdr 0.9.5's source, 2026-11-17): herdr writes to the file `HERDR_CONFIG_PATH` names, never to `~/.config/herdr/config.toml` when the variable is set. It writes `onboarding = false` when its first-run screen is closed, and theme, sound, toast and status-icon choices from its settings screen (Ctrl g ,). So:
-  - omamac's file sets `onboarding = false`. Otherwise every user's first herdr start would change the file. herdr's first-run screen only opens its settings, which stay one key away.
-  - If omamac's file differs from both the copy omamac last wrote and the file omamac would write now, herdr's settings screen or the user changed it. omamac then leaves it as it is and says so (ℹ), naming the fix: delete the file and run `omamac update`. Matching the new render too covers a run stopped between writing the file and its copy. Overwriting it would silently undo the user's choices; that is the vision's rule for the user's own files (`~/.config/nvim`), applied to a file they changed. The cost: omamac's later changes to herdr's config (Phase 4's theme) don't reach that user, and doctor says so.
+  - omamac's file sets `onboarding = false`. Otherwise herdr's first-run screen would come back after every update, which rewrites the file. That screen only opens herdr's settings, which stay one key away.
+  - Changes made in herdr's settings screen, or by hand, to omamac's file don't last: the next update or theme switch writes omamac's file again, so herdr always follows omamac's theme and key bindings. The README says so. Someone who wants their own herdr settings writes `~/.config/herdr/config.toml`; omamac never touches it (and then omamac's settings don't reach herdr). Tuna decided this on 2026-11-17, replacing a first version that left a changed file alone and so cut herdr off from omamac's themes.
   - With `HERDR_CONFIG_PATH` unset, closing the first-run screen makes herdr create `~/.config/herdr/config.toml` holding only `onboarding = false` and a newline (for example, herdr started in the window that ran the one-liner, before omamac's zsh file loaded). That file is herdr's, not the user's: a `~/.config/herdr/config.toml` whose whole content is `onboarding = false` (trailing newlines ignored) doesn't count as the user's config in zshrc, the installer or doctor. A symlink always counts as the user's. omamac leaves the file where herdr put it.
-  - Dropped: overwriting with a backup (still undoes their choices on every update), and merging herdr's keys back into omamac's file (a TOML merge in bash, for a few settings).
+  - Dropped: leaving a changed file alone (herdr would stop following omamac's theme), keeping a backup, and carrying herdr's sound and toast choices over (Tuna: omamac handles herdr's settings; one's own go in `~/.config/herdr/config.toml`).
 - Phase 4 starts herdr from Ghostty, where zsh may not run first, so Phase 4 passes `HERDR_CONFIG_PATH` itself (Ghostty's `env`).
 
 ### Languages (3c)
@@ -208,7 +208,7 @@ New checks, same ✓ ✗ ℹ format:
 
 - **Core tools** (3a): ✗ lists the missing formulas, fix `brew install <them>`.
 - **neovim config** (3a): ℹ only when `~/.config/nvim` exists without `lua/plugins/omamac.lua`: "your own neovim config is kept". Missing folder: ✗, fix "run the one-liner".
-- **herdr config** (3b): ✓ omamac's file present and in use; ℹ when the user's own config is used; ℹ when omamac's file was changed in herdr (omamac's updates to it are skipped); ✗ when omamac's file is missing, fix `omamac update`.
+- **herdr config** (3b): ✓ omamac's file present and in use; ℹ when the user's own config is used; ✗ when omamac's file is missing, fix `omamac update`.
 - **mise drop-in** (3c): ✗ if `conf.d/omamac.toml` doesn't match the choices, fix "omamac update".
 - **Chosen languages and cloud CLIs** (3c): ✗ for each one Homebrew or mise no longer has.
 
