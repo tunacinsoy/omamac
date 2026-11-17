@@ -41,7 +41,7 @@ have() { local f; for f in "$@"; do mkdir -p "$OMAMAC_TEST_BREW_PREFIX/Cellar/$f
   in_lib 'core_install'
   [ "$status" -eq 0 ]
   [[ "$output" == *"Core tools are installed"* ]]
-  ! grep -q '^brew install' "$STUB_LOG"
+  run ! grep -q '^brew install' "$STUB_LOG"
 }
 
 @test "one removed: installs only that one" {
