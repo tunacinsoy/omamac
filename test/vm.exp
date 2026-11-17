@@ -52,7 +52,7 @@ expect {
     }
     exp_continue
   }
-  -re {Remove [^?]*\?} {
+  -re {Remove [^?\r\n]*\?} {
     # One y per distinct prompt text; a redraw repeats the text and gets none.
     set text $expect_out(0,string)
     if {![info exists removed($text)]} {

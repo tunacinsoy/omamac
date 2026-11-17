@@ -100,8 +100,8 @@ step=fixture
 vm "mkdir -p ~/.local/state/omamac && curl -fsSL $raw/test/fixtures/$fixture.env -o ~/.local/state/omamac/choices.env"
 
 # 4. The one-liner, in an interactive login shell: .zshrc loads as in a Terminal
-# window (zsh -lc skips it). zsh has no pipefail
-# by default: without it a failed fetch feeds bash nothing, and bash exits 0.
+# window (zsh -lc skips it). zsh has no pipefail by default: without it a
+# failed fetch feeds bash nothing, and bash exits 0.
 one_liner="zsh -lic 'set -o pipefail; curl -fsSL $raw/boot.sh | OMAMAC_REF=$branch bash'"
 # Two password prompts: the ssh login and omamac's one sudo prompt. A third fails.
 run_one_liner() { OMAMAC_VM_MAX_PASSWORDS=2 vm "$one_liner"; }
