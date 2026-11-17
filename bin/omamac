@@ -34,7 +34,7 @@ USAGE
 # omamac_update: pull the new code, then run its update.sh. exec, so the steps
 # that run are the new ones, not this old copy's.
 omamac_update() {
-  local fix="omamac couldn't update its code. Fix: git -C ~/.local/share/omamac status, to see why."
+  local fix="omamac couldn't update its code. Fix: check your internet connection, or run git -C ~/.local/share/omamac status to see why."
   # pull --ff-only keeps local edits the new commits don't touch, so check
   # first: a checkout with local edits is left as it is.
   if [ -n "$(git -C "$OMAMAC_HOME" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
