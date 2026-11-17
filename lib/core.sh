@@ -1,7 +1,8 @@
 # shellcheck shell=bash
 # The core tools every omamac Mac gets. Sourced after lib/paths.sh and lib/ui.sh.
 
-CORE_FORMULAS=(starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli)
+# jq: herdr's key bindings need it.
+CORE_FORMULAS=(starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq)
 
 # core_where <installed|missing> <formula>…: the given formulas in that state,
 # one per line, in the given order. One brew list for all of them: each call

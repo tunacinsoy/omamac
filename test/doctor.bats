@@ -11,7 +11,7 @@ healthy_mac() {
   install_fake_brew
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install bash
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gum
-  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq
   mkdir -p "$HOME/.config/nvim/lua/plugins"
   : > "$HOME/.config/nvim/lua/plugins/omamac.lua"
   CHECKOUT="$HOME/.local/share/omamac"

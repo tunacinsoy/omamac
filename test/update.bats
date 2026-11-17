@@ -3,7 +3,7 @@ load helpers/common
 bats_require_minimum_version 1.5.0
 
 # The formulas update may upgrade: the core, then bash and gum.
-OMAMAC_FORMULAS='starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli bash gum'
+OMAMAC_FORMULAS='starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq bash gum'
 
 setup() {
   setup_sandbox
@@ -104,6 +104,13 @@ snapshot() {
   [[ "$output" == *"Kept neovim at the pinned version."* ]]
   run ! grep -E '^brew upgrade.*neovim' "$STUB_LOG"
   grep -q '^brew upgrade starship ' "$STUB_LOG"
+}
+
+@test "every formula pinned: no brew upgrade call" {
+  printf '%s\n' $OMAMAC_FORMULAS > "$OMAMAC_TEST_BREW_PREFIX/pinned"
+  run update
+  [ "$status" -eq 0 ]
+  ! grep -q '^brew upgrade' "$STUB_LOG"
 }
 
 @test "asks Homebrew for its list once per step, not per formula" {
