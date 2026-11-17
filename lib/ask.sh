@@ -5,10 +5,18 @@
 # terminal, and each exit status is caught where it happens, so a "no" or a
 # Ctrl-C never reaches the caller's ERR trap.
 
-# gum exits 130 on Ctrl-C.
+# gum exits 130 on Ctrl-C. Homebrew and omamac may already be in place, hence "else".
 ask_stopped() {
-  ui_fail "Stopped. Nothing was changed."
+  ui_fail "Stopped. Nothing else was changed."
   exit 130
+}
+
+# A missing terminal would make every yes/no prompt fail with exit 1, which
+# reads as "no". boot.sh checks it too; this keeps ask.sh safe on its own.
+ask_need_tty() {
+  [ -r "$OMAMAC_TTY" ] && return 0
+  ui_fail "omamac needs a terminal to ask its questions. Run it from Terminal."
+  exit 1
 }
 
 # ask_broken <what>: gum failed some other way.
@@ -20,6 +28,7 @@ ask_broken() {
 # ask_one <key>: ask one question and set CHOICES[key].
 ask_one() {
   local key=$1 status=0 out normal options=() limit=()
+  [ -z "${QUESTION_HELP[$key]:-}" ] || ui_info "${QUESTION_HELP[$key]}"
   if [ "${QUESTION_KIND[$key]}" = yesno ]; then
     "$UI_GUM" confirm --default=false "${QUESTION_TEXT[$key]}" < "$OMAMAC_TTY" || status=$?
     case $status in
@@ -45,6 +54,7 @@ ask_one() {
 ask_missing() {
   local key keys intro=0
   mapfile -t keys < <(choices_missing)
+  [ "${#keys[@]}" -eq 0 ] || ask_need_tty
   for key in "${keys[@]}"; do
     if [[ $key == apps_* ]] && [ "$intro" -eq 0 ]; then
       ui_info "Desktop apps, installed with Homebrew. Pick any, or none."
@@ -75,6 +85,7 @@ ask_summary() {
 # ask_install: 0 on yes, 1 on no. Enter alone is no.
 ask_install() {
   local status=0
+  ask_need_tty
   "$UI_GUM" confirm --default=false "Install?" < "$OMAMAC_TTY" || status=$?
   case $status in
     0 | 1) return "$status" ;;

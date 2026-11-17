@@ -28,7 +28,7 @@ expect_bad() {
   load_file "$2"
   [ "$status" -eq 1 ]
   [[ "$output" == *"line $1:"* ]]
-  [[ "$output" == *"Fix: delete that line"* ]]
+  [[ "$output" == *"Fix: Delete that line"* ]]
 }
 
 @test "the table has the 16 keys in the vision's order" {
@@ -176,4 +176,19 @@ no" ]
     [ "$status" -eq 0 ] || { echo "$f: $output"; return 1; }
     [ -z "$output" ] || { echo "$f is missing: $output"; return 1; }
   done
+}
+
+@test "prompts fit an 80-column terminal" {
+  # gum cuts a prompt off at the terminal's edge instead of wrapping it.
+  in_lib 'for k in "${QUESTION_KEYS[@]}"; do
+      t=${QUESTION_TEXT[$k]}; [ "${#t}" -le 76 ] || echo "$k: ${#t}"
+    done'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "the vision's disclosures are in the help lines" {
+  in_lib 'echo "${QUESTION_HELP[desktops]}|${QUESTION_HELP[wispr_flow]}"'
+  [[ "$output" == *"Reduce motion"*"shortens animations everywhere"* ]]
+  [[ "$output" == *"in the cloud"* ]]
 }

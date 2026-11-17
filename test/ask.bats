@@ -78,7 +78,7 @@ prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
   gum_answers tokyo-night "exit 130"
   in_ask 'ask_missing'
   [ "$status" -eq 130 ]
-  [[ "$output" == *"Stopped. Nothing was changed."* ]]
+  [[ "$output" == *"Stopped. Nothing else was changed."* ]]
 }
 
 @test "Ctrl-C at a yes/no question exits 130" {
@@ -130,5 +130,37 @@ prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
   gum_answers "exit 130"
   in_ask 'ask_install'
   [ "$status" -eq 130 ]
-  [[ "$output" == *"Stopped. Nothing was changed."* ]]
+  [[ "$output" == *"Stopped. Nothing else was changed."* ]]
+}
+
+@test "the help line comes before its question" {
+  gum_answers yes
+  in_ask 'choices_load "$REPO_ROOT/test/fixtures/bare.env"; unset "CHOICES[desktops]"; ask_missing'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Reduce motion turns on, which shortens animations everywhere."* ]]
+  [ "$(prompts)" = "gum confirm --default=false Make desktops behave like workspaces?" ]
+}
+
+@test "the summary fits an 80-column terminal with every app picked" {
+  in_ask 'choices_load "$REPO_ROOT/test/fixtures/bare.env"
+    for k in "${QUESTION_KEYS[@]}"; do
+      [ "${QUESTION_KIND[$k]}" != multi ] || CHOICES[$k]=$(question_values "$k" | paste -sd" " -)
+    done
+    ask_summary'
+  [ "$status" -eq 0 ]
+  # The box adds a border and two spaces of padding on each side.
+  while IFS= read -r line; do
+    [ "${#line}" -le 74 ] || { echo "too long: $line"; return 1; }
+  done <<< "$output"
+}
+
+@test "no terminal: stops before asking, never reads it as no" {
+  gum_answers "${FRESH_ANSWERS[@]}"
+  rm "$OMAMAC_TEST_TTY"
+  in_ask 'ask_missing'
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"needs a terminal"* ]]
+  [ -z "$(prompts)" ]
+  in_ask 'ask_install'
+  [ "$status" -eq 1 ]
 }
