@@ -9,8 +9,12 @@ setup() { setup_sandbox; }
     [ ! -e "$REPO_ROOT/$p" ] || files+=("$REPO_ROOT/$p")
   done
   [ "${#files[@]}" -eq 0 ] && return 0
-  run grep -rniwE 'apt|windows|wsl' "${files[@]}"
+  # Case-insensitive for apt and WSL; case-sensitive for Windows, the OS's
+  # name, since omamac's own text speaks of macOS windows.
+  run grep -rniwE 'apt|wsl' "${files[@]}"
   [ "$status" -eq 1 ]   # grep found nothing
+  run grep -rnw 'Windows' "${files[@]}"
+  [ "$status" -eq 1 ]
 }
 
 @test "boot.sh parses under macOS's bash 3.2" {
