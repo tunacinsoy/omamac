@@ -212,7 +212,7 @@ snapshot() {
 @test "installs the core and LazyVim after Install?" {
   run install
   [ "$status" -eq 0 ]
-  [ "$(grep -c '^brew install starship ' "$STUB_LOG")" = 1 ]
+  [ "$(grep -c '^brew install .*starship' "$STUB_LOG")" = 1 ]
   [ -f "$HOME/.config/nvim/lua/plugins/omamac.lua" ]
   [[ "$output" == *"Installed: Homebrew, bash, gum, omamac and the core tools"* ]]
 }
@@ -222,7 +222,8 @@ snapshot() {
   run install
   [ "$status" -eq 0 ]
   [ "$(grep -c '^brew install' "$STUB_LOG")" = 1 ]  # only setup's gum
-  ! grep -q '^brew install starship' "$STUB_LOG"
+  ! grep -q '^brew install .*starship' "$STUB_LOG"
+  [ ! -e "$HOME/.config/omamac/zshrc" ]
   [ ! -e "$HOME/.config/nvim" ]
 }
 
@@ -232,6 +233,7 @@ snapshot() {
   run install
   [ "$status" -eq 0 ]
   [ "$(grep -c '^brew upgrade' "$STUB_LOG" || true)" = 0 ]
+  [ "$(grep -c '^brew install .*starship' "$STUB_LOG")" = 1 ]
 }
 
 @test "never-touch: a user's nvim folder is left alone" {
@@ -241,4 +243,11 @@ snapshot() {
   run install
   [ "$status" -eq 0 ]
   [ "$(cd "$HOME/.config/nvim" && find . -type f -exec shasum {} + | sort)" = "$before" ]
+}
+
+@test "a failing core install stops naming its step, no nvim" {
+  T_BREW_FAIL=1 run install
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"omamac stopped while installing the core tools."* ]]
+  [ ! -e "$HOME/.config/nvim" ]
 }

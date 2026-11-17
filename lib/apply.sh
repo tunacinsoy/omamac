@@ -1,5 +1,5 @@
 # shellcheck shell=bash disable=SC2034 # OMAMAC_STEP is read by install.sh's ERR trap
-# What install.sh does after "Install?" is yes. Sourced after lib/core.sh and
+# The steps the one-liner and omamac update share. Sourced after lib/core.sh and
 # lib/neovim.sh; sets the caller's OMAMAC_STEP so a failure names its step.
 
 # apply_zsh_file: omamac's zsh file is config/zshrc from the checkout.
