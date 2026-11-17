@@ -9,6 +9,9 @@ OMAMAC_HOME=$HOME/.local/share/omamac
 OMAMAC_CONFIG_DIR=$HOME/.config/omamac
 OMAMAC_STATE_DIR=$HOME/.local/state/omamac
 OMAMAC_ZSH_FILE=$OMAMAC_CONFIG_DIR/zshrc
+OMAMAC_NVIM_DIR=$HOME/.config/nvim
+OMAMAC_NVIM_MARKER=$OMAMAC_NVIM_DIR/lua/plugins/omamac.lua
+OMAMAC_LAZYVIM_URL=${OMAMAC_TEST_LAZYVIM_URL:-https://github.com/LazyVim/starter}
 OMAMAC_CHOICES_FILE=$OMAMAC_STATE_DIR/choices.env
 # Prompts read the terminal: after boot.sh's exec, stdin is the spent curl pipe.
 OMAMAC_TTY=${OMAMAC_TEST_TTY:-/dev/tty}

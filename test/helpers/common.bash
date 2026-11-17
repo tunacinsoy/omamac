@@ -12,6 +12,7 @@ setup_sandbox() {
   export OMAMAC_TEST_BREW_PREFIX="$BATS_TEST_TMPDIR/opt/homebrew"
   export REPO_ROOT BASH5 HELPERS_DIR
   mkdir -p "$HOME" "$STUB_DIR"
+  lazyvim_fixture
   : > "$STUB_LOG"
   ln -sf "$HELPERS_DIR/fake-gum" "$STUB_DIR/gum"
   # The terminal prompts read. fake-gum checks for this first line.
@@ -21,6 +22,18 @@ setup_sandbox() {
   [ -x "$BASH5" ] || { echo "missing $BASH5" >&2; return 1; }
   # shellcheck disable=SC2016 # the single quotes are meant: bash 5 expands it
   [ "$("$BASH5" -c 'echo "${BASH_VERSINFO[0]}"')" -ge 5 ] || { echo "$BASH5 is older than 5" >&2; return 1; }
+}
+
+# A tiny local LazyVim starter, so tests run offline. file:// makes --depth work.
+lazyvim_fixture() {
+  local repo="$BATS_TEST_TMPDIR/lazyvim-starter"
+  mkdir -p "$repo/lua/config"
+  echo 'require("config.lazy")' > "$repo/init.lua"
+  echo '-- lazy' > "$repo/lua/config/lazy.lua"
+  git -C "$repo" init -q
+  git -C "$repo" add -A
+  git -C "$repo" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m fixture
+  export OMAMAC_TEST_LAZYVIM_URL="file://$repo"
 }
 
 # stub <name> [<bash body>]: a command that logs "<name> <args>" then runs the body.
