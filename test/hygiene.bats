@@ -22,9 +22,15 @@ setup() { setup_sandbox; }
 }
 
 @test "every bash 5 script parses" {
-  for f in "$REPO_ROOT"/install.sh "$REPO_ROOT"/update.sh "$REPO_ROOT"/bin/omamac "$REPO_ROOT"/lib/*.sh; do
+  for f in "$REPO_ROOT"/install.sh "$REPO_ROOT"/update.sh "$REPO_ROOT"/bin/omamac "$REPO_ROOT"/bin/omamac-herdr-mode "$REPO_ROOT"/lib/*.sh; do
     [ ! -e "$f" ] || "$BASH5" -n "$f"
   done
+}
+
+@test "the helper passes shellcheck" {
+  # CI's shellcheck line doesn't list the helper, so it's checked here.
+  command -v shellcheck >/dev/null || skip "shellcheck is not installed"
+  shellcheck "$REPO_ROOT/bin/omamac-herdr-mode"
 }
 
 @test "stub records its calls" {

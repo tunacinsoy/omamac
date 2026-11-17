@@ -1,0 +1,337 @@
+#!/opt/homebrew/bin/bash
+# omamac-herdr-mode <mode|action> [direction]
+#
+# herdr allows one key after its Ctrl g prefix: "prefix+p+n" is an invalid
+# binding. So Ctrl g, a mode letter (p/t/r/m/o), then an action key can't
+# be written in herdr's config. Instead config/herdr.toml binds each mode
+# letter to a popup running this script, which shows the mode's keys,
+# reads the next key itself and drives herdr through its CLI.
+#
+# Popups aren't panes, so herdr gives them no pane id. The focused pane is
+# read again from `herdr pane list` before every action, since the sticky
+# keys (focus, resize, move) change it as they go.
+#
+# The Alt chords herdr has no action for run this as a shell command too:
+# focus-or-tab, new-pane, grow and shrink.
+
+# No -e: a herdr call that fails, like focusing past the screen edge, must
+# not end the mode.
+set -uo pipefail
+
+# herdr runs key commands without the shell's PATH, so every command is
+# named by its full path.
+prefix=${OMAMAC_TEST_BREW_PREFIX:-/opt/homebrew}
+herdr() { "$prefix/bin/herdr" "$@"; }
+jq() { "$prefix/bin/jq" "$@"; }
+
+fail() {
+  printf '✗ %s\n' "$*" >&2
+  exit 1
+}
+
+pane="" tab="" ws=""
+refresh() {
+  read -r pane tab ws < <(herdr pane list |
+    jq -r '.result.panes[] | select(.focused) | "\(.pane_id) \(.tab_id) \(.workspace_id)"')
+  pane=${pane:-${HERDR_ACTIVE_PANE_ID:-}}
+  tab=${tab:-${HERDR_ACTIVE_TAB_ID:-}}
+  ws=${ws:-${HERDR_ACTIVE_WORKSPACE_ID:-}}
+}
+
+# herdr's CLI focuses a pane only by direction; its socket's pane.focus
+# takes a pane id. herdr gives commands HERDR_SOCKET_PATH. macOS nc has no
+# -q, so -w 1 makes it quit once the socket has been idle for a second.
+focus_pane_id() {
+  jq -cn --arg p "$1" '{id: "omamac", method: "pane.focus", params: {pane_id: $p}}' |
+    "${OMAMAC_TEST_NC:-/usr/bin/nc}" -U -w 1 "${HERDR_SOCKET_PATH:?}" >/dev/null
+}
+
+neighbor() {
+  herdr pane neighbor --pane "$pane" --direction "$1" | jq -r '.result.neighbor.neighbor_pane_id // empty'
+}
+
+# tab_offset <steps> [nowrap]: prints the tab that many steps from the
+# focused one, wrapping around the ends unless nowrap. Prints nothing when
+# there's only one tab, or with nowrap past either end.
+tab_offset() {
+  local -a ids
+  mapfile -t ids < <(herdr tab list --workspace "$ws" | jq -r '.result.tabs | sort_by(.number) | .[].tab_id')
+  local n=${#ids[@]} i j
+  ((n > 1)) || return 0
+  for i in "${!ids[@]}"; do
+    [[ ${ids[$i]} == "$tab" ]] || continue
+    j=$((i + $1))
+    if [[ ${2:-} == nowrap ]] && ((j < 0 || j >= n)); then return 0; fi
+    echo "${ids[$(((j + n) % n))]}"
+    return 0
+  done
+}
+
+# pane_offset <steps>: prints the pane that many steps from the focused one
+# in layout order, wrapping around.
+pane_offset() {
+  local -a ids
+  mapfile -t ids < <(herdr pane layout --pane "$pane" | jq -r '.result.layout.panes[].pane_id')
+  local n=${#ids[@]} i
+  ((n > 1)) || return 0
+  for i in "${!ids[@]}"; do
+    [[ ${ids[$i]} == "$pane" ]] || continue
+    echo "${ids[$(((i + $1 + n) % n))]}"
+    return 0
+  done
+}
+
+opposite() {
+  case $1 in left) echo right ;; right) echo left ;; up) echo down ;; down) echo up ;; esac
+}
+
+# Alt h/l: focus the pane that way, or at the edge the tab that way.
+focus_or_tab() {
+  if [[ -n $(neighbor "$1") ]]; then
+    herdr pane focus --pane "$pane" --direction "$1" >/dev/null
+  else
+    local t step=1
+    [[ $1 == left ]] && step=-1
+    t=$(tab_offset "$step")
+    [[ -n $t ]] && herdr tab focus "$t" >/dev/null
+  fi
+}
+
+# Split the way that leaves roomier panes: a terminal cell is about twice
+# as tall as it is wide.
+new_pane() {
+  local w h dir=down
+  read -r w h < <(herdr pane layout --pane "$pane" |
+    jq -r --arg p "$pane" '.result.layout.panes[] | select(.pane_id == $p) | "\(.rect.width) \(.rect.height)"')
+  ((${w:-0} > ${h:-0} * 2)) && dir=right
+  herdr pane split --pane "$pane" --direction "$dir" --focus >/dev/null
+}
+
+# `herdr pane resize --direction X` moves the border toward X, which grows
+# the pane when it has a neighbor that way. Shrinking toward X pulls that
+# same border back.
+grow_toward() {
+  [[ -n $(neighbor "$1") ]] && herdr pane resize --pane "$pane" --direction "$1" >/dev/null
+}
+shrink_from() {
+  [[ -n $(neighbor "$1") ]] && herdr pane resize --pane "$pane" --direction "$(opposite "$1")" >/dev/null
+}
+# Resize mode's hjkl. At the screen edge there is nothing to grow into, so
+# herdr moves the pane's other border toward X: the key still moves a
+# border the way it points.
+border_toward() { herdr pane resize --pane "$pane" --direction "$1" >/dev/null; }
+# grow_all / shrink_all: every side that has a neighbor (Alt =, Alt -).
+grow_all() { local d; for d in left right up down; do grow_toward "$d"; done; }
+shrink_all() { local d; for d in left right up down; do shrink_from "$d"; done; }
+
+swap_toward() { herdr pane swap --pane "$pane" --direction "$1" >/dev/null; }
+swap_offset() {
+  local t
+  t=$(pane_offset "$1")
+  [[ -n $t ]] && herdr pane swap --source-pane "$pane" --target-pane "$t" >/dev/null
+}
+
+# break_pane [-1|1]: move the pane into the tab on that side, or into a new
+# tab when there's none there (or no side is given).
+break_pane() {
+  local t=""
+  [[ -n ${1:-} ]] && t=$(tab_offset "$1" nowrap)
+  if [[ -n $t ]]; then
+    herdr pane move "$pane" --tab "$t" --split right --focus >/dev/null
+  else
+    herdr pane move "$pane" --new-tab --focus >/dev/null
+  fi
+}
+
+# prompt <question> [starting text]: prints the reply. The reply is edited
+# in place, so a pre-filled answer can be changed instead of retyped. It
+# runs inside $(...), so the question goes straight to the terminal, when
+# there is one.
+prompt() {
+  { printf '\e[?25h\e[H\e[2J %s ' "$1" >/dev/tty; } 2>/dev/null
+  /bin/stty sane 2>/dev/null
+  local reply
+  IFS= read -r -e -i "${2:-}" reply
+  printf '%s' "$reply"
+}
+
+# Pane mode c: the pane's name is its note, shown under the agent in the
+# sidebar (config/herdr.toml). An empty note clears it.
+note_pane() {
+  local note
+  note=$(herdr pane get "$pane" | jq -r '.result.pane.label // empty')
+  note=$(prompt "Pane note (empty clears it):" "$note")
+  if [[ -n $note ]]; then
+    herdr pane rename "$pane" "$note" >/dev/null
+  else
+    herdr pane rename "$pane" --clear >/dev/null
+  fi
+}
+
+quit_session() {
+  local r
+  r=$(prompt "Quit herdr? Every pane in the session stops. [y/N]")
+  [[ $r == [yY]* ]] && herdr server stop >/dev/null
+}
+
+# ---------------------------------------------------------------- popup
+
+key=""
+read_key() {
+  local k rest=""
+  IFS= read -rsn1 k || return 1
+  if [[ $k == $'\e' ]]; then
+    IFS= read -rsn2 -t 0.02 rest
+    case $rest in
+      '[A') k=UP ;; '[B') k=DOWN ;; '[C') k=RIGHT ;; '[D') k=LEFT ;; *) k=ESC ;;
+    esac
+  fi
+  # Terminals send Enter as CR, and herdr's popup doesn't turn it into a
+  # newline, so it arrives as $'\r', not as an empty line.
+  [[ -z $k || $k == $'\r' ]] && k=ENTER
+  key=$k
+}
+
+msg=""
+draw() {
+  printf '\e[?25l\e[H\e[2J \e[1;30;42m %s \e[0m  %s\n' "$1" "$2"
+  printf ' \e[2mEsc/Enter/Ctrl g: back to typing'
+  [[ -n $msg ]] && printf '   \e[0;33m%s' "$msg"
+  printf '\e[0m'
+  msg=""
+}
+
+# Each mode reads one key, then sets mode to the next mode, to "" to close
+# the popup, or leaves it as it is to stay (the sticky keys).
+mode_pane() {
+  draw PANE "←↓↑→/hjkl focus │ n new │ d down │ r right │ x close │ f fullscreen │ c note │ Tab next │ t m o modes"
+  read_key || { mode=""; return; }
+  local t
+  case $key in
+    h | LEFT) herdr pane focus --pane "$pane" --direction left >/dev/null ;;
+    j | DOWN) herdr pane focus --pane "$pane" --direction down >/dev/null ;;
+    k | UP) herdr pane focus --pane "$pane" --direction up >/dev/null ;;
+    l | RIGHT) herdr pane focus --pane "$pane" --direction right >/dev/null ;;
+    $'\t') t=$(pane_offset 1); [[ -n $t ]] && focus_pane_id "$t" ;;
+    n) new_pane; mode="" ;;
+    d) herdr pane split --pane "$pane" --direction down --focus >/dev/null; mode="" ;;
+    r) herdr pane split --pane "$pane" --direction right --focus >/dev/null; mode="" ;;
+    x) herdr pane close "$pane" >/dev/null; mode="" ;;
+    f) herdr pane zoom --pane "$pane" --toggle >/dev/null; mode="" ;;
+    c) note_pane; mode="" ;;
+    e) msg="herdr can't embed or float a pane" ;;
+    w) msg="herdr has no floating panes. Alt f opens a scratch shell" ;;
+    z) msg="herdr can't hide pane frames" ;;
+    s) msg="To scroll, press Ctrl g s while typing" ;;
+    t) mode=tab ;; m) mode=move ;; o) mode=session ;;
+    $'\x11') quit_session; mode="" ;;
+    p | ESC | ENTER | $'\a') mode="" ;;
+  esac
+}
+
+mode_tab() {
+  draw TAB "←↓↑→/hjkl switch │ 1-9 go to │ n new │ x close │ r rename │ b break pane │ [ ] break left/right │ p m o modes"
+  read_key || { mode=""; return; }
+  local t name
+  # Switching tab also closes the popup: once a running popup switches
+  # tabs, herdr 0.9 opens every later popup on the old tab, out of sight.
+  case $key in
+    h | k | LEFT | UP) t=$(tab_offset -1); [[ -n $t ]] && herdr tab focus "$t" >/dev/null; mode="" ;;
+    j | l | RIGHT | DOWN) t=$(tab_offset 1); [[ -n $t ]] && herdr tab focus "$t" >/dev/null; mode="" ;;
+    [1-9])
+      t=$(herdr tab list --workspace "$ws" | jq -r --argjson n "$key" '.result.tabs[] | select(.number == $n) | .tab_id')
+      [[ -n $t ]] && herdr tab focus "$t" >/dev/null
+      mode=""
+      ;;
+    n) herdr tab create --workspace "$ws" --focus >/dev/null; mode="" ;;
+    x) herdr tab close "$tab" >/dev/null; mode="" ;;
+    r) name=$(prompt "Tab name:"); [[ -n $name ]] && herdr tab rename "$tab" "$name" >/dev/null; mode="" ;;
+    b) break_pane; mode="" ;;
+    '[') break_pane -1; mode="" ;;
+    ']') break_pane 1; mode="" ;;
+    s) msg="herdr can't send input to every pane at once" ;;
+    $'\t') msg="herdr can't jump back to the last tab" ;;
+    p) mode=pane ;; m) mode=move ;; o) mode=session ;;
+    $'\x11') quit_session; mode="" ;;
+    t | ESC | ENTER | $'\a') mode="" ;;
+  esac
+}
+
+mode_resize() {
+  draw RESIZE "←↓↑→/hjkl increase │ HJKL decrease │ + = increase │ - decrease │ p t m o modes"
+  read_key || { mode=""; return; }
+  case $key in
+    h | LEFT) border_toward left ;;
+    j | DOWN) border_toward down ;;
+    k | UP) border_toward up ;;
+    l | RIGHT) border_toward right ;;
+    H) shrink_from left ;;
+    J) shrink_from down ;;
+    K) shrink_from up ;;
+    L) shrink_from right ;;
+    + | =) grow_all ;;
+    -) shrink_all ;;
+    p) mode=pane ;; t) mode=tab ;; m) mode=move ;; o) mode=session ;;
+    $'\x11') quit_session; mode="" ;;
+    r | ESC | ENTER | $'\a') mode="" ;;
+  esac
+}
+
+mode_move() {
+  draw MOVE "←↓↑→/hjkl move pane │ n/Tab next │ p previous │ t r o modes"
+  read_key || { mode=""; return; }
+  case $key in
+    h | LEFT) swap_toward left ;;
+    j | DOWN) swap_toward down ;;
+    k | UP) swap_toward up ;;
+    l | RIGHT) swap_toward right ;;
+    n | $'\t') swap_offset 1 ;;
+    p) swap_offset -1 ;;
+    t) mode=tab ;; r) mode=resize ;; o) mode=session ;;
+    $'\x11') quit_session; mode="" ;;
+    m | ESC | ENTER | $'\a') mode="" ;;
+  esac
+}
+
+# herdr's detach, workspace picker and settings are its own key bindings,
+# not in its CLI, so session mode can only point at them.
+mode_session() {
+  draw SESSION "detach → Ctrl g q │ sessions/workspaces → Ctrl g w │ goto agent → Ctrl g g │ settings → Ctrl g ,"
+  read_key || { mode=""; return; }
+  case $key in
+    d) msg="To detach, press Ctrl g q" ;;
+    w) msg="For workspaces, press Ctrl g w" ;;
+    c) msg="For settings, press Ctrl g ," ;;
+    p) msg="herdr has no plugin manager" ;;
+    t) mode=tab ;; m) mode=move ;; r) mode=resize ;;
+    $'\x11') quit_session; mode="" ;;
+    o | ESC | ENTER | $'\a') mode="" ;;
+  esac
+}
+
+# ---------------------------------------------------------------- start
+
+[[ -x $prefix/bin/jq ]] || fail "jq is missing. Fix: brew install jq"
+refresh
+[[ -n $pane ]] || fail "herdr isn't running."
+
+case ${1:-} in
+  focus-or-tab) focus_or_tab "${2:?direction}" ;;
+  new-pane) new_pane ;;
+  grow) grow_all ;;
+  shrink) shrink_all ;;
+  quit) quit_session ;;
+  pane | tab | resize | move | session)
+    # Turn off XON/XOFF so Ctrl q reaches the mode.
+    /bin/stty -ixon 2>/dev/null
+    mode=$1
+    while [[ -n $mode ]]; do
+      "mode_$mode"
+      refresh
+    done
+    ;;
+  *)
+    echo "usage: omamac-herdr-mode pane|tab|resize|move|session|quit|new-pane|grow|shrink|focus-or-tab <left|right>" >&2
+    exit 2
+    ;;
+esac
