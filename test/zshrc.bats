@@ -23,7 +23,7 @@ zrc() { run zsh -f -i -c "source $REPO_ROOT/config/zshrc; $1" < /dev/null; }
 }
 
 @test "EDITOR is nvim when nvim exists" {
-  zrc 'echo "[${EDITOR-unset}]"'
+  PATH=/usr/bin:/bin run zsh -f -i -c "source $REPO_ROOT/config/zshrc; echo \"[\${EDITOR-unset}]\"" < /dev/null
   [[ "$output" == *"[unset]"* ]]
   stub nvim
   zrc 'echo "$EDITOR $VISUAL"'
@@ -54,4 +54,22 @@ zrc() { run zsh -f -i -c "source $REPO_ROOT/config/zshrc; $1" < /dev/null; }
 @test "no zellij, apt names or multiplexer start" {
   run grep -E 'zellij|batcat|fdfind|herdr' "$REPO_ROOT/config/zshrc"
   [ "$status" -eq 1 ]
+}
+
+@test "a user alias n does not break the file" {
+  stub nvim
+  run zsh -f -i -c "alias n='echo hi'; source $REPO_ROOT/config/zshrc; whence -w n" < /dev/null
+  [ "$status" -eq 0 ]
+  [ "$output" = "n: function" ]
+}
+
+@test "Homebrew's completions are on fpath once" {
+  zrc "source $REPO_ROOT/config/zshrc; print -l \$fpath | grep -cx /opt/homebrew/share/zsh/site-functions"
+  [ "$output" = "1" ]
+}
+
+@test "it is quiet when ~/.zshrc already ran compinit" {
+  run zsh -f -i -c "autoload -Uz compinit && compinit; source $REPO_ROOT/config/zshrc" < /dev/null
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }

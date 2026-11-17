@@ -11,7 +11,7 @@ if (( $+commands[nvim] )); then
 fi
 
 # Homebrew's completions only load if their folder is on fpath before compinit.
-fpath=(/opt/homebrew/share/zsh/site-functions $fpath)
+(( ${fpath[(Ie)/opt/homebrew/share/zsh/site-functions]} )) || fpath=(/opt/homebrew/share/zsh/site-functions $fpath)
 # Skip compinit when the user's own ~/.zshrc already ran it.
 (( $+functions[compdef] )) || { autoload -Uz compinit && compinit; }
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
@@ -22,6 +22,9 @@ if [[ -o zle ]]; then
   zle -N down-line-or-beginning-search
   bindkey '^[[A' up-line-or-beginning-search
   bindkey '^[[B' down-line-or-beginning-search
+  # Application keypad mode sends ^[OA instead; terminfo knows which one this terminal uses.
+  [[ -n ${terminfo[kcuu1]} ]] && bindkey "${terminfo[kcuu1]}" up-line-or-beginning-search
+  [[ -n ${terminfo[kcud1]} ]] && bindkey "${terminfo[kcud1]}" down-line-or-beginning-search
 fi
 
 if (( $+commands[eza] )); then
@@ -61,7 +64,9 @@ fi
 (( $+commands[lazydocker] )) && alias lzd='lazydocker'
 
 if (( $+commands[nvim] )); then
-  n() { if (( $# == 0 )); then nvim .; else nvim "$@"; fi; }
+  # Drop a user alias `n` first: `n()` is a parse error with one, and an alias hides a function.
+  (( $+aliases[n] )) && unalias n
+  function n { if (( $# == 0 )); then nvim .; else nvim "$@"; fi; }
 fi
 
 (( $+commands[mise] )) && eval "$(mise activate zsh)"
