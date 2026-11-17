@@ -43,7 +43,7 @@ clis_join() { local IFS=,; local out="$*"; echo "${out//,/, }"; }
 # clis_install [<id>…]: the given CLIs, or the chosen ones. Only what's missing
 # is installed: formulas in one brew call, casks in another.
 clis_install() {
-  local ids=("$@") list id missing=() formulas=() casks=() flabels=() clabels=() brew
+  local ids=("$@") list taps id missing=() formulas=() casks=() flabels=() clabels=() brew
   brew="$OMAMAC_BREW_PREFIX/bin/brew"
   [ "$#" -gt 0 ] || read -ra ids <<< "${CHOICES[cloud_clis]:-}"
   [ "${#ids[@]}" -gt 0 ] || return 0
@@ -57,7 +57,11 @@ clis_install() {
       casks+=("${CLI_CASK[$id]}"); clabels+=("$(question_label cloud_clis "$id")")
     fi
   done
-  if [[ " ${missing[*]} " == *" terraform "* ]] && ! "$brew" tap | grep -qx hashicorp/tap; then
+  if [[ " ${missing[*]} " == *" terraform "* ]]; then
+    # Read the list first: in a pipe a failing brew, or grep -q closing early, reads as "not tapped".
+    taps=$("$brew" tap) || return
+  fi
+  if [[ " ${missing[*]} " == *" terraform "* && $'\n'$taps$'\n' != *$'\nhashicorp/tap\n'* ]]; then
     ui_run "Adding the HashiCorp tap" "$brew" tap hashicorp/tap || return
   fi
   if [ "${#formulas[@]}" -gt 0 ]; then

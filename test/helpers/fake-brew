@@ -67,6 +67,7 @@ case "${1:-}" in
     done
     ;;
   tap)
+    [ "${T_BREW_TAP_FAIL:-0}" != 1 ] || { echo "Error: brew tap failed" >&2; exit 1; }
     if [ $# -eq 1 ]; then
       [ ! -f "$prefix/taps" ] || cat "$prefix/taps"
     else

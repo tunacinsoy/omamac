@@ -102,3 +102,10 @@ the gcloud-cli cask" ]
   [ -z "$(installs)" ]
   [[ "$output" != *"Cloud CLIs are installed"* ]]
 }
+
+@test "brew tap fails: fails, installs nothing" {
+  T_BREW_TAP_FAIL=1 in_lib terraform 'clis_install'
+  [ "$status" -ne 0 ]
+  [ -z "$(installs)" ]
+  [[ "$output" != *"Cloud CLIs are installed"* ]]
+}
