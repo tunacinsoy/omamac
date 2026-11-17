@@ -128,3 +128,11 @@ elixir = \"latest\"" ]
   [ -z "$(mise_installs)" ]
   [[ "$output" != *"Languages are installed"* ]]
 }
+
+@test "languages_has: mise's warnings go to the log, not the screen" {
+  have go
+  T_MISE_WARN=1 in_lib '' 'languages_has go'
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"mise WARN"* ]]
+  grep -q 'mise WARN a warning' "$OMAMAC_LOG"
+}

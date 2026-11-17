@@ -15,6 +15,7 @@ case "${1:-}" in
     for t in "$@"; do touch "$state/$t"; done
     ;;
   ls)
+    [ "${T_MISE_WARN:-0}" != 1 ] || echo "mise WARN a warning" >&2
     [ "${2:-} ${3:-}" = "--installed --no-header" ] && [ -n "${4:-}" ] ||
       { echo "fake-mise: use ls --installed --no-header <tool>" >&2; exit 1; }
     [ ! -e "$state/$4" ] || echo "$4 1.0"

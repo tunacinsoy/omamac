@@ -36,9 +36,10 @@ languages_write_dropin() {
 }
 
 # languages_has <tool>: 0 if mise has a version installed, 1 if not, 2 if mise failed.
+# mise's warnings go to the log, not between the spinners. doctor has no log.
 languages_has() {
   local out
-  out=$(languages_mise ls --installed --no-header "$1") || return 2
+  out=$(languages_mise ls --installed --no-header "$1" 2>> "${OMAMAC_LOG:-/dev/null}") || return 2
   [ -n "$out" ]
 }
 
