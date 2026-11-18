@@ -30,6 +30,8 @@ source "$OMAMAC_CHECKOUT/lib/ghostty.sh"
 source "$OMAMAC_CHECKOUT/lib/languages.sh"
 # shellcheck source=lib/clis.sh
 source "$OMAMAC_CHECKOUT/lib/clis.sh"
+# shellcheck source=lib/appmanagement.sh
+source "$OMAMAC_CHECKOUT/lib/appmanagement.sh"
 # shellcheck source=lib/apply.sh
 source "$OMAMAC_CHECKOUT/lib/apply.sh"
 # shellcheck source=lib/add.sh
