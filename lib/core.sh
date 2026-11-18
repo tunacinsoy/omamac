@@ -31,16 +31,22 @@ core_where() {
 # core_missing: the core formulas Homebrew doesn't have, one per line.
 core_missing() { core_where missing "${CORE_FORMULAS[@]}"; }
 
-# core_cask_state <cask>: brew (Homebrew has it), hand (the app is in
-# Applications but Homebrew doesn't know it) or missing. Returns non-zero if
-# Homebrew can't list.
+# core_cask_state <cask>: brew (Homebrew has it and the app is there), hand
+# (the app is in Applications but Homebrew doesn't know it) or missing (no app;
+# Homebrew may still list the cask). Returns non-zero if Homebrew can't list.
 core_cask_state() {
-  local cask=$1 list line
+  local cask=$1 list line listed=0
+  local app=$OMAMAC_APPLICATIONS/${CORE_CASK_APP[$cask]}
   list=$("$OMAMAC_BREW_PREFIX/bin/brew" list --cask -1) || return
   while IFS= read -r line; do
-    if [ "$line" = "$cask" ]; then echo brew; return; fi
+    if [ "$line" = "$cask" ]; then listed=1; fi
   done <<< "$list"
-  if [ -e "$OMAMAC_APPLICATIONS/${CORE_CASK_APP[$cask]}" ]; then echo hand; else echo missing; fi
+  if [ ! -e "$app" ]; then echo missing; elif [ "$listed" -eq 1 ]; then echo brew; else echo hand; fi
+}
+
+# core_cask_listed <cask>: succeeds when Homebrew lists the cask.
+core_cask_listed() {
+  "$OMAMAC_BREW_PREFIX/bin/brew" list --cask "$1" > /dev/null 2>&1
 }
 
 # core_install: one brew install for what is missing. A formula already there is left alone.
@@ -58,7 +64,14 @@ core_install() {
   for cask in "${CORE_CASKS[@]}"; do
     state=$(core_cask_state "$cask") || return
     case $state in
-      missing) ui_run "Installing Ghostty" "$OMAMAC_BREW_PREFIX/bin/brew" install --cask "$cask" || return ;;
+      missing)
+        # A plain install of a cask Homebrew lists does nothing; reinstall puts the app back.
+        if core_cask_listed "$cask"; then
+          ui_run "Reinstalling Ghostty" "$OMAMAC_BREW_PREFIX/bin/brew" reinstall --cask "$cask" || return
+        else
+          ui_run "Installing Ghostty" "$OMAMAC_BREW_PREFIX/bin/brew" install --cask "$cask" || return
+        fi
+        ;;
       hand) ui_info "Ghostty is already installed, not through Homebrew. omamac won't update it." ;;
     esac
   done

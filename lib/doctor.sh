@@ -136,7 +136,7 @@ doctor_check_herdr() {
 # Ghostty: the app, the include line in the user's files, omamac's own file,
 # and App Management (only for a Ghostty Homebrew upgrades).
 doctor_check_ghostty() {
-  local what=Ghostty state app="$OMAMAC_APPLICATIONS/${CORE_CASK_APP[ghostty]}" status=0
+  local what=Ghostty state fix app="$OMAMAC_APPLICATIONS/${CORE_CASK_APP[ghostty]}" status=0
   if ! state=$(core_cask_state ghostty 2>/dev/null); then
     doctor_report info "$what" "skipped, Homebrew can't list its casks"
     state=skipped
@@ -144,7 +144,11 @@ doctor_check_ghostty() {
     case $state in
       brew) doctor_report ok "$what" ;;
       hand) doctor_report info "$what" "installed by hand, so omamac won't update it" ;;
-      missing) doctor_report fail "$what" "omamac's terminal is Ghostty" "brew install --cask ghostty" || status=1 ;;
+      missing)
+        # Homebrew's install does nothing for a cask it already lists.
+        if core_cask_listed ghostty; then fix="brew reinstall --cask ghostty"; else fix="brew install --cask ghostty"; fi
+        doctor_report fail "$what" "omamac's terminal is Ghostty" "$fix" || status=1
+        ;;
     esac
   fi
   if lines_has "$(ghostty_line_file)" "$OMAMAC_GHOSTTY_LINE"; then

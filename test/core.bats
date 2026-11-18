@@ -23,7 +23,10 @@ in_lib() {
 have() { local f; for f in "$@"; do mkdir -p "$OMAMAC_TEST_BREW_PREFIX/Cellar/$f"; done; }
 
 # have_cask <cask>: mark a cask as installed through Homebrew.
-have_cask() { mkdir -p "$OMAMAC_TEST_BREW_PREFIX/Caskroom/$1"; }
+have_cask() {
+  mkdir -p "$OMAMAC_TEST_BREW_PREFIX/Caskroom/$1"
+  [ "$1" != ghostty ] || mkdir -p "$OMAMAC_TEST_APPLICATIONS/Ghostty.app"
+}
 
 @test "the core list is the spec's" {
   in_lib 'echo "${CORE_FORMULAS[*]}"'
@@ -99,12 +102,25 @@ have_cask() { mkdir -p "$OMAMAC_TEST_BREW_PREFIX/Caskroom/$1"; }
   run ! grep -q 'install --cask' "$STUB_LOG"
 }
 
+@test "Ghostty listed by Homebrew but its app gone: reinstall" {
+  mkdir -p "$OMAMAC_TEST_BREW_PREFIX/Caskroom/ghostty"
+  in_lib 'core_install'
+  [ "$status" -eq 0 ]
+  grep -qx "brew reinstall --cask ghostty" "$STUB_LOG"
+  run ! grep -q '^brew install --cask' "$STUB_LOG"
+  [ -d "$OMAMAC_TEST_APPLICATIONS/Ghostty.app" ]
+}
+
 @test "core_cask_state" {
   in_lib 'core_cask_state ghostty'
   [ "$output" = missing ]
   mkdir -p "$OMAMAC_TEST_APPLICATIONS/Ghostty.app"
   in_lib 'core_cask_state ghostty'
   [ "$output" = hand ]
+  rm -r "$OMAMAC_TEST_APPLICATIONS/Ghostty.app"
+  mkdir -p "$OMAMAC_TEST_BREW_PREFIX/Caskroom/ghostty"
+  in_lib 'core_cask_state ghostty'
+  [ "$output" = missing ]
   have_cask ghostty
   in_lib 'core_cask_state ghostty'
   [ "$output" = brew ]

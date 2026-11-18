@@ -1,8 +1,9 @@
 #!/opt/homebrew/bin/bash
 # Everything after the restart. First the questions and "Install?", so nothing
 # is written before the user says yes; then omamac's zsh file, herdr's config,
-# mise's drop-in, the core tools, LazyVim, the languages, the cloud CLIs, the
-# two guarded lines and a summary.
+# mise's drop-in, the core tools (Ghostty too), LazyVim, the languages, the
+# cloud CLIs, the guarded lines (zprofile, zshrc, and Ghostty's include line)
+# and a summary.
 # shellcheck source-path=SCRIPTDIR
 set -Eeuo pipefail
 
@@ -98,13 +99,13 @@ install_summary() {
     "" \
     "omamac sets two Ghostty settings: command (starts herdr)" \
     "and macos-option-as-alt." \
-    "Open Ghostty: it starts herdr. The first time, macOS asks you to" \
-    "confirm; click Open." \
+    "The first time you open Ghostty, macOS asks you to confirm;" \
+    "click Open." \
     "To let omamac update Ghostty: System Settings → Privacy & Security" \
     "→ App Management → Ghostty." \
     "" \
     "Log: $OMAMAC_LOG" \
-    "Open a new terminal window, then run omamac."
+    "Open Ghostty (it starts herdr), then run omamac."
 }
 
 install_main() {

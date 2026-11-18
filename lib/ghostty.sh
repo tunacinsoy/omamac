@@ -1,6 +1,8 @@
 # shellcheck shell=bash
-# Ghostty opens into herdr. Sourced after lib/paths.sh, lib/ui.sh and
-# lib/lines.sh, before lib/apply.sh (it uses apply_put).
+# Ghostty opens into herdr. Sourced after lib/paths.sh and lib/ui.sh, before
+# lib/apply.sh (ghostty_config_apply uses apply_put). ghostty_line_file and
+# ghostty_line_add also need lib/lines.sh (install.sh and doctor have it;
+# update.sh doesn't call them).
 # omamac's file is rewritten each run; the user's own Ghostty config only gets one include line.
 
 # ghostty_render <out>: the template with the launcher's absolute path filled in.

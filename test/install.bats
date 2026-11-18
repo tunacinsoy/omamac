@@ -118,7 +118,8 @@ snapshot() {
 @test "summary tells the user what to do next" {
   run install
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Open a new terminal window, then run omamac"* ]]
+  [[ "$output" == *"Open Ghostty (it starts herdr), then run omamac."* ]]
+  [[ "$output" != *"Open a new terminal window"* ]]
 }
 
 @test "summary names Ghostty and the clicks" {

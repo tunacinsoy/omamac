@@ -303,12 +303,14 @@ ghostty_outdated() { echo ghostty > "$OMAMAC_TEST_BREW_PREFIX/outdated"; }
   run ! grep -q '^brew upgrade --cask' "$STUB_LOG"
 }
 
-@test "Ghostty outdated and allowed: upgraded greedy" {
+@test "Ghostty outdated and allowed: upgraded, without --greedy" {
   ghostty_app
   ghostty_outdated
   run update
   [ "$status" -eq 0 ]
-  grep -qx 'brew upgrade --cask --greedy ghostty' "$STUB_LOG"
+  grep -qx 'brew upgrade --cask ghostty' "$STUB_LOG"
+  grep -qx 'brew outdated --cask --quiet ghostty' "$STUB_LOG"
+  run ! grep -q 'greedy.*ghostty' "$STUB_LOG"
   [ ! -e "$OMAMAC_TEST_APPLICATIONS/Ghostty.app/.omamac-write-test" ]
 }
 
@@ -338,14 +340,4 @@ ghostty_outdated() { echo ghostty > "$OMAMAC_TEST_BREW_PREFIX/outdated"; }
   [ "$status" -eq 1 ]
   grep -qx 'brew upgrade --cask --greedy gcloud-cli' "$STUB_LOG"
   grep -qx 'mise upgrade go' "$STUB_LOG"
-}
-
-@test "Homebrew can't list casks: Ghostty's upgrade is skipped with one line" {
-  ghostty_app
-  ghostty_outdated
-  # The install step lists once and works; the upgrade step's list fails.
-  T_BREW_LIST_CASK_FAIL_FROM=2 run update
-  [ "$status" -eq 0 ]
-  [ "$(grep -c "Ghostty's upgrade is skipped" <<< "$output")" -eq 1 ]
-  run ! grep -q '^brew upgrade --cask' "$STUB_LOG"
 }

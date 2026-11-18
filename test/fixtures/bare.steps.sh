@@ -23,15 +23,16 @@ cfg=$($G +show-config --no-pager)
 print -r -- "$cfg" | grep -qx "command = direct:$HOME/.local/share/omamac/bin/omamac-terminal"
 print -r -- "$cfg" | grep -qx 'macos-option-as-alt = left'
 # open -a reaches the logged-in GUI session; Ghostty then starts herdr, which
-# starts a detached server. Wait for it, then read its environment.
+# starts a detached "herdr server". Wait for it, then read its environment.
 open -a Ghostty
 pid=
 for _ in {1..30}; do
-  pid=$(pgrep -x herdr | head -n 1) || true
+  pid=$(pgrep -f '^herdr server' | head -n 1) || true
   [[ -n $pid ]] && break
   sleep 1
 done
 [[ -n $pid ]] || { print -r -- "herdr did not start within 30 s of opening Ghostty"; exit 1; }
-ps -E -ww -o command= -p "$pid" | grep -q "HERDR_CONFIG_PATH=$HOME/.config/omamac/herdr.toml" ||
-  { print -r -- "herdr (pid $pid) lacks HERDR_CONFIG_PATH"; exit 1; }
+env=$(ps -E -ww -o command= -p "$pid")
+[[ $env == *"HERDR_CONFIG_PATH=$HOME/.config/omamac/herdr.toml"* ]] ||
+  { print -r -- "herdr server (pid $pid) lacks HERDR_CONFIG_PATH"; exit 1; }
 omamac doctor

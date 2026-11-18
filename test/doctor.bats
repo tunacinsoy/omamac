@@ -524,6 +524,12 @@ healthy_ghostty() {
   expect_fail "Ghostty" "brew install --cask ghostty"
 }
 
+@test "Ghostty listed by Homebrew but its app gone" {
+  healthy_mac
+  rm -r "$OMAMAC_TEST_APPLICATIONS/Ghostty.app"
+  expect_fail "Ghostty" "brew reinstall --cask ghostty"
+}
+
 @test "Ghostty line missing" {
   healthy_mac
   : > "$HOME/.config/ghostty/config.ghostty"

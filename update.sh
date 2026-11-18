@@ -119,17 +119,16 @@ update_upgrade_casks() {
 update_upgrade_ghostty() {
   local state out status=0 app="$OMAMAC_APPLICATIONS/${CORE_CASK_APP[ghostty]}"
   OMAMAC_STEP='upgrading Ghostty'
-  if ! state=$(core_cask_state ghostty); then
-    ui_info "Ghostty's upgrade is skipped, Homebrew can't list its casks."
-    return 0
-  fi
+  state=$(core_cask_state ghostty) || return
   [ "$state" = brew ] || return 0
+  # No --greedy: Ghostty updates itself, and --greedy would compare only
+  # Homebrew's own record, so update would call it outdated forever.
   # brew outdated exits 1 when the named cask is outdated; the output says which.
-  out=$("$OMAMAC_BREW_PREFIX/bin/brew" outdated --cask --greedy --quiet ghostty) || true
+  out=$("$OMAMAC_BREW_PREFIX/bin/brew" outdated --cask --quiet ghostty) || true
   [ -n "$out" ] || return 0
   app_management_ok "$app" || status=$?
   case $status in
-    0) ui_run "Upgrading Ghostty" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask --greedy ghostty ;;
+    0) ui_run "Upgrading Ghostty" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask ghostty ;;
     1)
       ui_fail "Ghostty has an update, but macOS won't let your terminal change apps."
       ui_fail "Fix: System Settings → Privacy & Security → App Management, turn on your terminal, then run omamac update again."

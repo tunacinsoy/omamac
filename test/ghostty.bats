@@ -54,6 +54,16 @@ in_lib() {
   [ ! -e "$APPSUP/config.ghostty" ]
 }
 
+@test "only config and config.ghostty exist: the line goes to config.ghostty" {
+  mkdir -p "$XDG"
+  echo 'font-size = 14' > "$XDG/config"
+  echo 'theme = x' > "$XDG/config.ghostty"
+  cp "$XDG/config" "$BATS_TEST_TMPDIR/config.orig"
+  in_lib ghostty_line_add
+  [ "$(<"$XDG/config.ghostty")" = "theme = x"$'\n'"$LINE" ]
+  cmp "$XDG/config" "$BATS_TEST_TMPDIR/config.orig"
+}
+
 @test "line already in any file: nothing added" {
   mkdir -p "$XDG" "$APPSUP"
   echo "$LINE" > "$XDG/config"
