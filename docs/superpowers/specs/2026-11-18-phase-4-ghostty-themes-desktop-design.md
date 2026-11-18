@@ -94,7 +94,7 @@ On today's `main` the new lines are the same before and after a run, so `bare` s
 
 ### Ghostty (4a)
 
-- `CORE_CASKS=(ghostty)` in `lib/core.sh`. `core_install` also runs `brew install --cask` for core casks `brew list --cask` doesn't have, unless `/Applications/<App>.app` is already there. In that case it prints one ℹ line: "Ghostty is already installed, not through Homebrew, so omamac uses it as it is and doesn't update it."
+- `CORE_CASKS=(ghostty)` in `lib/core.sh`. `core_install` also runs `brew install --cask` for core casks `brew list --cask` doesn't have, unless `/Applications/<App>.app` is already there. In that case it prints one ℹ line: "Ghostty is already installed, not through Homebrew, so omamac uses it as it is and doesn't update it." A cask Homebrew lists whose app is gone (dragged to the Trash) counts as missing and gets `brew reinstall --cask`, since `brew install` of a listed cask does nothing.
 - `config/ghostty.conf`, rendered to `~/.config/omamac/ghostty.conf`:
 
   ```
@@ -108,7 +108,7 @@ On today's `main` the new lines are the same before and after a run, so `bare` s
 - **`bin/omamac-terminal`** (zsh, `#!/bin/zsh -il`):
   1. Runs `herdr`. If herdr exits 0 (the user quit or detached), the script exits and Ghostty closes the window.
   2. If herdr is missing or exits non-zero, it prints one line, "herdr didn't start, so this is a plain zsh window. Run omamac doctor to see why.", then `exec zsh -l`.
-- **The installer's summary** gains the Ghostty lines (vision step 5): "Open Ghostty: it starts herdr." "Allow App Management for Ghostty: System Settings → Privacy & Security → App Management." "The first time you open each app, macOS asks you to confirm; click Open." It also says once which Ghostty settings omamac takes over (colours, `macos-option-as-alt`, `command`).
+- **The installer's summary** gains the Ghostty lines (vision step 5): the first-open "click Open", the App Management click (System Settings → Privacy & Security → App Management → Ghostty), and a last line "Open Ghostty (it starts herdr), then run omamac." It also says once which Ghostty settings omamac takes over (`command` and `macos-option-as-alt`; 4b adds the colours).
 - **App Management** (`lib/appmanagement.sh`): `app_management_ok <App>.app` runs `touch <App>.app/.omamac-write-test`, then removes it. It returns 1 on "Operation not permitted", and for any other failure says why. In `update`, after the formula upgrades, and only when Homebrew has the `ghostty` cask:
   - Is it outdated? Decided from the text of `brew outdated --cask --quiet ghostty`, never its exit status: `brew outdated <name>` exits 1 when the named item *is* outdated. fake-brew copies that exit status.
   - Outdated, permission missing: Ghostty's upgrade is skipped and the app is left exactly as it is. update prints a ✗ line with the click, opens the pane with `open "x-apple.systempreferences:com.apple.preference.security?Privacy_AppBundles"`, finishes everything else, and exits 1. This is the vision's "stops, changes nothing", applied to the app it protects. Formulas, languages and CLIs need no App Management, so they still update.
@@ -194,7 +194,7 @@ On today's `main` the new lines are the same before and after a run, so `bare` s
 
 ### bats
 
-- fake-brew learns `list --cask`, `install --cask` and `outdated --cask --greedy`. A fake `defaults` keeps a plist-like file per domain and can be told to refuse a domain.
+- fake-brew learns `list --cask`, `install --cask`, `reinstall --cask` and `outdated --cask` (exiting 1 when the named cask is outdated, as Homebrew does). A fake `defaults` keeps a plist-like file per domain and can be told to refuse a domain.
 - Ghostty: cask installed only when missing, not when the app is in `/Applications` by hand; include line placement for each of the four files and for none; a second run adds nothing; the rendered file names the launcher by absolute path.
 - `omamac-terminal`: herdr exit 0 exits; herdr missing or exit 1 prints the line and execs zsh (stubbed).
 - App Management: update with Ghostty current, or not from Homebrew, never runs the write test; outdated and denied skips only Ghostty's upgrade, still upgrades the formulas, and exits 1; outdated and allowed upgrades without `--greedy`; `brew outdated`'s exit 1 doesn't trip the ERR trap.
