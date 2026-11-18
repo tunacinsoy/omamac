@@ -20,18 +20,25 @@ if print -r -- "$out" | grep -Eq 'Error detected|E5108'; then print -r -- "$out"
 xattr -dr com.apple.quarantine /Applications/Ghostty.app
 G=/Applications/Ghostty.app/Contents/MacOS/ghostty
 cfg=$($G +show-config --no-pager)
-print -r -- "$cfg" | grep -qx "command = direct:$HOME/.local/share/omamac/bin/omamac-terminal"
-print -r -- "$cfg" | grep -qx 'macos-option-as-alt = left'
+# Matched in the shell, not with | grep -q: under pipefail an early-exiting
+# grep can fail the pipe.
+[[ $'\n'$cfg$'\n' == *$'\n'"command = direct:$HOME/.local/share/omamac/bin/omamac-terminal"$'\n'* ]]
+[[ $'\n'$cfg$'\n' == *$'\n''macos-option-as-alt = left'$'\n'* ]]
 # open -a reaches the logged-in GUI session; Ghostty then starts herdr, which
 # starts a detached "herdr server". Wait for it, then read its environment.
 open -a Ghostty
 pid=
 for _ in {1..30}; do
-  pid=$(pgrep -f '^herdr server' | head -n 1) || true
+  # Not anchored: "^herdr server" never matched, so the command starts otherwise (a full path, likely).
+  pid=$(pgrep -f 'herdr server' | head -n 1) || true
   [[ -n $pid ]] && break
   sleep 1
 done
-[[ -n $pid ]] || { print -r -- "herdr did not start within 30 s of opening Ghostty"; exit 1; }
+if [[ -z $pid ]]; then
+  print -r -- "herdr's server did not start within 30 s of opening Ghostty. herdr processes:"
+  ps -axww -o pid=,command= | grep -i '[h]erdr' || true
+  exit 1
+fi
 env=$(ps -E -ww -o command= -p "$pid")
 [[ $env == *"HERDR_CONFIG_PATH=$HOME/.config/omamac/herdr.toml"* ]] ||
   { print -r -- "herdr server (pid $pid) lacks HERDR_CONFIG_PATH"; exit 1; }
