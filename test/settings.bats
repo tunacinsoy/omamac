@@ -163,3 +163,48 @@ com.apple.Accessibility${TAB}ReduceMotionEnabled${TAB}integer${TAB}0" ]
   [ "$(value com.apple.universalaccess reduceMotion)" = 0 ]
   [[ "$(cat "$REC")" != *educeMotion* ]]
 }
+
+@test "restore puts back absent and present values" {
+  seed com.apple.Accessibility ReduceMotionEnabled integer 0
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  : > "$STUB_LOG"
+  in_lib 'settings_uninstall desktops'
+  [ "$status" -eq 0 ]
+  [ "$(value com.apple.dock mru-spaces)" = absent ]
+  [ "$(value NSGlobalDomain AppleSpacesSwitchOnActivate)" = absent ]
+  [ "$(value com.apple.universalaccess reduceMotion)" = absent ]
+  [ "$(value com.apple.Accessibility ReduceMotionEnabled)" = 0 ]
+  [[ "$(stub_calls)" == *"defaults write com.apple.Accessibility ReduceMotionEnabled -int 0"* ]]
+  [ ! -e "$REC" ]
+  [ "$(grep -c '^killall Dock' "$STUB_LOG")" -eq 1 ]
+}
+
+@test "restore again changes nothing" {
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  in_lib 'settings_uninstall desktops'
+  : > "$STUB_LOG"
+  in_lib 'settings_uninstall desktops'
+  [ "$status" -eq 0 ]
+  [ -z "$(stub_calls)" ]
+}
+
+@test "restore only touches that answer's keys" {
+  in_lib 'CHOICES[desktops]=yes; CHOICES[window_margins]=yes; settings_apply'
+  in_lib 'settings_uninstall window_margins'
+  [ "$status" -eq 0 ]
+  [ "$(value com.apple.WindowManager EnableTiledWindowMargins)" = absent ]
+  [ "$(value com.apple.dock mru-spaces)" = 0 ]
+  [ "$(grep -c . "$REC")" -eq 4 ]
+}
+
+@test "restore with Reduce motion refused" {
+  seed com.apple.Accessibility ReduceMotionEnabled integer 0
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  export T_DEFAULTS_REFUSE=com.apple.universalaccess
+  in_lib 'settings_uninstall desktops'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Turn off Reduce motion: search for Reduce motion in System Settings."* ]]
+  [ "$(value com.apple.dock mru-spaces)" = absent ]
+  [ "$(value NSGlobalDomain AppleSpacesSwitchOnActivate)" = absent ]
+  [ ! -e "$REC" ]
+}

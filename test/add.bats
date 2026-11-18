@@ -15,6 +15,8 @@ setup() {
   CHOICES_FILE="$HOME/.local/state/omamac/choices.env"
   mkdir -p "$(dirname "$CHOICES_FILE")"
   cp "$REPO_ROOT/test/fixtures/bare.env" "$CHOICES_FILE"
+  # Answered yes, so install doesn't ask about them (tests below ask on purpose).
+  sed -i '' -e 's/^desktops=.*/desktops=yes/' -e 's/^window_margins=.*/window_margins=yes/' "$CHOICES_FILE"
   # Only the run's own calls.
   : > "$STUB_LOG"
 }
@@ -163,4 +165,35 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   [ "$status" -eq 2 ]
   [[ "$stderr" == *"Usage: omamac <command>"* ]]
   [ -z "$(prompts)" ]
+}
+
+@test "desktops no: asked again; yes applies" {
+  choose desktops no
+  gum_answers "" "" yes yes
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Desktops as workspaces"* ]]
+  grep -qx 'desktops=yes' "$CHOICES_FILE"
+  [ "$(defaults read com.apple.dock mru-spaces)" = 0 ]
+  [ "$(defaults read NSGlobalDomain AppleSpacesSwitchOnActivate)" = 1 ]
+}
+
+@test "desktops yes: not asked" {
+  gum_answers "" ""
+  run omamac_install
+  [[ "$(prompts)" != *"desktops"* ]]
+  [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
+}
+
+@test "answer no again: nothing changes" {
+  choose desktops no
+  before=$(choices_stamp)
+  gum_answers "" "" no
+  sleep 1.1
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Nothing picked, so nothing changed."* ]]
+  grep -qx 'desktops=no' "$CHOICES_FILE"
+  [ "$(choices_stamp)" = "$before" ]
+  run ! grep -q '^defaults write' "$STUB_LOG"
 }

@@ -98,11 +98,19 @@ settings_one() {
   settings_note "$d" "$k" "$cur"
 }
 
-# settings_restore <domain> <key> <before>: undo one write.
+# settings_restore <domain> <key> <before>: undo one write. A key that is
+# already gone counts as done. Returns 3 when the domain is protected, 1 on
+# any other error.
 settings_restore() {
-  local t v
+  local t v out
   if [ "$3" = absent ]; then
-    defaults delete "$1" "$2"
+    if ! out=$(defaults delete "$1" "$2" 2>&1); then
+      case $out in
+        *'Could not write domain'*) return 3 ;;
+        *'does not exist'* | *'Could not find key'* | *'not found'*) ;;
+        *) echo "$out" >&2; return 1 ;;
+      esac
+    fi
   else
     read -r t v <<< "$3"
     settings_write "$1" "$2" "$t" "$v"
@@ -166,9 +174,76 @@ settings_apply() {
     fi
     ui_ok "${QUESTION_TITLE[$answer]}"
   done
-  if [ "$SETTINGS_DOCK" -eq 1 ]; then
-    OMAMAC_STEP='restarting the Dock'
-    # The Dock is not running in a session without a desktop; nothing to restart.
-    killall Dock || true
-  fi
+  settings_dock_restart
+}
+
+settings_dock_restart() {
+  [ "$SETTINGS_DOCK" -eq 1 ] || return 0
+  OMAMAC_STEP='restarting the Dock'
+  # The Dock is not running in a session without a desktop; nothing to restart.
+  killall Dock || true
+}
+
+# settings_what <answer-key>: what uninstall puts back, for its box.
+settings_what() {
+  case $1 in
+    desktops) echo "your earlier Spaces, app-switching and Reduce motion settings" ;;
+    *) echo "your earlier window-margin setting" ;;
+  esac
+}
+
+# settings_before <domain> <key>: the recorded value, "absent" or "<type> <value>".
+# Returns 1 when the key is not recorded.
+settings_before() {
+  local d k rest
+  [ -f "$OMAMAC_SETTINGS_RECORD" ] || return 1
+  while IFS=$'\t' read -r d k rest; do
+    if [ "$d $k" = "$1 $2" ]; then
+      echo "${rest//$'\t'/ }"
+      return 0
+    fi
+  done < "$OMAMAC_SETTINGS_RECORD"
+  return 1
+}
+
+# settings_drop <domain> <key>: take the key's line out of the record; the
+# record goes with its last line.
+settings_drop() {
+  local d k rest tmp
+  tmp=$(mktemp "$OMAMAC_SETTINGS_RECORD.XXXXXX")
+  while IFS=$'\t' read -r d k rest; do
+    [ "$d $k" = "$1 $2" ] || printf '%s\t%s\t%s\n' "$d" "$k" "$rest" >> "$tmp"
+  done < "$OMAMAC_SETTINGS_RECORD"
+  if [ -s "$tmp" ]; then mv -- "$tmp" "$OMAMAC_SETTINGS_RECORD"; else rm -f -- "$tmp" "$OMAMAC_SETTINGS_RECORD"; fi
+}
+
+# settings_uninstall <answer-key>: put each recorded key of that answer back,
+# dropping its line right after, so a failure halfway leaves the rest recorded
+# and a rerun finishes. A protected domain is not a failure: its lines are
+# dropped and the user is told to do it by hand.
+settings_uninstall() {
+  local d k t v before rc refused=0
+  SETTINGS_DOCK=0
+  while read -r d k t v; do
+    before=$(settings_before "$d" "$k") || continue
+    OMAMAC_STEP="putting back $(settings_label "$k")"
+    case $d in
+      com.apple.universalaccess | com.apple.Accessibility)
+        # One unit: once one key is refused, the other is left alone too.
+        if [ "$refused" -eq 1 ]; then settings_drop "$d" "$k"; continue; fi ;;
+    esac
+    rc=0
+    settings_restore "$d" "$k" "$before" || rc=$?
+    if [ "$rc" -eq 3 ]; then
+      refused=1
+      ui_info "Turn off Reduce motion: search for Reduce motion in System Settings."
+    elif [ "$rc" -ne 0 ]; then
+      settings_dock_restart
+      return 1
+    else
+      case $d in com.apple.dock | NSGlobalDomain) SETTINGS_DOCK=1 ;; esac
+    fi
+    settings_drop "$d" "$k"
+  done < <(settings_keys "$1")
+  settings_dock_restart
 }

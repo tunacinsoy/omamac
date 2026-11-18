@@ -1,10 +1,34 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2034 # OMAMAC_STEP is read by bin/omamac's ERR trap
+# shellcheck disable=SC2004 # CHOICES is associative (lib/choices.sh), so $key is needed
 # omamac uninstall: remove one language or cloud CLI. Sourced after lib/ask.sh,
 # lib/log.sh, lib/core.sh, lib/languages.sh and lib/clis.sh.
 
 # The questions whose picks omamac uninstall can remove.
 REMOVE_KEYS=(languages cloud_clis)
+
+# remove_setting <name>: put a desktop or window-margin setting back. The
+# answer is saved no last, so a failure leaves it yes and the rest recorded.
+remove_setting() {
+  local key=desktops title
+  [ "$1" != window-margins ] || key=window_margins
+  title=${QUESTION_TITLE[$key]}
+  if [ "${CHOICES[$key]:-}" != yes ]; then
+    ui_info "$title isn't set by omamac."
+    exit 0
+  fi
+  ui_box "$title: $(settings_what "$key")"
+  if ! ask_yes "Remove $title?"; then
+    ui_info "Nothing was removed."
+    exit 0
+  fi
+  log_start
+  settings_uninstall "$key"
+  CHOICES[$key]=no
+  OMAMAC_STEP='saving your answers'
+  choices_save "$OMAMAC_CHOICES_FILE"
+  ui_ok "$title is removed"
+}
 
 # remove_run [<name>]: CHOICES is loaded (bin/omamac did that). Nothing is
 # changed before "Remove?" is yes, and the choice is saved last, so a failure
@@ -17,6 +41,8 @@ remove_run() {
       read -ra ids <<< "${CHOICES[$k]:-}"
       for v in "${ids[@]}"; do options+=("$(question_label "$k" "$v"):$v"); done
     done
+    [ "${CHOICES[desktops]:-}" != yes ] || options+=("${QUESTION_TITLE[desktops]}:desktops")
+    [ "${CHOICES[window_margins]:-}" != yes ] || options+=("${QUESTION_TITLE[window_margins]}:window-margins")
     if [ "${#options[@]}" -eq 0 ]; then
       ui_info "omamac installed no languages or cloud CLIs, so there's nothing to remove."
       exit 0
@@ -25,6 +51,7 @@ remove_run() {
     [ "$ASK_PICKED" != none ] || exit 0
     name=$ASK_PICKED
   fi
+  case $name in desktops | window-margins) remove_setting "$name"; return ;; esac
   # bash and gum are omamac's own, so they count as core.
   for v in "${CORE_FORMULAS[@]}" "${CORE_CASKS[@]}" bash gum zsh; do
     if [ "$name" = "$v" ]; then
