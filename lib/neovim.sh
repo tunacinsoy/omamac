@@ -6,16 +6,16 @@
 # Moved into place only if different, so a second run leaves its mtime alone.
 neovim_marker_write() {
   local dest=${1:-$OMAMAC_NVIM_MARKER} tmp
-  OMAMAC_STEP="writing $dest"
-  mkdir -p "$(dirname "$dest")"
-  tmp=$(mktemp "$dest.XXXXXX")
-  cat > "$tmp" <<'LUA'
+  # Each step returns on failure itself: inside neovim_setup's && list errexit is off.
+  mkdir -p "$(dirname "$dest")" || return 1
+  tmp=$(mktemp "$dest.XXXXXX") || return 1
+  cat > "$tmp" <<'LUA' || { rm -f "$tmp"; return 1; }
 -- Set up by omamac. The theme comes from omamac's own file, which omamac theme rewrites.
 local theme = vim.fn.expand("~/.config/omamac/neovim.lua")
 if vim.uv.fs_stat(theme) then return dofile(theme) end
 return {}
 LUA
-  if cmp -s "$tmp" "$dest"; then rm -f "$tmp"; else mv "$tmp" "$dest"; fi
+  if cmp -s "$tmp" "$dest"; then rm -f "$tmp"; else mv "$tmp" "$dest" || { rm -f "$tmp"; return 1; }; fi
 }
 
 # neovim_setup: install LazyVim when ~/.config/nvim is absent. Anything already

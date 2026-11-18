@@ -94,3 +94,13 @@ in_lib() {
   [ ! -e "$HOME/.config/nvim" ]
   [ -z "$(ls -d "$HOME"/.config/nvim.omamac.* 2>/dev/null)" ]
 }
+
+@test "a failing marker write leaves no marker and no temp file" {
+  local d="$HOME/.config/nvim/lua/plugins"
+  mkdir -p "$d"
+  chmod 555 "$d"
+  in_lib "neovim_marker_write"
+  chmod 755 "$d"
+  [ "$status" -ne 0 ]
+  [ -z "$(ls -A "$d")" ]
+}

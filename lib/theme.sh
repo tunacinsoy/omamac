@@ -24,7 +24,8 @@ theme_put() {
   apply_put "$tmp" "$dest"
 }
 
-theme_btop_conf() { printf 'color_theme = "%s"\n' "$id" > "$1"; }
+# theme_btop_conf <id> <out>
+theme_btop_conf() { printf 'color_theme = "%s"\n' "$1" > "$2"; }
 
 # theme_apply: the six theme files, from CHOICES[theme].
 theme_apply() {
@@ -35,7 +36,7 @@ theme_apply() {
   theme_put "$OMAMAC_GHOSTTY_FILE" ghostty_render
   theme_put "$OMAMAC_HERDR_FILE" herdr_render
   theme_put "$OMAMAC_STARSHIP_FILE" cp "$OMAMAC_CHECKOUT/themes/$id/starship.toml"
-  theme_put "$OMAMAC_BTOP_FILE" theme_btop_conf
+  theme_put "$OMAMAC_BTOP_FILE" theme_btop_conf "$id"
   theme_put "$OMAMAC_BTOP_THEMES/$id.theme" cp "$OMAMAC_CHECKOUT/themes/$id/btop.theme"
   OMAMAC_STEP="removing the old btop themes in $OMAMAC_BTOP_THEMES"
   for f in "$OMAMAC_BTOP_THEMES"/*.theme; do
@@ -43,7 +44,10 @@ theme_apply() {
   done
   theme_put "$OMAMAC_NEOVIM_THEME_FILE" cp "$OMAMAC_CHECKOUT/themes/$id/neovim.lua"
   # The marker is only omamac's to write when omamac made the folder (it also upgrades Phase 3's).
-  [ ! -e "$OMAMAC_NVIM_MARKER" ] || neovim_marker_write
+  if [ -e "$OMAMAC_NVIM_MARKER" ]; then
+    OMAMAC_STEP="writing $OMAMAC_NVIM_MARKER"
+    neovim_marker_write
+  fi
   herdr_user_config && ui_info "Your own herdr config is kept."
   ui_ok "Theme files are in place"
 }
