@@ -99,8 +99,8 @@ install_summary() {
     "Installed: Homebrew, bash, gum, omamac, Ghostty and the core tools," \
     "and the languages and cloud CLIs you chose." \
     "" \
-    "omamac sets two Ghostty settings: command (starts herdr)" \
-    "and macos-option-as-alt." \
+    "omamac sets three Ghostty settings: its colours, command" \
+    "(starts herdr) and macos-option-as-alt." \
     "The first time you open Ghostty, macOS asks you to confirm;" \
     "click Open." \
     "To let omamac update Ghostty: System Settings → Privacy & Security" \

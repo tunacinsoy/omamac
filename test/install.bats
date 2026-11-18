@@ -128,6 +128,8 @@ snapshot() {
   [[ "$output" == *"Open Ghostty"* ]]
   [[ "$output" == *"App Management"* ]]
   [[ "$output" == *"click Open"* ]]
+  [[ "$output" == *"three Ghostty settings"* ]]
+  [[ "$output" == *"colours"* ]]
   [[ "$output" == *"command"* ]]
   [[ "$output" == *"macos-option-as-alt"* ]]
 }

@@ -63,6 +63,10 @@ A change to languages or CLIs runs the `bare`, `languages` and `cloud` fixtures.
 
 A fixture may have a `<name>.steps.sh`. Its commands run in the VM after the two runs, in `zsh -eux` with stdin closed. A "Remove …?" prompt is answered y; any other prompt fails the run. Put every command that prompts before any `zsh -ic`: an interactive zsh takes the terminal and doesn't give it back, so a later prompt can't read the keyboard. Remove an app's quarantine (`xattr -dr com.apple.quarantine <app>`) before opening it: a quarantined app waits on macOS's "Open?" dialog, which nobody can click over SSH, and hangs.
 
+## Themes
+
+The 13 themes in `themes/` come from [omawsl](https://github.com/tunacinsoy/omawsl)'s themes, which are MIT-licensed through Omarchy (see `themes/LICENSE.omarchy`). Each `ghostty.conf` was converted once from omawsl's terminal palette: `background`, `foreground`, `cursor-color`, `selection-background` and `palette` 0 to 15.
+
 ## Questions and fixtures
 
 The first-run questions live in one table, `lib/questions.sh`: one `question` line each, with its key, kind, text and options. Each key is a line in `choices.env`; values are ids that later code relies on, so never rename one.
