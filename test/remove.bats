@@ -71,7 +71,7 @@ snapshot() {
   gum_answers
   run --separate-stderr omamac_uninstall php
   [ "$status" -eq 2 ]
-  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform."* ]]
+  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, desktops, window-margins."* ]]
   [ -z "$(prompts)" ]
 }
 
@@ -308,6 +308,7 @@ REC() { echo "$HOME/.local/state/omamac/macos-settings.tsv"; }
   [ "$status" -ne 0 ]
   grep -qx 'desktops=yes' "$CHOICES_FILE"
   [[ "$(cat "$(REC)")" != *mru-spaces* ]]
+  grep -q '^killall Dock' "$STUB_LOG"
   [[ "$(cat "$(REC)")" == *AppleSpacesSwitchOnActivate* ]]
   [[ "$(cat "$(REC)")" == *ReduceMotionEnabled* ]]
   gum_answers yes

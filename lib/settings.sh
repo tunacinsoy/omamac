@@ -16,6 +16,7 @@ SETTINGS_KEYS_window_margins=(
 SETTINGS_REFUSED=0
 SETTINGS_DOCK=0
 SETTINGS_UNMET=()
+SETTINGS_PUT_BACK=' '
 
 # settings_keys <answer-key>: that answer's lines.
 settings_keys() {
@@ -60,6 +61,9 @@ settings_write() {
 settings_label() {
   case $1 in
     reduceMotion | ReduceMotionEnabled) echo "Reduce motion" ;;
+    mru-spaces) echo "Spaces order" ;;
+    AppleSpacesSwitchOnActivate) echo "Switching to an app's desktop" ;;
+    EnableTiledWindowMargins) echo "Window margins" ;;
     *) echo "$1" ;;
   esac
 }
@@ -78,8 +82,13 @@ settings_recorded() {
 # gets a line only after the first successful write and is never rewritten,
 # so uninstall can put that first value back.
 settings_note() {
+  local label
   if settings_recorded "$1" "$2"; then
-    ui_info "Put back: $(settings_label "$2")"
+    # Once per label per run (Reduce motion is two keys).
+    label=$(settings_label "$2")
+    case $SETTINGS_PUT_BACK in *"|$label|"*) return 0 ;; esac
+    SETTINGS_PUT_BACK+="|$label| "
+    ui_info "Put back: $label"
   else
     mkdir -p "$OMAMAC_STATE_DIR"
     printf '%s\t%s\t%s\n' "$1" "$2" "${3// /$'\t'}" >> "$OMAMAC_SETTINGS_RECORD"
@@ -96,7 +105,8 @@ settings_one() {
   [ "$cur" != "$t $v" ] || return 0
   settings_write "$d" "$k" "$t" "$v" || return $?
   case $d in com.apple.dock | NSGlobalDomain) SETTINGS_DOCK=1 ;; esac
-  settings_note "$d" "$k" "$cur"
+  # No record line, no change: uninstall could not put the value back.
+  settings_note "$d" "$k" "$cur" || { settings_restore "$d" "$k" "$cur"; return 1; }
 }
 
 # settings_restore <domain> <key> <before>: undo one write. A key that is
@@ -136,7 +146,7 @@ settings_unit() {
     if [ "$rc" -ne 0 ]; then
       for j in "${!written[@]}"; do
         read -r d k _ <<< "${lines[$j]}"
-        settings_restore "$d" "$k" "${cur[$j]}"
+        settings_restore "$d" "$k" "${cur[$j]}" || return 1
       done
       return "$rc"
     fi
@@ -144,7 +154,14 @@ settings_unit() {
   done
   for i in "${!written[@]}"; do
     read -r d k _ <<< "${lines[$i]}"
-    settings_note "$d" "$k" "${cur[$i]}"
+    if ! settings_note "$d" "$k" "${cur[$i]}"; then
+      # No record line, no change: put every key of the unit back.
+      for j in "${!written[@]}"; do
+        read -r d k _ <<< "${lines[$j]}"
+        settings_restore "$d" "$k" "${cur[$j]}" || true
+      done
+      return 1
+    fi
   done
 }
 
@@ -152,6 +169,7 @@ settings_apply() {
   local answer line d k t v rc unit=()
   SETTINGS_REFUSED=0
   SETTINGS_DOCK=0
+  SETTINGS_PUT_BACK=' '
   for answer in desktops window_margins; do
     [ "${CHOICES[$answer]:-}" = yes ] || continue
     unit=()
@@ -160,7 +178,7 @@ settings_apply() {
       case $d in
         com.apple.universalaccess | com.apple.Accessibility) unit+=("$line"); continue ;;
       esac
-      settings_one "$d" "$k" "$t" "$v" || return 1
+      settings_one "$d" "$k" "$t" "$v" || { settings_dock_restart; return 1; }
     done < <(settings_keys "$answer")
     if [ "${#unit[@]}" -gt 0 ]; then
       rc=0
@@ -170,6 +188,7 @@ settings_apply() {
         SETTINGS_REFUSED=1
         ui_info "Turn on Reduce motion: search for Reduce motion in System Settings."
       elif [ "$rc" -ne 0 ]; then
+        settings_dock_restart
         return 1
       fi
     fi
@@ -180,9 +199,12 @@ settings_apply() {
 
 settings_dock_restart() {
   [ "$SETTINGS_DOCK" -eq 1 ] || return 0
+  local step=$OMAMAC_STEP
   OMAMAC_STEP='restarting the Dock'
   # The Dock is not running in a session without a desktop; nothing to restart.
-  killall Dock || true
+  killall Dock 2>> "${OMAMAC_LOG:-/dev/null}" || true
+  # Keep the failed step's name for the caller's ERR trap.
+  OMAMAC_STEP=$step
 }
 
 # settings_what <answer-key>: what uninstall puts back, for its box.
@@ -223,10 +245,11 @@ settings_drop() {
 # and a rerun finishes. A protected domain is not a failure: its lines are
 # dropped and the user is told to do it by hand.
 settings_uninstall() {
-  local d k t v before rc refused=0
+  local d k t v before rc refused=0 unit_recorded=0
   SETTINGS_DOCK=0
   while read -r d k t v; do
     before=$(settings_before "$d" "$k") || continue
+    case $d in com.apple.universalaccess | com.apple.Accessibility) unit_recorded=1 ;; esac
     OMAMAC_STEP="putting back $(settings_label "$k")"
     case $d in
       com.apple.universalaccess | com.apple.Accessibility)
@@ -247,6 +270,9 @@ settings_uninstall() {
     settings_drop "$d" "$k"
   done < <(settings_keys "$1")
   settings_dock_restart
+  if [ "$1" = desktops ] && [ "$unit_recorded" -eq 0 ]; then
+    ui_info "omamac didn't change Reduce motion; if you turned it on yourself, search for Reduce motion in System Settings."
+  fi
 }
 
 # settings_check <answer-key>: sets SETTINGS_UNMET to the names of the keys that

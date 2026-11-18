@@ -440,7 +440,7 @@ settings_set() {
   settings_set
   defaults write com.apple.dock mru-spaces -bool true
   expect_fail "Desktops as workspaces" "omamac update"
-  [[ "$output" == *"mru-spaces was changed since omamac set it"* ]]
+  [[ "$output" == *"Spaces order was changed since omamac set it"* ]]
   [[ "$output" == *"✓ Window margins"* ]]
 }
 
@@ -458,6 +458,15 @@ settings_set() {
   run doctor
   [ "$status" -eq 0 ]
   [[ "$output" == *"ℹ Desktops as workspaces"*"search for Reduce motion in System Settings"* ]]
+}
+
+@test "settings: Spaces setting refused for reading: ✗ naming it" {
+  healthy_mac
+  settings_set
+  export T_DEFAULTS_REFUSE=com.apple.universalaccess
+  defaults write com.apple.dock mru-spaces -bool true
+  expect_fail "Desktops as workspaces" "omamac update"
+  [[ "$output" == *"Spaces order was changed"* ]]
 }
 
 @test "settings: both answers no: no settings lines" {

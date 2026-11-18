@@ -80,7 +80,7 @@ com.apple.Accessibility${TAB}ReduceMotionEnabled${TAB}integer${TAB}0" ]
   seed com.apple.dock mru-spaces boolean true
   in_lib 'CHOICES[desktops]=yes; settings_apply'
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Put back: mru-spaces"* ]]
+  [[ "$output" == *"Put back: Spaces order"* ]]
   [ "$(value com.apple.dock mru-spaces)" = 0 ]
   cmp "$REC" "$BATS_TEST_TMPDIR/rec.before"
   # And once more: still byte for byte.
@@ -117,6 +117,46 @@ com.apple.Accessibility${TAB}ReduceMotionEnabled${TAB}integer${TAB}0" ]
   [[ "$(cat "$REC")" != *AppleSpacesSwitchOnActivate* ]]
 }
 
+@test "a record that can't be written: a plain key is put back and the run fails" {
+  mkdir -p "$(dirname "$REC")"
+  chmod 555 "$(dirname "$REC")"
+  in_lib 'CHOICES[window_margins]=yes; settings_apply'
+  chmod 755 "$(dirname "$REC")"
+  [ "$status" -ne 0 ]
+  [ "$(value com.apple.WindowManager EnableTiledWindowMargins)" = absent ]
+}
+
+@test "a record that can't be written: the Reduce motion unit is put back and the run fails" {
+  seed com.apple.Accessibility ReduceMotionEnabled integer 0
+  mkdir -p "$(dirname "$REC")"
+  chmod 555 "$(dirname "$REC")"
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  chmod 755 "$(dirname "$REC")"
+  [ "$status" -ne 0 ]
+  [ "$(value com.apple.universalaccess reduceMotion)" = absent ]
+  [ "$(value com.apple.Accessibility ReduceMotionEnabled)" = 0 ]
+}
+
+@test "a failing key still restarts the Dock when an earlier key changed it" {
+  export T_DEFAULTS_FAIL=NSGlobalDomain:AppleSpacesSwitchOnActivate
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  [ "$status" -ne 0 ]
+  [ "$(grep -c '^killall Dock' "$STUB_LOG")" -eq 1 ]
+}
+
+@test "plain labels, and Put back prints once per label" {
+  seed com.apple.dock mru-spaces boolean true
+  seed com.apple.universalaccess reduceMotion boolean false
+  seed com.apple.Accessibility ReduceMotionEnabled integer 0
+  mkdir -p "$(dirname "$REC")"
+  printf 'com.apple.dock\tmru-spaces\tboolean\ttrue\ncom.apple.universalaccess\treduceMotion\tboolean\tfalse\ncom.apple.Accessibility\tReduceMotionEnabled\tinteger\t0\n' > "$REC"
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Put back: Spaces order"* ]]
+  [ "$(grep -c 'Put back: Reduce motion' <<< "$output")" -eq 1 ]
+  [[ "$output" != *mru-spaces* ]]
+}
+
 @test "record with a key from an earlier run is never rewritten" {
   mkdir -p "$(dirname "$REC")"
   printf 'com.apple.dock\tmru-spaces\tboolean\ttrue\n' > "$REC"
@@ -124,7 +164,7 @@ com.apple.Accessibility${TAB}ReduceMotionEnabled${TAB}integer${TAB}0" ]
   in_lib 'CHOICES[desktops]=yes; settings_apply'
   [ "$status" -eq 0 ]
   [ "$(value com.apple.dock mru-spaces)" = 0 ]
-  [[ "$output" == *"Put back: mru-spaces"* ]]
+  [[ "$output" == *"Put back: Spaces order"* ]]
   [ "$(grep -c mru-spaces "$REC")" -eq 1 ]
   [[ "$(grep mru-spaces "$REC")" == *"boolean${TAB}true" ]]
 }
@@ -201,10 +241,21 @@ com.apple.Accessibility${TAB}ReduceMotionEnabled${TAB}integer${TAB}0" ]
   seed com.apple.Accessibility ReduceMotionEnabled integer 0
   in_lib 'CHOICES[desktops]=yes; settings_apply'
   export T_DEFAULTS_REFUSE=com.apple.universalaccess
+  : > "$STUB_LOG"
   in_lib 'settings_uninstall desktops'
   [ "$status" -eq 0 ]
   [[ "$output" == *"Turn off Reduce motion: search for Reduce motion in System Settings."* ]]
+  [[ "$(stub_calls)" != *"com.apple.Accessibility ReduceMotionEnabled"* ]]
+  [ "$(T_DEFAULTS_REFUSE= value com.apple.Accessibility ReduceMotionEnabled)" = 1 ]
   [ "$(value com.apple.dock mru-spaces)" = absent ]
   [ "$(value NSGlobalDomain AppleSpacesSwitchOnActivate)" = absent ]
   [ ! -e "$REC" ]
+}
+
+@test "restore with no Reduce motion line says omamac didn't change it" {
+  in_lib 'CHOICES[window_margins]=yes; settings_apply'
+  printf 'com.apple.dock\tmru-spaces\tabsent\n' > "$REC"
+  in_lib 'settings_uninstall desktops'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"omamac didn't change Reduce motion; if you turned it on yourself, search for Reduce motion in System Settings."* ]]
 }

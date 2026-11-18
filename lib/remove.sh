@@ -65,7 +65,7 @@ remove_run() {
     all+=("${ids[@]}")
   done
   if [ -z "$key" ]; then
-    ui_fail "omamac can't remove '$name'. It can remove: $(clis_join "${all[@]}")."
+    ui_fail "omamac can't remove '$name'. It can remove: $(clis_join "${all[@]}" desktops window-margins)."
     exit 2
   fi
   label=$(question_label "$key" "$name")
