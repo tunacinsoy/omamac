@@ -22,14 +22,7 @@ omamac() { "$BASH5" "$REPO_ROOT/bin/omamac" "$@"; }
   done
 }
 
-@test "commands not built yet say so" {
-  run --separate-stderr omamac theme
-  [ "$status" -eq 1 ]
-  [ "$output" = "" ]
-  [ "$stderr" = "omamac theme isn't available yet." ]
-}
-
-@test "unknown command" {
+@test@test "unknown command" {
   run --separate-stderr omamac frob
   [ "$status" -eq 2 ]
   [[ "$stderr" == *"Unknown command: frob"* ]]

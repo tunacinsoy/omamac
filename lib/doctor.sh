@@ -116,7 +116,7 @@ doctor_check_neovim() {
   if [ -e "$OMAMAC_NVIM_MARKER" ]; then
     doctor_report ok "$what"
   elif [ -e "$OMAMAC_NVIM_DIR" ] || [ -L "$OMAMAC_NVIM_DIR" ]; then
-    doctor_report info "$what" "your own neovim config is kept"
+    doctor_report info "$what" "your own neovim config is kept, so themes don't reach neovim"
   else
     doctor_report fail "$what" "~/.config/nvim is missing" "Run the one-liner again"
   fi
@@ -130,6 +130,36 @@ doctor_check_herdr() {
     doctor_report fail "$what" "~/.config/omamac/herdr.toml is missing" "omamac update"
   else
     doctor_report ok "$what"
+  fi
+}
+
+# doctor_check_theme_files: the files omamac theme writes, except the ones other checks name.
+doctor_check_theme_files() {
+  local f missing=()
+  for f in "$OMAMAC_STARSHIP_FILE" "$OMAMAC_BTOP_FILE" "$OMAMAC_NEOVIM_THEME_FILE"; do
+    [ -e "$f" ] || missing+=("${f#"$HOME"/}")
+  done
+  compgen -G "$OMAMAC_BTOP_THEMES/*.theme" >/dev/null || missing+=(".config/omamac/btop-themes")
+  if [ "${#missing[@]}" -eq 0 ]; then
+    doctor_report ok "Theme files"
+  else
+    doctor_report fail "Theme files" "${missing[*]} missing" "omamac update"
+  fi
+}
+
+doctor_check_starship() {
+  if [ -e "$OMAMAC_STARSHIP_USER_FILE" ] || [ -L "$OMAMAC_STARSHIP_USER_FILE" ]; then
+    doctor_report info "starship config" "your own starship config is kept, so themes don't reach the prompt"
+  else
+    doctor_report ok "starship config"
+  fi
+}
+
+doctor_check_btop() {
+  if [ -e "$OMAMAC_BTOP_USER_FILE" ] || [ -L "$OMAMAC_BTOP_USER_FILE" ]; then
+    doctor_report info "btop config" "your own btop config is kept, so themes don't reach btop"
+  else
+    doctor_report ok "btop config"
   fi
 }
 
@@ -283,6 +313,28 @@ doctor_offer() {
   done
 }
 
+# doctor_offer_neovim: a neovim config that isn't omamac's can be moved aside, so omamac sets up its own.
+# One mv, so nothing is lost; the marker is only ever written by neovim_setup into a new folder.
+doctor_offer_neovim() {
+  local backup
+  if [ -e "$OMAMAC_NVIM_MARKER" ] || { [ ! -e "$OMAMAC_NVIM_DIR" ] && [ ! -L "$OMAMAC_NVIM_DIR" ]; } || ! ask_has_tty; then
+    return 0
+  fi
+  ask_choose "Move your neovim config aside so omamac can set up its own?" "Leave it:leave" "Move it aside:move"
+  [ "$ASK_PICKED" = move ] || return 0
+  backup=$OMAMAC_NVIM_DIR.bak-$(date +%Y%m%d)
+  [ ! -e "$backup" ] && [ ! -L "$backup" ] || backup=$backup-$(date +%H%M%S)
+  if ! mv "$OMAMAC_NVIM_DIR" "$backup"; then
+    ui_fail "omamac couldn't move ~/.config/nvim aside. Nothing was changed."
+    return 0
+  fi
+  ui_ok "Your neovim config is now ${backup/#"$HOME"/\~}"
+  log_start
+  if ! neovim_setup; then
+    ui_fail "omamac couldn't fetch LazyVim. Your config is safe at ${backup/#"$HOME"/\~}. Run the one-liner again to set up omamac's."
+  fi
+}
+
 # Prints one line per check; returns 1 if any is a ✗.
 doctor_run() {
   local status=0
@@ -299,10 +351,14 @@ doctor_run() {
   doctor_check_core || status=1
   doctor_check_ghostty || status=1
   doctor_check_neovim || status=1
+  doctor_check_theme_files || status=1
+  doctor_check_starship || status=1
+  doctor_check_btop || status=1
   doctor_check_herdr || status=1
   doctor_check_choices || status=1
   doctor_check_mise_dropin || status=1
   doctor_check_chosen || status=1
   doctor_offer
+  doctor_offer_neovim
   return "$status"
 }

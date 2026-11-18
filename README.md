@@ -2,7 +2,7 @@
 
 omamac sets up a fresh Mac for development in one command: Homebrew, a modern bash, your terminal, editor, apps and theme. After that, one command, `omamac`, keeps it all up to date. It is the sister project of [omawsl](https://github.com/tunacinsoy/omawsl).
 
-omamac is still being built. Today the one-liner installs Homebrew, bash, gum, the `omamac` command and the core tools: Ghostty (which opens into herdr), starship, neovim with LazyVim, btop, mise, herdr, eza, bat, zoxide, fzf, ripgrep, fd, lazygit, tree-sitter-cli and jq. It asks the first-run questions, saves your answers, and installs the languages and cloud CLIs you picked. Apps, Docker and macOS settings come later. `omamac install`, `uninstall`, `doctor` and `update` work; `omamac theme` says "not available yet".
+omamac is still being built. Today the one-liner installs Homebrew, bash, gum, the `omamac` command and the core tools: Ghostty (which opens into herdr), starship, neovim with LazyVim, btop, mise, herdr, eza, bat, zoxide, fzf, ripgrep, fd, lazygit, tree-sitter-cli and jq. It asks the first-run questions, saves your answers, and installs the languages and cloud CLIs you picked. Apps, Docker and macOS settings come later. `omamac install`, `uninstall`, `theme`, `doctor` and `update` work. `omamac theme [name]` switches the theme for Ghostty, herdr, btop, the prompt and neovim, and reloads what is running.
 
 ## Before you begin
 
@@ -66,7 +66,7 @@ Ghostty starts it for you; or run `herdr`. Ctrl g is the prefix, then `p` pane, 
 
 herdr's first-run screen is skipped.
 
-> **omamac handles herdr's settings.** It writes `~/.config/omamac/herdr.toml` again on every update (and, later, every theme switch), so herdr always follows omamac's theme and key bindings. Changes made in herdr's own settings screen (Ctrl g `,`) or by hand to that file don't last. To use your own herdr config instead, write `~/.config/herdr/config.toml`: omamac never touches it, but then omamac's themes and key bindings don't reach herdr, and `omamac doctor` says so.
+> **omamac handles herdr's settings.** It writes `~/.config/omamac/herdr.toml` again on every update (and every theme switch), so herdr always follows omamac's theme and key bindings. Changes made in herdr's own settings screen (Ctrl g `,`) or by hand to that file don't last. To use your own herdr config instead, write `~/.config/herdr/config.toml`: omamac never touches it, but then omamac's themes and key bindings don't reach herdr, and `omamac doctor` says so.
 
 ## Testing a branch
 

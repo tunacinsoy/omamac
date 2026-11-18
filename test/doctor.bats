@@ -66,7 +66,7 @@ expect_fail() {
   healthy_mac
   run doctor
   [ "$status" -eq 0 ]
-  [ "$(printf '%s\n' "$output" | grep -c '^✓')" -eq 18 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^✓')" -eq 21 ]
 }
 
 @test "Homebrew missing" {
@@ -190,14 +190,104 @@ expect_fail() {
 
 @test "user's own neovim config is kept" {
   healthy_mac
+  gum_answers leave
   rm "$HOME/.config/nvim/lua/plugins/omamac.lua"
   run doctor
   [ "$status" -eq 0 ]
   [[ "$output" == *"ℹ neovim config — your own neovim config is kept"* ]]
 }
 
+@test "own starship config is info" {
+  healthy_mac
+  : > "$HOME/.config/starship.toml"
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ starship config — your own starship config is kept, so themes don't reach the prompt"* ]]
+}
+
+@test "own btop config is info" {
+  healthy_mac
+  mkdir -p "$HOME/.config/btop"
+  : > "$HOME/.config/btop/btop.conf"
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ btop config — your own btop config is kept, so themes don't reach btop"* ]]
+}
+
+@test "a missing theme file is a fail" {
+  healthy_mac
+  rm "$HOME/.config/omamac/starship.toml"
+  expect_fail "Theme files" "omamac update"
+}
+
+@test "own nvim: info says themes don't reach neovim" {
+  healthy_mac
+  gum_answers leave
+  rm "$HOME/.config/nvim/lua/plugins/omamac.lua"
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ neovim config — your own neovim config is kept, so themes don't reach neovim"* ]]
+}
+
+# own_nvim: the user's neovim config, without omamac's marker.
+own_nvim() {
+  healthy_mac
+  rm -r "$HOME/.config/nvim"
+  mkdir -p "$HOME/.config/nvim"
+  echo 'mine' > "$HOME/.config/nvim/init.lua"
+}
+
+@test "move-aside offered with a terminal, not without" {
+  own_nvim
+  gum_answers leave
+  run doctor
+  [ "$status" -eq 0 ]
+  grep -q '^gum choose --header Move your neovim config aside so omamac can set up its own? --label-delimiter=: Leave it:leave Move it aside:move' "$STUB_LOG"
+  [ "$(<"$HOME/.config/nvim/init.lua")" = mine ]
+  : > "$STUB_LOG"
+  export OMAMAC_TEST_TTY="$BATS_TEST_TMPDIR/no-tty"
+  run doctor
+  [ "$status" -eq 0 ]
+  [ -z "$(grep '^gum' "$STUB_LOG")" ]
+}
+
+@test "move aside renames and sets up" {
+  own_nvim
+  gum_answers move
+  run doctor
+  [ "$status" -eq 0 ]
+  [ "$(<"$HOME/.config/nvim.bak-$(date +%Y%m%d)/init.lua")" = mine ]
+  [ -e "$HOME/.config/nvim/lua/plugins/omamac.lua" ]
+  [ ! -e "$HOME/.config/nvim.bak-$(date +%Y%m%d)/lua/plugins/omamac.lua" ]
+}
+
+@test "move aside when the backup name is taken" {
+  own_nvim
+  mkdir "$HOME/.config/nvim.bak-$(date +%Y%m%d)"
+  echo older > "$HOME/.config/nvim.bak-$(date +%Y%m%d)/old"
+  gum_answers move
+  run doctor
+  [ "$status" -eq 0 ]
+  [ "$(<"$HOME/.config/nvim.bak-$(date +%Y%m%d)/old")" = older ]
+  [ "$(ls -d "$HOME"/.config/nvim.bak-"$(date +%Y%m%d)"-?????? | wc -l)" -eq 1 ]
+  [ "$(<"$HOME"/.config/nvim.bak-"$(date +%Y%m%d)"-??????/init.lua)" = mine ]
+  [ -e "$HOME/.config/nvim/lua/plugins/omamac.lua" ]
+}
+
+@test "move aside, clone fails" {
+  own_nvim
+  export OMAMAC_TEST_LAZYVIM_URL="file://$BATS_TEST_TMPDIR/no-such-repo"
+  gum_answers move
+  run doctor
+  [ "$(<"$HOME/.config/nvim.bak-$(date +%Y%m%d)/init.lua")" = mine ]
+  [ ! -e "$HOME/.config/nvim" ]
+  [[ "$output" == *"nvim.bak-$(date +%Y%m%d)"* ]]
+  [[ "$output" == *"Run the one-liner again"* ]]
+}
+
 @test "a dangling neovim symlink counts as the user's own" {
   healthy_mac
+  gum_answers leave
   rm -r "$HOME/.config/nvim"
   ln -s "$BATS_TEST_TMPDIR/nowhere" "$HOME/.config/nvim"
   run doctor

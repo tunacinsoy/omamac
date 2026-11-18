@@ -51,3 +51,35 @@ theme_apply() {
   herdr_user_config && ui_info "Your own herdr config is kept."
   ui_ok "Theme files are in place"
 }
+
+# theme_reload: tell what is running to read its new files. Each is a no-op when
+# it isn't running, so a failure is ignored; any output goes to the log.
+theme_reload() {
+  OMAMAC_STEP="reloading what is running"
+  pkill -USR2 -x ghostty >> "$OMAMAC_LOG" 2>&1 || true
+  herdr server reload-config >> "$OMAMAC_LOG" 2>&1 || true
+  pkill -USR2 -x btop >> "$OMAMAC_LOG" 2>&1 || true
+}
+
+# theme_run [<id>]: CHOICES is loaded. Save the theme first, then always apply it,
+# even when it is the current one: that finishes a switch that failed halfway.
+theme_run() {
+  local id=${1:-} options
+  OMAMAC_STEP='choosing the theme'
+  if [ "$#" -eq 0 ]; then
+    ask_need_tty
+    mapfile -t options <<< "${QUESTION_OPTIONS[theme]}"
+    ask_choose "Which theme?" "${options[@]}"
+    id=$ASK_PICKED
+  elif ! question_has theme "$id"; then
+    ui_fail "omamac doesn't know the theme '$id'. It knows: $(question_values theme | paste -sd' ' -)."
+    exit 2
+  fi
+  log_start
+  CHOICES[theme]=$id
+  OMAMAC_STEP='saving your answers'
+  choices_save "$OMAMAC_CHOICES_FILE"
+  theme_apply
+  theme_reload
+  ui_ok "Theme: $(question_label theme "$id"). Ghostty, herdr, btop and your prompt show it now; neovim the next time it opens."
+}
