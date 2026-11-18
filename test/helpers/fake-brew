@@ -29,6 +29,10 @@ case "${1:-}" in
       esac
     elif [ "${2:-}" = "--cask" ]; then
       [ "${T_BREW_LIST_FAIL:-0}" != 1 ] || { echo "Error: brew list failed" >&2; exit 1; }
+      case "${3:-}" in
+        '' | -1) ;;
+        *) [ -e "$prefix/Caskroom/$3" ]; exit ;;
+      esac
       for d in "$prefix"/Caskroom/*; do
         [ -e "$d" ] && basename "$d"
       done

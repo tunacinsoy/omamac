@@ -5,6 +5,7 @@
 OMAMAC_REPO_URL=https://github.com/tunacinsoy/omamac
 OMAMAC_BREW_PREFIX=${OMAMAC_TEST_BREW_PREFIX:-/opt/homebrew}
 OMAMAC_USR_LOCAL_BREW=${OMAMAC_TEST_USR_LOCAL_BREW:-/usr/local/bin/brew}
+OMAMAC_APPLICATIONS=${OMAMAC_TEST_APPLICATIONS:-/Applications}
 OMAMAC_HOME=$HOME/.local/share/omamac
 OMAMAC_CONFIG_DIR=$HOME/.config/omamac
 OMAMAC_STATE_DIR=$HOME/.local/state/omamac

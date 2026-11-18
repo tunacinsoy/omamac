@@ -12,6 +12,7 @@ setup() {
   export TMPDIR="$BATS_TEST_TMPDIR"
   # shellcheck disable=SC2086 # one formula per word
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install $OMAMAC_FORMULAS
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask ghostty
   CHOICES_FILE="$HOME/.local/state/omamac/choices.env"
   mkdir -p "$(dirname "$CHOICES_FILE")"
   cp "$REPO_ROOT/test/fixtures/bare.env" "$CHOICES_FILE"

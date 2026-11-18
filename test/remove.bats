@@ -11,6 +11,7 @@ setup() {
   export TMPDIR="$BATS_TEST_TMPDIR"
   # shellcheck disable=SC2086 # one formula per word
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install $OMAMAC_FORMULAS
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask ghostty
   CHOICES_FILE="$HOME/.local/state/omamac/choices.env"
   mkdir -p "$(dirname "$CHOICES_FILE")"
   cp "$REPO_ROOT/test/fixtures/bare.env" "$CHOICES_FILE"
@@ -57,6 +58,13 @@ snapshot() {
     [[ "$stderr" == *"$name is part of omamac's core and can't be removed on its own."* ]]
   done
   [ -z "$(prompts)" ]
+}
+
+@test "ghostty is core" {
+  gum_answers
+  run --separate-stderr omamac_uninstall ghostty
+  [ "$status" -eq 1 ]
+  [[ "$stderr" == *"ghostty is part of omamac's core"* ]]
 }
 
 @test "an unknown name lists what can go" {

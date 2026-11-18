@@ -4,6 +4,10 @@
 # jq: herdr's key bindings need it.
 CORE_FORMULAS=(starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq)
 
+# Casks, and the app each one puts in /Applications.
+CORE_CASKS=(ghostty)
+declare -A CORE_CASK_APP=([ghostty]=Ghostty.app)
+
 # core_where <installed|missing> <formula>…: the given formulas in that state,
 # one per line, in the given order. One brew list for all of them: each call
 # takes about a second. Returns non-zero if Homebrew can't list.
@@ -27,9 +31,22 @@ core_where() {
 # core_missing: the core formulas Homebrew doesn't have, one per line.
 core_missing() { core_where missing "${CORE_FORMULAS[@]}"; }
 
+# core_cask_state <cask>: brew (Homebrew has it), hand (the app is in
+# Applications but Homebrew doesn't know it) or missing. Returns non-zero if
+# Homebrew can't list.
+core_cask_state() {
+  local cask=$1 list line
+  list=$("$OMAMAC_BREW_PREFIX/bin/brew" list --cask -1) || return
+  while IFS= read -r line; do
+    if [ "$line" = "$cask" ]; then echo brew; return; fi
+  done <<< "$list"
+  if [ -e "$OMAMAC_APPLICATIONS/${CORE_CASK_APP[$cask]}" ]; then echo hand; else echo missing; fi
+}
+
 # core_install: one brew install for what is missing. A formula already there is left alone.
+# A cask already in Applications by hand is used as it is.
 core_install() {
-  local list missing=() names
+  local list missing=() names cask state
   # Not mapfile < <(…): that would hide a failed brew list and install nothing.
   list=$(core_missing) || return
   [ -z "$list" ] || mapfile -t missing <<< "$list"
@@ -37,5 +54,13 @@ core_install() {
     names=$(IFS=,; echo "${missing[*]}")
     ui_run "Installing ${names//,/, }" "$OMAMAC_BREW_PREFIX/bin/brew" install "${missing[@]}" || return
   fi
+  # Its own step: a cask can ask macOS for permission, so it is shown alone.
+  for cask in "${CORE_CASKS[@]}"; do
+    state=$(core_cask_state "$cask") || return
+    case $state in
+      missing) ui_run "Installing Ghostty" "$OMAMAC_BREW_PREFIX/bin/brew" install --cask "$cask" || return ;;
+      hand) ui_info "Ghostty is already installed, not through Homebrew. omamac won't update it." ;;
+    esac
+  done
   ui_ok "Core tools are installed"
 }
