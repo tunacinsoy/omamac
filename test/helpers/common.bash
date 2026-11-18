@@ -13,7 +13,9 @@ setup_sandbox() {
   export STUB_LOG="$BATS_TEST_TMPDIR/stub.log"
   export OMAMAC_TEST_BREW_PREFIX="$BATS_TEST_TMPDIR/opt/homebrew"
   export REPO_ROOT BASH5 HELPERS_DIR
-  mkdir -p "$HOME" "$STUB_DIR"
+  # Tests never see the real /Applications.
+  export OMAMAC_TEST_APPLICATIONS="$BATS_TEST_TMPDIR/Applications"
+  mkdir -p "$HOME" "$STUB_DIR" "$OMAMAC_TEST_APPLICATIONS"
   lazyvim_fixture
   : > "$STUB_LOG"
   ln -sf "$HELPERS_DIR/fake-gum" "$STUB_DIR/gum"

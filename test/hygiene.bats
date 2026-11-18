@@ -27,6 +27,11 @@ setup() { setup_sandbox; }
   done
 }
 
+@test "the launcher parses under zsh" {
+  # shellcheck can't read zsh, so CI doesn't list the launcher.
+  /bin/zsh -n "$REPO_ROOT/bin/omamac-terminal"
+}
+
 @test "the helper passes shellcheck" {
   # CI's shellcheck line doesn't list the helper, so it's checked here.
   command -v shellcheck >/dev/null || skip "shellcheck is not installed"
@@ -38,4 +43,11 @@ setup() { setup_sandbox; }
   run hello there
   [ "$output" = "hi" ]
   grep -qx 'hello there' "$STUB_LOG"
+}
+
+@test "omamac never runs Ghostty's binary" {
+  # On a fresh Mac it waits on macOS's "Open?" dialog. Only VM steps may run it.
+  cd "$REPO_ROOT"
+  run grep -rn 'MacOS/ghostty' bin lib install.sh update.sh
+  [ "$status" -eq 1 ]
 }

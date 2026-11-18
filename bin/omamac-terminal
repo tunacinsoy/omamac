@@ -1,0 +1,8 @@
+#!/bin/zsh -il
+# Ghostty runs this in each new window. -il loads ~/.zprofile and ~/.zshrc, so
+# herdr gets the same PATH and HERDR_CONFIG_PATH as any shell.
+if (( $+commands[herdr] )); then
+  herdr && exit 0
+fi
+print -r -- "herdr didn't start, so this is a plain zsh window. Run omamac doctor to see why."
+exec zsh -l

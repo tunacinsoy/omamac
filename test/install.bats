@@ -101,8 +101,8 @@ snapshot() {
   for f in "${mine[@]}"; do after+="$(shasum < "$HOME/$f") $(stat -f %m "$HOME/$f");"; done
   [ "$after" = "$before" ]
   run grep -rnE '/etc/|/Library/' "$REPO_ROOT/install.sh" "$REPO_ROOT/lib"
-  # Only comment lines may match.
-  [ -z "$(grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' <<< "$output")" ]
+  # Only comment lines may match, and Ghostty's own folder under $HOME.
+  [ -z "$(grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' <<< "$output" | grep -vF '$HOME/Library/Application Support/com.mitchellh.ghostty')" ]
 }
 
 @test "a failing step names itself, not a log that lacks it" {
@@ -118,7 +118,18 @@ snapshot() {
 @test "summary tells the user what to do next" {
   run install
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Open a new terminal window, then run omamac"* ]]
+  [[ "$output" == *"Open Ghostty (it starts herdr), then run omamac."* ]]
+  [[ "$output" != *"Open a new terminal window"* ]]
+}
+
+@test "summary names Ghostty and the clicks" {
+  run install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Open Ghostty"* ]]
+  [[ "$output" == *"App Management"* ]]
+  [[ "$output" == *"click Open"* ]]
+  [[ "$output" == *"command"* ]]
+  [[ "$output" == *"macos-option-as-alt"* ]]
 }
 
 @test "fresh: asks, saves, then writes the Phase 1 files" {
@@ -225,7 +236,7 @@ snapshot() {
   [ "$status" -eq 0 ]
   [ "$(grep -c '^brew install .*starship' "$STUB_LOG")" = 1 ]
   [ -f "$HOME/.config/nvim/lua/plugins/omamac.lua" ]
-  [[ "$output" == *"Installed: Homebrew, bash, gum, omamac, the core tools"* ]]
+  [[ "$output" == *"Installed: Homebrew, bash, gum, omamac, Ghostty and the core tools"* ]]
   [[ "$output" == *"and the languages and cloud CLIs you chose."* ]]
 }
 

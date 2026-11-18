@@ -12,6 +12,7 @@ setup() {
   export TMPDIR="$BATS_TEST_TMPDIR"
   # shellcheck disable=SC2086 # one formula per word
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install $OMAMAC_FORMULAS
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask ghostty
   CHOICES_FILE="$HOME/.local/state/omamac/choices.env"
   mkdir -p "$(dirname "$CHOICES_FILE")"
   cp "$REPO_ROOT/test/fixtures/bare.env" "$CHOICES_FILE"
@@ -272,4 +273,71 @@ choose() { sed -i '' "s/^$1=.*/$1=$2/" "$CHOICES_FILE"; }
   [[ "$output" == *"omamac stopped while installing the core tools."* ]]
   [[ "$output" == *"run omamac update again"* ]]
   run ! grep -q '^brew upgrade' "$STUB_LOG"
+}
+
+# Ghostty's own app folder, writable, like a Mac that allows App Management.
+ghostty_app() { mkdir -p "$OMAMAC_TEST_APPLICATIONS/Ghostty.app"; }
+# deny_app_management: touch fails inside the app folder only; bats and git need the real touch.
+deny_app_management() {
+  stub touch 'case "$1" in *.omamac-write-test) echo "touch: $1: Operation not permitted" >&2; exit 1 ;; esac; exec /usr/bin/touch "$@"'
+}
+# ghostty_outdated: Homebrew says Ghostty is outdated.
+ghostty_outdated() { echo ghostty > "$OMAMAC_TEST_BREW_PREFIX/outdated"; }
+
+@test "Ghostty current: no write test, no cask upgrade" {
+  ghostty_app
+  stub touch
+  run update
+  [ "$status" -eq 0 ]
+  run ! grep -q '^touch' "$STUB_LOG"
+  run ! grep -q '^brew upgrade --cask' "$STUB_LOG"
+}
+
+@test "Ghostty by hand: never checked or upgraded" {
+  rm -rf "${OMAMAC_TEST_BREW_PREFIX:?}/Caskroom/ghostty"
+  ghostty_app
+  ghostty_outdated
+  run update
+  [ "$status" -eq 0 ]
+  run ! grep -q '^brew outdated' "$STUB_LOG"
+  run ! grep -q '^brew upgrade --cask' "$STUB_LOG"
+}
+
+@test "Ghostty outdated and allowed: upgraded, without --greedy" {
+  ghostty_app
+  ghostty_outdated
+  run update
+  [ "$status" -eq 0 ]
+  grep -qx 'brew upgrade --cask ghostty' "$STUB_LOG"
+  grep -qx 'brew outdated --cask --quiet ghostty' "$STUB_LOG"
+  run ! grep -q 'greedy.*ghostty' "$STUB_LOG"
+  [ ! -e "$OMAMAC_TEST_APPLICATIONS/Ghostty.app/.omamac-write-test" ]
+}
+
+@test "Ghostty outdated, App Management missing" {
+  ghostty_app
+  ghostty_outdated
+  deny_app_management
+  stub open
+  run update
+  [ "$status" -eq 1 ]
+  # Check the output first: a later run replaces it.
+  [[ "$output" == *"System Settings → Privacy & Security → App Management"* ]]
+  [[ "$output" != *"omamac stopped while"* ]]
+  grep -q '^brew upgrade ' "$STUB_LOG"
+  run ! grep -q '^brew upgrade --cask.*ghostty' "$STUB_LOG"
+  grep -qx 'open x-apple.systempreferences:com.apple.preference.security?Privacy_AppBundles' "$STUB_LOG"
+}
+
+@test "Ghostty outdated, App Management missing: everything else still upgrades" {
+  choose cloud_clis 'gcloud'
+  choose languages 'go'
+  ghostty_app
+  ghostty_outdated
+  deny_app_management
+  stub open
+  run update
+  [ "$status" -eq 1 ]
+  grep -qx 'brew upgrade --cask --greedy gcloud-cli' "$STUB_LOG"
+  grep -qx 'mise upgrade go' "$STUB_LOG"
 }

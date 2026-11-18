@@ -1,8 +1,9 @@
 #!/opt/homebrew/bin/bash
 # Everything after the restart. First the questions and "Install?", so nothing
 # is written before the user says yes; then omamac's zsh file, herdr's config,
-# mise's drop-in, the core tools, LazyVim, the languages, the cloud CLIs, the
-# two guarded lines and a summary.
+# mise's drop-in, the core tools (Ghostty too), LazyVim, the languages, the
+# cloud CLIs, the guarded lines (zprofile, zshrc, and Ghostty's include line)
+# and a summary.
 # shellcheck source-path=SCRIPTDIR
 set -Eeuo pipefail
 
@@ -31,6 +32,8 @@ source "$OMAMAC_CHECKOUT/lib/core.sh"
 source "$OMAMAC_CHECKOUT/lib/neovim.sh"
 # shellcheck source=lib/herdr.sh
 source "$OMAMAC_CHECKOUT/lib/herdr.sh"
+# shellcheck source=lib/ghostty.sh
+source "$OMAMAC_CHECKOUT/lib/ghostty.sh"
 # shellcheck source=lib/languages.sh
 source "$OMAMAC_CHECKOUT/lib/languages.sh"
 # shellcheck source=lib/clis.sh
@@ -82,12 +85,27 @@ install_lines() {
   OMAMAC_STEP='adding omamac to ~/.zshrc'
   lines_add "$HOME/.zshrc" "$OMAMAC_ZSHRC_LINE"
   ui_ok "omamac is loaded by zsh"
+  OMAMAC_STEP="adding omamac's file to Ghostty's config"
+  ghostty_line_add
+  ui_ok "Ghostty starts herdr"
 }
 
 install_summary() {
   OMAMAC_STEP='printing the summary'
-  # Two lines, so the box fits an 80-column terminal.
-  ui_box "Installed: Homebrew, bash, gum, omamac, the core tools" "and the languages and cloud CLIs you chose." "Log: $OMAMAC_LOG" "Open a new terminal window, then run omamac."
+  # Short lines, so the box fits an 80-column terminal.
+  ui_box \
+    "Installed: Homebrew, bash, gum, omamac, Ghostty and the core tools," \
+    "and the languages and cloud CLIs you chose." \
+    "" \
+    "omamac sets two Ghostty settings: command (starts herdr)" \
+    "and macos-option-as-alt." \
+    "The first time you open Ghostty, macOS asks you to confirm;" \
+    "click Open." \
+    "To let omamac update Ghostty: System Settings → Privacy & Security" \
+    "→ App Management → Ghostty." \
+    "" \
+    "Log: $OMAMAC_LOG" \
+    "Open Ghostty (it starts herdr), then run omamac."
 }
 
 install_main() {

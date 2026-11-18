@@ -29,14 +29,20 @@ source "$OMAMAC_CHECKOUT/lib/core.sh"
 source "$OMAMAC_CHECKOUT/lib/neovim.sh"
 # shellcheck source=lib/herdr.sh
 source "$OMAMAC_CHECKOUT/lib/herdr.sh"
+# shellcheck source=lib/ghostty.sh
+source "$OMAMAC_CHECKOUT/lib/ghostty.sh"
 # shellcheck source=lib/languages.sh
 source "$OMAMAC_CHECKOUT/lib/languages.sh"
 # shellcheck source=lib/clis.sh
 source "$OMAMAC_CHECKOUT/lib/clis.sh"
+# shellcheck source=lib/appmanagement.sh
+source "$OMAMAC_CHECKOUT/lib/appmanagement.sh"
 # shellcheck source=lib/apply.sh
 source "$OMAMAC_CHECKOUT/lib/apply.sh"
 
 OMAMAC_STEP='starting'
+# Set when a step was skipped on purpose; update finishes, then exits 1.
+UPDATE_FAILED=0
 
 update_failed() {
   # With set -E the trap also runs inside ( … ) and $( … ); let only the main shell speak.
@@ -107,6 +113,35 @@ update_upgrade_casks() {
   ui_run "Upgrading the cloud CLIs that are casks" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask --greedy "${names[@]}"
 }
 
+# update_upgrade_ghostty: upgrade Ghostty when Homebrew manages it and says it is
+# outdated. Homebrew replaces the app, which needs App Management; without it,
+# skip only this, say how to fix it, and let update_main finish and exit 1.
+update_upgrade_ghostty() {
+  local state out status=0 app="$OMAMAC_APPLICATIONS/${CORE_CASK_APP[ghostty]}"
+  OMAMAC_STEP='upgrading Ghostty'
+  state=$(core_cask_state ghostty) || return
+  [ "$state" = brew ] || return 0
+  # No --greedy: Ghostty updates itself, and --greedy would compare only
+  # Homebrew's own record, so update would call it outdated forever.
+  # brew outdated exits 1 when the named cask is outdated; the output says which.
+  out=$("$OMAMAC_BREW_PREFIX/bin/brew" outdated --cask --quiet ghostty) || true
+  [ -n "$out" ] || return 0
+  app_management_ok "$app" || status=$?
+  case $status in
+    0) ui_run "Upgrading Ghostty" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask ghostty ;;
+    1)
+      ui_fail "Ghostty has an update, but macOS won't let your terminal change apps."
+      ui_fail "Fix: System Settings → Privacy & Security → App Management, turn on your terminal, then run omamac update again."
+      open "$APP_MANAGEMENT_URL" || true
+      UPDATE_FAILED=1
+      ;;
+    *)
+      ui_fail "Ghostty has an update, but omamac couldn't test write access to $app."
+      UPDATE_FAILED=1
+      ;;
+  esac
+}
+
 # update_upgrade_languages: the chosen languages to their newest versions, old
 # ones pruned, then the rails gem.
 update_upgrade_languages() {
@@ -130,8 +165,13 @@ update_main() {
   apply_all
   update_upgrade
   update_upgrade_casks
+  update_upgrade_ghostty
   update_upgrade_languages
   OMAMAC_STEP='printing the summary'
+  if [ "$UPDATE_FAILED" -eq 1 ]; then
+    ui_box "✗ Everything else is up to date. Ghostty is not." "Log: $OMAMAC_LOG" >&2
+    exit 1
+  fi
   ui_box "omamac and your tools are up to date." "Log: $OMAMAC_LOG"
 }
 

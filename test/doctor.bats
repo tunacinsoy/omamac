@@ -31,6 +31,7 @@ healthy_mac() {
   omamac_lib herdr_config_apply
   omamac_lib languages_write_dropin
   mkdir -p "$OMAMAC_TEST_BREW_PREFIX/mise"
+  healthy_ghostty
 }
 
 # omamac_lib <code>: run code with omamac's libraries and the saved answers loaded.
@@ -65,7 +66,7 @@ expect_fail() {
   healthy_mac
   run doctor
   [ "$status" -eq 0 ]
-  [ "$(printf '%s\n' "$output" | grep -c '^✓')" -eq 14 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^✓')" -eq 18 ]
 }
 
 @test "Homebrew missing" {
@@ -489,4 +490,63 @@ expect_fail() {
   run doctor
   [ "$status" -eq 0 ]
   [ -z "$(grep '^gum' "$STUB_LOG")" ]
+}
+
+# Ghostty the way install leaves it: from Homebrew, with omamac's file and its line.
+healthy_ghostty() {
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask ghostty
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/Ghostty.app" "$HOME/.config/ghostty"
+  echo 'config-file = ?~/.config/omamac/ghostty.conf' > "$HOME/.config/ghostty/config.ghostty"
+  : > "$HOME/.config/omamac/ghostty.conf"
+}
+
+@test "Ghostty from Homebrew with its line" {
+  healthy_mac
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ Ghostty"$'\n'* ]]
+  [[ "$output" == *"✓ Ghostty line"* ]]
+  [[ "$output" == *"✓ App Management"* ]]
+}
+
+@test "Ghostty by hand" {
+  healthy_mac
+  rm -r "$OMAMAC_TEST_BREW_PREFIX/Caskroom/ghostty"
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ Ghostty — installed by hand"* ]]
+  [[ "$output" != *"App Management"* ]]
+}
+
+@test "Ghostty missing" {
+  healthy_mac
+  rm -r "$OMAMAC_TEST_BREW_PREFIX/Caskroom/ghostty" "$OMAMAC_TEST_APPLICATIONS/Ghostty.app"
+  expect_fail "Ghostty" "brew install --cask ghostty"
+}
+
+@test "Ghostty listed by Homebrew but its app gone" {
+  healthy_mac
+  rm -r "$OMAMAC_TEST_APPLICATIONS/Ghostty.app"
+  expect_fail "Ghostty" "brew reinstall --cask ghostty"
+}
+
+@test "Ghostty line missing" {
+  healthy_mac
+  : > "$HOME/.config/ghostty/config.ghostty"
+  expect_fail "Ghostty line" "Run the one-liner again"
+}
+
+@test "omamac's Ghostty file missing" {
+  healthy_mac
+  rm "$HOME/.config/omamac/ghostty.conf"
+  expect_fail "omamac's Ghostty file" "omamac update"
+}
+
+@test "App Management refused is info" {
+  healthy_mac
+  stub touch 'case "$1" in *.omamac-write-test) echo "touch: $1: Operation not permitted" >&2; exit 1 ;; esac; exec /usr/bin/touch "$@"'
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ App Management"* ]]
+  [[ "$output" == *"System Settings → Privacy & Security → App Management"* ]]
 }

@@ -5,6 +5,7 @@
 OMAMAC_REPO_URL=https://github.com/tunacinsoy/omamac
 OMAMAC_BREW_PREFIX=${OMAMAC_TEST_BREW_PREFIX:-/opt/homebrew}
 OMAMAC_USR_LOCAL_BREW=${OMAMAC_TEST_USR_LOCAL_BREW:-/usr/local/bin/brew}
+OMAMAC_APPLICATIONS=${OMAMAC_TEST_APPLICATIONS:-/Applications}
 OMAMAC_HOME=$HOME/.local/share/omamac
 OMAMAC_CONFIG_DIR=$HOME/.config/omamac
 OMAMAC_STATE_DIR=$HOME/.local/state/omamac
@@ -24,3 +25,7 @@ OMAMAC_TTY=${OMAMAC_TEST_TTY:-/dev/tty}
 OMAMAC_ZPROFILE_LINE='eval "$(/opt/homebrew/bin/brew shellenv)" # added by omamac'
 # shellcheck disable=SC2016
 OMAMAC_ZSHRC_LINE='[[ -r ~/.config/omamac/zshrc ]] && source ~/.config/omamac/zshrc # added by omamac'
+OMAMAC_GHOSTTY_FILE=$OMAMAC_CONFIG_DIR/ghostty.conf
+OMAMAC_TERMINAL=$OMAMAC_HOME/bin/omamac-terminal
+# No trailing comment: Ghostty reads all after = as the path, so a comment would stop the file loading.
+OMAMAC_GHOSTTY_LINE='config-file = ?~/.config/omamac/ghostty.conf'

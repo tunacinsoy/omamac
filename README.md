@@ -2,7 +2,7 @@
 
 omamac sets up a fresh Mac for development in one command: Homebrew, a modern bash, your terminal, editor, apps and theme. After that, one command, `omamac`, keeps it all up to date. It is the sister project of [omawsl](https://github.com/tunacinsoy/omawsl).
 
-omamac is still being built. Today the one-liner installs Homebrew, bash, gum, the `omamac` command and the core tools: starship, neovim with LazyVim, btop, mise, herdr, eza, bat, zoxide, fzf, ripgrep, fd, lazygit, tree-sitter-cli and jq. It asks the first-run questions, saves your answers, and installs the languages and cloud CLIs you picked. Apps, Docker and macOS settings come later. `omamac install`, `uninstall`, `doctor` and `update` work; `omamac theme` says "not available yet".
+omamac is still being built. Today the one-liner installs Homebrew, bash, gum, the `omamac` command and the core tools: Ghostty (which opens into herdr), starship, neovim with LazyVim, btop, mise, herdr, eza, bat, zoxide, fzf, ripgrep, fd, lazygit, tree-sitter-cli and jq. It asks the first-run questions, saves your answers, and installs the languages and cloud CLIs you picked. Apps, Docker and macOS settings come later. `omamac install`, `uninstall`, `doctor` and `update` work; `omamac theme` says "not available yet".
 
 ## Before you begin
 
@@ -28,7 +28,9 @@ Each run writes a log to `~/.local/state/omamac/logs/`. The newest 10 are kept.
 
 ## After install
 
-Open a new terminal window. `nvim` downloads its plugins the first time it opens.
+Open Ghostty. It starts herdr. The first time, macOS asks you to confirm; click Open. `nvim` downloads its plugins the first time it opens.
+
+To let `omamac update` upgrade Ghostty, allow App Management for it: System Settings → Privacy & Security → App Management.
 
 ## Keeping it up to date
 
@@ -36,11 +38,12 @@ Open a new terminal window. `nvim` downloads its plugins the first time it opens
 omamac update
 ```
 
-It updates omamac and what omamac installed, nothing else. It pulls omamac (and stops if you edited its files), rewrites the files omamac writes, puts back any core tool, language or cloud CLI that is missing, then upgrades only what omamac installed: the core tools, bash, gum, the cloud CLIs you chose (Google Cloud's cask with `--greedy`) and the languages you chose. After that, `mise prune` deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`. The log goes to `~/.local/state/omamac/logs/`.
+It updates omamac and what omamac installed, nothing else. It pulls omamac (and stops if you edited its files), rewrites the files omamac writes, puts back any core tool, language or cloud CLI that is missing, then upgrades only what omamac installed: the core tools, Ghostty (only if App Management is allowed for it; otherwise update says what to click and exits 1), bash, gum, the cloud CLIs you chose (Google Cloud's cask with `--greedy`) and the languages you chose. After that, `mise prune` deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`. The log goes to `~/.local/state/omamac/logs/`.
 
 ## What it changes
 
 - Homebrew, in `/opt/homebrew`. It brings Apple's Command Line Tools.
+- Ghostty, installed with Homebrew (a cask). A Ghostty you installed by hand is used as is and not updated.
 - bash, gum and the core tools (`starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`), installed with Homebrew.
 - The languages you chose (Ruby on Rails, Node.js, Go, Python, Elixir, Rust, Java), installed with mise, and the cloud CLIs you chose (Azure, AWS, Google Cloud, GitHub, Terraform), installed with Homebrew. Terraform comes from `hashicorp/tap`.
 - `~/.config/mise/conf.d/omamac.toml`: the languages, written by omamac again on every run. Your own pins in `~/.config/mise/config.toml` win and are never touched.
@@ -49,15 +52,17 @@ It updates omamac and what omamac installed, nothing else. It pulls omamac (and 
 - `~/.local/share/omamac`: omamac itself.
 - `~/.config/omamac`: files omamac writes, including `zshrc` (aliases, history, completion, mise and the starship prompt), which the line in `~/.zshrc` loads. That file takes over EDITOR and VISUAL (nvim), history sizes (raised, never lowered), ↑/↓ history search, Ctrl-R (fzf), the prompt (starship), and the aliases `ls`, `lsa`, `ll`, `lt`, `lta`, `tree`, `cat`, `cd`, `ff`, `..`, `...`, `....`, `g`, `gcm`, `gcam`, `gcad`, `d`, `lzg`, `lzd`, `n` and `r`. It also sets `HERDR_CONFIG_PATH` when you have no herdr config.
 - `~/.config/omamac/herdr.toml`: omawsl's herdr config and key bindings. A `~/.config/herdr/config.toml` of your own is used instead and never touched (one holding only `onboarding = false` is herdr's own and doesn't count).
+- One line in a Ghostty config file: `config-file = ?~/.config/omamac/ghostty.conf`. It goes in the last of Ghostty's four config files that exists, or in a new `~/.config/ghostty/config.ghostty`. If one of them already has it, nothing is added. If you installed omamac before Ghostty joined, run the one-liner again to get the line.
+- `~/.config/omamac/ghostty.conf`: written again on every run. It takes over two Ghostty settings: `command` (starts herdr) and `macos-option-as-alt` (left). Ghostty loads the included file after the rest of your config, wherever the line sits, so these two win over the same settings in your own files.
 - `~/.local/state/omamac`: logs and your saved answers (`choices.env`).
 
 `omamac install` adds the languages and cloud CLIs you didn't pick before. `omamac uninstall <name>` removes one, after asking; a version another mise config uses stays, and Homebrew taps stay.
 
-`omamac uninstall` removes your picks one at a time. For the rest, undo by hand: delete the two lines ending in `# added by omamac`, delete the three folders and `~/.config/mise/conf.d/omamac.toml`, delete `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`), and, if omamac installed them, run `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`. To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
+`omamac uninstall` removes your picks one at a time. For the rest, undo by hand: delete the two lines ending in `# added by omamac`, delete the line naming `~/.config/omamac/ghostty.conf` from your Ghostty config, delete the three folders and `~/.config/mise/conf.d/omamac.toml`, delete `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`), and, if omamac installed them, run `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`, and `brew uninstall --cask ghostty`. To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
 
 ## herdr
 
-Start it with `herdr` (Ghostty will do it in a later phase). Ctrl g is the prefix, then `p` pane, `t` tab, `r` resize, `m` move, `o` session, `s` scroll. Alt h/j/k/l move between panes, Alt n opens a new pane.
+Ghostty starts it for you; or run `herdr`. Ctrl g is the prefix, then `p` pane, `t` tab, `r` resize, `m` move, `o` session, `s` scroll. Alt h/j/k/l move between panes, Alt n opens a new pane.
 
 herdr's first-run screen is skipped.
 

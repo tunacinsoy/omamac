@@ -26,7 +26,7 @@ remove_run() {
     name=$ASK_PICKED
   fi
   # bash and gum are omamac's own, so they count as core.
-  for v in "${CORE_FORMULAS[@]}" bash gum zsh; do
+  for v in "${CORE_FORMULAS[@]}" "${CORE_CASKS[@]}" bash gum zsh; do
     if [ "$name" = "$v" ]; then
       ui_fail "$name is part of omamac's core and can't be removed on its own."
       exit 1

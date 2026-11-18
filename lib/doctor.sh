@@ -133,6 +133,47 @@ doctor_check_herdr() {
   fi
 }
 
+# Ghostty: the app, the include line in the user's files, omamac's own file,
+# and App Management (only for a Ghostty Homebrew upgrades).
+doctor_check_ghostty() {
+  local what=Ghostty state fix app="$OMAMAC_APPLICATIONS/${CORE_CASK_APP[ghostty]}" status=0
+  if ! state=$(core_cask_state ghostty 2>/dev/null); then
+    doctor_report info "$what" "skipped, Homebrew can't list its casks"
+    state=skipped
+  else
+    case $state in
+      brew) doctor_report ok "$what" ;;
+      hand) doctor_report info "$what" "installed by hand, so omamac won't update it" ;;
+      missing)
+        # Homebrew's install does nothing for a cask it already lists.
+        if core_cask_listed ghostty; then fix="brew reinstall --cask ghostty"; else fix="brew install --cask ghostty"; fi
+        doctor_report fail "$what" "omamac's terminal is Ghostty" "$fix" || status=1
+        ;;
+    esac
+  fi
+  if lines_has "$(ghostty_line_file)" "$OMAMAC_GHOSTTY_LINE"; then
+    doctor_report ok "Ghostty line"
+  else
+    doctor_report fail "Ghostty line" "Ghostty's config doesn't load omamac's file" "Run the one-liner again" || status=1
+  fi
+  if [ -e "$OMAMAC_GHOSTTY_FILE" ]; then
+    doctor_report ok "omamac's Ghostty file"
+  else
+    doctor_report fail "omamac's Ghostty file" "~/.config/omamac/ghostty.conf is missing" "omamac update" || status=1
+  fi
+  if [ "$state" = brew ]; then
+    # Status 1 is a refusal, 2 is some other failure; only a refusal is known to be App Management.
+    local am=0
+    app_management_ok "$app" 2>/dev/null || am=$?
+    case $am in
+      0) doctor_report ok "App Management" ;;
+      1) doctor_report info "App Management" "off, so omamac update can't upgrade Ghostty. Fix: System Settings → Privacy & Security → App Management, turn on your terminal" ;;
+      *) doctor_report info "App Management" "skipped, omamac couldn't test it" ;;
+    esac
+  fi
+  return "$status"
+}
+
 # Sets DOCTOR_HAS_CHOICES so the checks after it know CHOICES is loaded.
 doctor_check_choices() {
   local what="Saved answers" message
@@ -256,6 +297,7 @@ doctor_run() {
     "~/.zshrc does not load omamac's settings" || status=1
   doctor_check_zsh_file || status=1
   doctor_check_core || status=1
+  doctor_check_ghostty || status=1
   doctor_check_neovim || status=1
   doctor_check_herdr || status=1
   doctor_check_choices || status=1
