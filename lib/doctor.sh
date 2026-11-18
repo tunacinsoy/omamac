@@ -233,6 +233,30 @@ doctor_check_mise_dropin() {
   fi
 }
 
+# One line per yes answer of the macOS settings: the values omamac set are still there.
+doctor_check_settings() {
+  local what="macOS settings" answer title unmet status=0
+  if [ "$DOCTOR_HAS_CHOICES" -ne 1 ]; then
+    doctor_report info "$what" "skipped, your saved answers can't be read"
+    return 0
+  fi
+  for answer in desktops window_margins; do
+    [ "${CHOICES[$answer]:-}" = yes ] || continue
+    title=${QUESTION_TITLE[$answer]}
+    settings_check "$answer"
+    if [ "${#SETTINGS_UNMET[@]}" -gt 0 ]; then
+      # Names joined with ", ".
+      unmet=$(IFS=,; echo "${SETTINGS_UNMET[*]}")
+      doctor_report fail "$title" "${unmet//,/, } was changed since omamac set it" "omamac update" || status=1
+    elif [ "$SETTINGS_REFUSED" -eq 1 ]; then
+      doctor_report info "$title" "macOS doesn't let omamac read Reduce motion; to check it, search for Reduce motion in System Settings"
+    else
+      doctor_report ok "$title"
+    fi
+  done
+  return "$status"
+}
+
 # doctor_key <id>: the question a language or cloud CLI id answers.
 doctor_key() { if [ -n "${LANGUAGE_TOOLS[$1]:-}" ]; then echo languages; else echo cloud_clis; fi; }
 
@@ -359,6 +383,7 @@ doctor_run() {
   doctor_check_choices || status=1
   doctor_check_mise_dropin || status=1
   doctor_check_chosen || status=1
+  doctor_check_settings || status=1
   doctor_offer
   doctor_offer_neovim || status=1
   return "$status"

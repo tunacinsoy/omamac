@@ -415,6 +415,65 @@ own_nvim() {
   [[ "$output" == *"ℹ Languages and cloud CLIs — skipped, your saved answers can't be read"* ]]
 }
 
+# Both settings answers yes, and the macOS values omamac wants.
+settings_set() {
+  choose desktops yes
+  choose window_margins yes
+  defaults write com.apple.dock mru-spaces -bool false
+  defaults write NSGlobalDomain AppleSpacesSwitchOnActivate -bool true
+  defaults write com.apple.universalaccess reduceMotion -bool true
+  defaults write com.apple.Accessibility ReduceMotionEnabled -int 1
+  defaults write com.apple.WindowManager EnableTiledWindowMargins -bool true
+}
+
+@test "settings: both answers yes and all set: ✓" {
+  healthy_mac
+  settings_set
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ Desktops as workspaces"* ]]
+  [[ "$output" == *"✓ Window margins"* ]]
+}
+
+@test "settings: a key changed since omamac set it: ✗ with the fix" {
+  healthy_mac
+  settings_set
+  defaults write com.apple.dock mru-spaces -bool true
+  expect_fail "Desktops as workspaces" "omamac update"
+  [[ "$output" == *"mru-spaces was changed since omamac set it"* ]]
+  [[ "$output" == *"✓ Window margins"* ]]
+}
+
+@test "settings: a key that is gone: ✗" {
+  healthy_mac
+  settings_set
+  defaults delete com.apple.WindowManager EnableTiledWindowMargins
+  expect_fail "Window margins" "omamac update"
+}
+
+@test "settings: Reduce motion refused: ℹ with the click" {
+  healthy_mac
+  settings_set
+  export T_DEFAULTS_REFUSE=com.apple.universalaccess
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ Desktops as workspaces"*"search for Reduce motion in System Settings"* ]]
+}
+
+@test "settings: both answers no: no settings lines" {
+  healthy_mac
+  run doctor
+  [[ "$output" != *"Desktops as workspaces"* ]]
+  [[ "$output" != *"Window margins"* ]]
+}
+
+@test "without saved answers the settings are skipped" {
+  healthy_mac
+  rm "$CHOICES_FILE"
+  run doctor
+  [[ "$output" == *"ℹ macOS settings — skipped, your saved answers can't be read"* ]]
+}
+
 @test "a chosen language gone: ✗ naming it" {
   healthy_mac
   choose languages go

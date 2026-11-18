@@ -15,6 +15,7 @@ SETTINGS_KEYS_window_margins=(
 )
 SETTINGS_REFUSED=0
 SETTINGS_DOCK=0
+SETTINGS_UNMET=()
 
 # settings_keys <answer-key>: that answer's lines.
 settings_keys() {
@@ -246,4 +247,24 @@ settings_uninstall() {
     settings_drop "$d" "$k"
   done < <(settings_keys "$1")
   settings_dock_restart
+}
+
+# settings_check <answer-key>: sets SETTINGS_UNMET to the names of the keys that
+# no longer hold the wanted value, and SETTINGS_REFUSED to 1 when a protected
+# domain can't be read (that key is left out). Not run in a subshell.
+settings_check() {
+  local d k t v cur rc label
+  SETTINGS_UNMET=()
+  SETTINGS_REFUSED=0
+  while read -r d k t v; do
+    rc=0
+    cur=$(settings_read "$d" "$k" 2>/dev/null) || rc=$?
+    if [ "$rc" -eq 3 ]; then
+      SETTINGS_REFUSED=1
+      continue
+    fi
+    [ "$rc" -ne 0 ] || [ "$cur" != "$t $v" ] || continue
+    label=$(settings_label "$k")
+    case " ${SETTINGS_UNMET[*]:-} " in *" $label "*) ;; *) SETTINGS_UNMET+=("$label") ;; esac
+  done < <(settings_keys "$1")
 }

@@ -59,7 +59,7 @@ It runs the one-liner twice in a throwaway VM, checks that the second run change
 
 Tests that need mise use a fake, `test/helpers/fake-mise`. Its `T_*` knobs (for example `T_MISE_KEEP`) set what it reports and which tools it keeps.
 
-A change to languages or CLIs runs the `bare`, `languages` and `cloud` fixtures.
+A change to languages or CLIs runs the `bare`, `languages` and `cloud` fixtures. A change to the macOS settings runs `bare` and `desktop`.
 
 A fixture may have a `<name>.steps.sh`. Its commands run in the VM after the two runs, in `zsh -eux` with stdin closed. A "Remove …?" prompt is answered y; any other prompt fails the run. Put every command that prompts before any `zsh -ic`: an interactive zsh takes the terminal and doesn't give it back, so a later prompt can't read the keyboard. Remove an app's quarantine (`xattr -dr com.apple.quarantine <app>`) before opening it: a quarantined app waits on macOS's "Open?" dialog, which nobody can click over SSH, and hangs.
 

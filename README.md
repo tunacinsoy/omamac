@@ -2,7 +2,7 @@
 
 omamac sets up a fresh Mac for development in one command: Homebrew, a modern bash, your terminal, editor, apps and theme. After that, one command, `omamac`, keeps it all up to date. It is the sister project of [omawsl](https://github.com/tunacinsoy/omawsl).
 
-omamac is still being built. Today the one-liner installs Homebrew, bash, gum, the `omamac` command and the core tools: Ghostty (which opens into herdr), starship, neovim with LazyVim, btop, mise, herdr, eza, bat, zoxide, fzf, ripgrep, fd, lazygit, tree-sitter-cli and jq. It asks the first-run questions, saves your answers, and installs the languages and cloud CLIs you picked. Apps, Docker and macOS settings come later. `omamac install`, `uninstall`, `theme`, `doctor` and `update` work. `omamac theme [name]` switches the theme for Ghostty, herdr, btop, the prompt and neovim, and reloads what is running.
+omamac is still being built. Today the one-liner installs Homebrew, bash, gum, the `omamac` command and the core tools: Ghostty (which opens into herdr), starship, neovim with LazyVim, btop, mise, herdr, eza, bat, zoxide, fzf, ripgrep, fd, lazygit, tree-sitter-cli and jq. It asks the first-run questions, saves your answers, and installs the languages and cloud CLIs you picked. Apps, Docker and the Dock settings come later. It sets the desktop and window-margin settings you chose. `omamac install`, `uninstall`, `theme`, `doctor` and `update` work. `omamac theme [name]` switches the theme for Ghostty, herdr, btop, the prompt and neovim, and reloads what is running.
 
 ## Before you begin
 
@@ -30,6 +30,8 @@ Each run writes a log to `~/.local/state/omamac/logs/`. The newest 10 are kept.
 
 Open Ghostty. It starts herdr. The first time, macOS asks you to confirm; click Open. `nvim` downloads its plugins the first time it opens.
 
+If you chose Desktops as workspaces, give an app its own desktop: right-click its Dock icon, then Options, then Assign To. Reduce motion may need one click: macOS can refuse the setting, and omamac then says so; search for Reduce motion in System Settings and turn it on.
+
 To let `omamac update` upgrade Ghostty, allow App Management for it: System Settings → Privacy & Security → App Management.
 
 ## Keeping it up to date
@@ -56,11 +58,12 @@ It updates omamac and what omamac installed, nothing else. It pulls omamac (and 
 - `~/.config/omamac/ghostty.conf`: written again on every run. It takes over three Ghostty settings: its colours (your theme), `command` (starts herdr) and `macos-option-as-alt` (left). Ghostty loads the included file after the rest of your config, wherever the line sits, so these win over the same settings in your own files.
 - Theme files in `~/.config/omamac`, written again on every run and every `omamac theme`: `ghostty.conf`, `herdr.toml`, `starship.toml` (the prompt), `btop.conf` with `btop-themes/<theme>.theme`, and `neovim.lua` (loaded by `~/.config/nvim/lua/plugins/omamac.lua`).
 - `zshrc` sets `STARSHIP_CONFIG` to omamac's `starship.toml` and aliases `btop` to use omamac's `btop.conf` and themes. It does each only if you have no `~/.config/starship.toml` or `~/.config/btop/btop.conf` (and no `STARSHIP_CONFIG` of your own). If you do, your file is kept and never written, and the theme doesn't reach that tool.
-- `~/.local/state/omamac`: logs and your saved answers (`choices.env`).
+- `~/.local/state/omamac`: logs, your saved answers (`choices.env`) and `macos-settings.tsv`, the earlier value of each macOS setting omamac changed.
+- macOS settings, only for the answers you chose, written with `defaults` and the Dock restarted once. Desktops as workspaces: `com.apple.dock mru-spaces` (off, so Spaces keep their order), `NSGlobalDomain AppleSpacesSwitchOnActivate` (on, so switching to an app goes to its desktop), and Reduce motion (`com.apple.universalaccess reduceMotion` and `com.apple.Accessibility ReduceMotionEnabled`, both on). Window margins: `com.apple.WindowManager EnableTiledWindowMargins` (on). macOS may refuse Reduce motion; omamac then leaves it alone and tells you to turn it on in System Settings. `omamac update` sets them again if you changed them; the first earlier value stays in `macos-settings.tsv`.
 
-`omamac install` adds the languages and cloud CLIs you didn't pick before. `omamac uninstall <name>` removes one, after asking; a version another mise config uses stays, and Homebrew taps stay.
+`omamac install` adds the languages and cloud CLIs you didn't pick before. `omamac uninstall <name>` removes one, after asking; a version another mise config uses stays, and Homebrew taps stay. `omamac uninstall desktops` and `omamac uninstall window-margins` put the earlier values back and turn the answer to no.
 
-`omamac uninstall` removes your picks one at a time. For the rest, undo by hand: delete the two lines ending in `# added by omamac`, delete the line naming `~/.config/omamac/ghostty.conf` from your Ghostty config, delete the three folders (`~/.config/omamac` holds `starship.toml`, `btop.conf`, `btop-themes` and `neovim.lua` too) and `~/.config/mise/conf.d/omamac.toml`, delete `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`), and, if omamac installed them, run `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`, and `brew uninstall --cask ghostty`. To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
+`omamac uninstall` removes your picks one at a time. For the rest, undo by hand: delete the two lines ending in `# added by omamac`, delete the line naming `~/.config/omamac/ghostty.conf` from your Ghostty config, delete the three folders (`~/.config/omamac` holds `starship.toml`, `btop.conf`, `btop-themes` and `neovim.lua` too) and `~/.config/mise/conf.d/omamac.toml`, put the macOS settings back with `omamac uninstall desktops` and `omamac uninstall window-margins`, delete `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`), and, if omamac installed them, run `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`, and `brew uninstall --cask ghostty`. To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
 
 ## Themes
 
