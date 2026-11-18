@@ -35,3 +35,5 @@ OMAMAC_GHOSTTY_FILE=$OMAMAC_CONFIG_DIR/ghostty.conf
 OMAMAC_TERMINAL=$OMAMAC_HOME/bin/omamac-terminal
 # No trailing comment: Ghostty reads all after = as the path, so a comment would stop the file loading.
 OMAMAC_GHOSTTY_LINE='config-file = ?~/.config/omamac/ghostty.conf'
+# One line per macOS setting omamac changed, with its earlier value (lib/settings.sh).
+OMAMAC_SETTINGS_RECORD=$OMAMAC_STATE_DIR/macos-settings.tsv

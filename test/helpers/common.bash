@@ -19,6 +19,11 @@ setup_sandbox() {
   lazyvim_fixture
   : > "$STUB_LOG"
   ln -sf "$HELPERS_DIR/fake-gum" "$STUB_DIR/gum"
+  # No test touches the real defaults or the real Dock.
+  export T_DEFAULTS_DIR="$BATS_TEST_TMPDIR/defaults"
+  mkdir -p "$T_DEFAULTS_DIR"
+  ln -sf "$HELPERS_DIR/fake-defaults" "$STUB_DIR/defaults"
+  stub killall
   # The terminal prompts read. fake-gum checks for this first line.
   echo fake-tty > "$BATS_TEST_TMPDIR/tty"
   export OMAMAC_TEST_TTY="$BATS_TEST_TMPDIR/tty"

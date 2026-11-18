@@ -34,6 +34,8 @@ source "$OMAMAC_CHECKOUT/lib/languages.sh"
 source "$OMAMAC_CHECKOUT/lib/clis.sh"
 # shellcheck source=lib/appmanagement.sh
 source "$OMAMAC_CHECKOUT/lib/appmanagement.sh"
+# shellcheck source=lib/settings.sh
+source "$OMAMAC_CHECKOUT/lib/settings.sh"
 # shellcheck source=lib/apply.sh
 source "$OMAMAC_CHECKOUT/lib/apply.sh"
 # shellcheck source=lib/add.sh

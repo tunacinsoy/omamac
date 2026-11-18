@@ -71,7 +71,7 @@ snapshot() {
   gum_answers
   run --separate-stderr omamac_uninstall php
   [ "$status" -eq 2 ]
-  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform."* ]]
+  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, desktops, window-margins."* ]]
   [ -z "$(prompts)" ]
 }
 
@@ -236,4 +236,84 @@ snapshot() {
   [ "$status" -eq 2 ]
   [[ "$stderr" == *"Usage: omamac <command>"* ]]
   [ -z "$(prompts)" ]
+}
+
+# desktops_on: what a first run with desktops=yes left.
+desktops_on() {
+  mkdir -p "$T_DEFAULTS_DIR"
+  defaults write com.apple.Accessibility ReduceMotionEnabled -int 0
+  "$BASH5" -c "
+    set -Eeuo pipefail
+    OMAMAC_CHECKOUT='$REPO_ROOT'
+    source '$REPO_ROOT/lib/paths.sh'; source '$REPO_ROOT/lib/ui.sh'
+    source '$REPO_ROOT/lib/questions.sh'; source '$REPO_ROOT/lib/choices.sh'
+    source '$REPO_ROOT/lib/settings.sh'
+    CHOICES[desktops]=yes; settings_apply" > /dev/null
+  choose desktops yes
+  : > "$STUB_LOG"
+}
+
+REC() { echo "$HOME/.local/state/omamac/macos-settings.tsv"; }
+
+@test "uninstall desktops" {
+  desktops_on
+  gum_answers yes
+  run omamac_uninstall desktops
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Desktops as workspaces: your earlier Spaces, app-switching and Reduce motion settings"* ]]
+  grep -qx 'gum confirm --default=false Remove Desktops as workspaces?' "$STUB_LOG"
+  grep -qx 'desktops=no' "$CHOICES_FILE"
+  [ ! -e "$(REC)" ]
+  run defaults read com.apple.dock mru-spaces
+  [ "$status" -ne 0 ]
+  [ "$(defaults read com.apple.Accessibility ReduceMotionEnabled)" = 0 ]
+}
+
+@test "uninstall window-margins maps the name" {
+  choose window_margins yes
+  defaults write com.apple.WindowManager EnableTiledWindowMargins -bool true
+  mkdir -p "$(dirname "$(REC)")"
+  printf 'com.apple.WindowManager\tEnableTiledWindowMargins\tabsent\n' > "$(REC)"
+  gum_answers yes
+  run omamac_uninstall window-margins
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Window margins: your earlier window-margin setting"* ]]
+  grep -qx 'window_margins=no' "$CHOICES_FILE"
+  [ ! -e "$(REC)" ]
+  run defaults read com.apple.WindowManager EnableTiledWindowMargins
+  [ "$status" -ne 0 ]
+}
+
+@test "not set by omamac" {
+  gum_answers
+  run omamac_uninstall desktops
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Desktops as workspaces isn't set by omamac."* ]]
+  [ -z "$(prompts)" ]
+}
+
+@test "no-name menu offers settings answered yes" {
+  choose languages node
+  choose window_margins yes
+  gum_answers none
+  run omamac_uninstall
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "gum choose --header What should omamac remove? --label-delimiter=: Nothing:none Node.js:node Window margins:window-margins" ]
+}
+
+@test "a failed restore leaves the answer yes and the rest recorded" {
+  desktops_on
+  gum_answers yes
+  T_DEFAULTS_FAIL=NSGlobalDomain:AppleSpacesSwitchOnActivate run omamac_uninstall desktops
+  [ "$status" -ne 0 ]
+  grep -qx 'desktops=yes' "$CHOICES_FILE"
+  [[ "$(cat "$(REC)")" != *mru-spaces* ]]
+  grep -q '^killall Dock' "$STUB_LOG"
+  [[ "$(cat "$(REC)")" == *AppleSpacesSwitchOnActivate* ]]
+  [[ "$(cat "$(REC)")" == *ReduceMotionEnabled* ]]
+  gum_answers yes
+  run omamac_uninstall desktops
+  [ "$status" -eq 0 ]
+  grep -qx 'desktops=no' "$CHOICES_FILE"
+  [ ! -e "$(REC)" ]
 }

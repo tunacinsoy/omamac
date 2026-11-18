@@ -5,7 +5,7 @@
 # apply. Sourced after lib/ask.sh, lib/log.sh and lib/apply.sh.
 
 # The questions omamac install asks again, with only their unpicked options.
-ADD_KEYS=(languages cloud_clis)
+ADD_KEYS=(languages cloud_clis desktops window_margins)
 
 # add_run: CHOICES is loaded (bin/omamac did that). Ask, show the additions,
 # and save and apply them only after "Install?" is yes, so a no changes nothing.
@@ -14,6 +14,16 @@ add_run() {
   local -A picks=()
   OMAMAC_STEP='asking the questions'
   for key in "${ADD_KEYS[@]}"; do
+    if [ "${QUESTION_KIND[$key]}" = yesno ]; then
+      [ "${CHOICES[$key]:-}" != yes ] || continue
+      [ -n "$asked" ] || ask_need_tty
+      asked=1
+      ask_one "$key"
+      # A yes is applied only after "Install?"; put the saved answer back.
+      [ "${CHOICES[$key]}" != yes ] || picks[$key]=yes
+      CHOICES[$key]=no
+      continue
+    fi
     read -ra had <<< "${CHOICES[$key]:-}"
     left=()
     while IFS= read -r v; do
@@ -33,6 +43,12 @@ add_run() {
   fi
   for key in "${ADD_KEYS[@]}"; do
     [ -n "${picks[$key]:-}" ] || continue
+    if [ "${QUESTION_KIND[$key]}" = yesno ]; then
+      CHOICES[$key]=yes
+      names+=("${QUESTION_TITLE[$key]}")
+      lines+=("${QUESTION_TITLE[$key]}")
+      continue
+    fi
     read -ra had <<< "${picks[$key]}"
     choices_add "$key" "${had[@]}"
     labels=()

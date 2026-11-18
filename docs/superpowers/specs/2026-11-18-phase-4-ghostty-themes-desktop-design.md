@@ -171,7 +171,7 @@ On today's `main` the new lines are the same before and after a run, so `bare` s
   1. Read the current type and value, or `absent` ("Could not find key").
   2. If the value isn't the wanted one, write it. Only after the write succeeds, and only if `macos-settings.tsv` has no line for the key yet, append the value read in step 1. So the record holds only keys omamac changed, each with its value from before omamac's first change. When the key was already recorded, the write puts back a value the user changed since: print "Put back: <what>".
   3. After all keys, `killall Dock` if a `com.apple.dock` or `NSGlobalDomain` key changed.
-- **Reduce motion** is one unit of two keys: `com.apple.universalaccess reduceMotion` first, and `com.apple.Accessibility ReduceMotionEnabled` only once that succeeded. If macOS refuses to read or write the protected domain ("Could not write domain"), omamac changes neither key and records neither. That is not a failure: the summary gets one line, "Turn on Reduce motion: System Settings → Accessibility → <the pane the builder finds on macOS 27> → Reduce motion." Any other `defaults` failure stops the run as usual.
+- **Reduce motion** is one unit of two keys: `com.apple.universalaccess reduceMotion` first, and `com.apple.Accessibility ReduceMotionEnabled` only once that succeeded. If macOS refuses to read or write the protected domain ("Could not write domain"), omamac changes neither key and records neither. That is not a failure: the summary gets one line, "Turn on Reduce motion: search for Reduce motion in System Settings." (The pane moved between macOS versions; the search finds it on every one.) Any other `defaults` failure stops the run as usual.
 - **`omamac uninstall desktops` / `omamac uninstall window-margins`**:
   - Not set by omamac (answer `no`): "<title> isn't set by omamac." and exit 0.
   - Otherwise it shows what goes back ("Desktops as workspaces: your earlier Spaces, app-switching and Reduce motion settings"), then asks `Remove <title>?` (default No; vm.exp already answers this shape).
@@ -231,5 +231,4 @@ On today's `main` the new lines are the same before and after a run, so `bare` s
 ## Left to the builder
 
 - Exact wording of messages and summary lines.
-- The macOS 27 Settings path for Reduce motion.
 - How the 4a steps file finds herdr's parent chain and the server's environment.
