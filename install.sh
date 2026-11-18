@@ -40,6 +40,8 @@ source "$OMAMAC_CHECKOUT/lib/theme.sh"
 source "$OMAMAC_CHECKOUT/lib/languages.sh"
 # shellcheck source=lib/clis.sh
 source "$OMAMAC_CHECKOUT/lib/clis.sh"
+# shellcheck source=lib/settings.sh
+source "$OMAMAC_CHECKOUT/lib/settings.sh"
 # shellcheck source=lib/apply.sh
 source "$OMAMAC_CHECKOUT/lib/apply.sh"
 
@@ -95,19 +97,23 @@ install_lines() {
 install_summary() {
   OMAMAC_STEP='printing the summary'
   # Short lines, so the box fits an 80-column terminal.
-  ui_box \
-    "Installed: Homebrew, bash, gum, omamac, Ghostty and the core tools," \
-    "and the languages and cloud CLIs you chose." \
-    "" \
-    "omamac sets three Ghostty settings: its colours, command" \
-    "(starts herdr) and macos-option-as-alt." \
-    "The first time you open Ghostty, macOS asks you to confirm;" \
-    "click Open." \
-    "To let omamac update Ghostty: System Settings → Privacy & Security" \
-    "→ App Management → Ghostty." \
-    "" \
-    "Log: $OMAMAC_LOG" \
-    "Open Ghostty (it starts herdr), then run omamac."
+  local lines=(
+    "Installed: Homebrew, bash, gum, omamac, Ghostty and the core tools,"
+    "and the languages and cloud CLIs you chose."
+    ""
+    "omamac sets three Ghostty settings: its colours, command"
+    "(starts herdr) and macos-option-as-alt."
+    "The first time you open Ghostty, macOS asks you to confirm;"
+    "click Open."
+    "To let omamac update Ghostty: System Settings → Privacy & Security"
+    "→ App Management → Ghostty."
+    ""
+  )
+  if [ "$SETTINGS_REFUSED" -eq 1 ]; then
+    lines+=("Turn on Reduce motion: search for Reduce motion in System Settings." "")
+  fi
+  lines+=("Log: $OMAMAC_LOG" "Open Ghostty (it starts herdr), then run omamac.")
+  ui_box "${lines[@]}"
 }
 
 install_main() {

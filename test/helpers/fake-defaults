@@ -1,0 +1,50 @@
+#!/bin/bash
+# Test double for macOS `defaults`. Bash 3.2 safe. One file per domain/key under
+# $T_DEFAULTS_DIR holds "<boolean|integer> <value>".
+# T_DEFAULTS_REFUSE=<domain>: reads and writes of that domain are refused.
+# T_DEFAULTS_FAIL=<domain>:<key>: writes and deletes of that key fail.
+dir="${T_DEFAULTS_DIR:?fake-defaults needs T_DEFAULTS_DIR}"
+[ -z "${STUB_LOG:-}" ] || echo "defaults $*" >> "$STUB_LOG"
+cmd="${1:-}" d="${2:-}" k="${3:-}"
+f="$dir/$d/$k"
+
+if [ -n "${T_DEFAULTS_REFUSE:-}" ] && [ "$d" = "$T_DEFAULTS_REFUSE" ]; then
+  echo "Could not write domain $d; exiting" >&2
+  exit 1
+fi
+missing() { echo "The domain/default pair of ($d, $k) does not exist" >&2; exit 1; }
+
+case "$cmd" in
+  read)
+    [ -f "$f" ] || missing
+    read -r type value < "$f"
+    case "$type$value" in
+      booleantrue) echo 1 ;;
+      booleanfalse) echo 0 ;;
+      *) echo "$value" ;;
+    esac
+    ;;
+  read-type)
+    [ -f "$f" ] || missing
+    read -r type _ < "$f"
+    echo "Type is $type"
+    ;;
+  write | delete)
+    if [ "${T_DEFAULTS_FAIL:-}" = "$d:$k" ]; then
+      echo "defaults: unexpected error on $d $k" >&2
+      exit 1
+    fi
+    if [ "$cmd" = delete ]; then
+      [ -f "$f" ] || missing
+      rm -f "$f"
+      exit 0
+    fi
+    mkdir -p "$dir/$d"
+    case "${4:-}" in
+      -bool) echo "boolean $5" > "$f" ;;
+      -int) echo "integer $5" > "$f" ;;
+      *) echo "fake-defaults: unsupported write type '${4:-}'" >&2; exit 1 ;;
+    esac
+    ;;
+  *) echo "fake-defaults: unsupported command '$cmd'" >&2; exit 1 ;;
+esac
