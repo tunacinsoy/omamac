@@ -153,6 +153,12 @@ On today's `main` the new lines are the same before and after a run, so `bare` s
 
   It asks no "Install?": it changes only omamac's own files. The user's choice is the confirmation.
 - **doctor:** ℹ "your own starship config is kept, so themes don't reach the prompt", and the same for btop. ✗ when one of the theme files above is missing, fix `omamac update`.
+- **Moving a user's neovim config aside** (vision, "Config folders with no include mechanism"; deferred from Phase 3 to come with themes, which it unlocks):
+  - When `~/.config/nvim` exists without omamac's `lua/plugins/omamac.lua`, doctor's ℹ also says themes don't reach neovim.
+  - After the report, and only with a terminal, doctor asks (single choice, "Leave it" first): "Move your neovim config aside so omamac can set up its own?"
+  - On "Move it aside", doctor renames the folder to `~/.config/nvim.bak-<YYYYMMDD>` (adding `-<HHMMSS>` if that name is taken) and runs `neovim_setup`. Nothing is deleted.
+  - If the LazyVim clone fails, doctor says so and names the backup. The user's folder stays at the backup name, and running the one-liner again sets up omamac's config.
+  - With no terminal (the VM) nothing is asked.
 
 ### Desktop and window-margin settings (4c)
 
