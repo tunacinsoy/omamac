@@ -42,4 +42,51 @@ fi
 env=$(ps -E -ww -o command= -p "$pid")
 [[ $env == *"HERDR_CONFIG_PATH=$HOME/.config/omamac/herdr.toml"* ]] ||
   { print -r -- "herdr server (pid $pid) lacks HERDR_CONFIG_PATH"; exit 1; }
+# Themes: switch to each one; nvim must load its colorscheme without errors.
+# Each value is the scheme's family: a plugin may report a variant name
+# (rose-pine-dawn loads as "rose-pine", tokyonight may be "tokyonight-moon"),
+# while a failed load falls back to habamax, which matches none.
+typeset -A scheme=(
+  [catppuccin]=catppuccin
+  [dracula]=dracula
+  [everforest]=everforest
+  [gruvbox]=gruvbox
+  [kanagawa]=kanagawa
+  [matte-black]=matteblack
+  [nord]=nordfox
+  [one-dark]=onedark
+  [osaka-jade]=bamboo
+  [ristretto]=monokai-pro
+  [rose-pine]=rose-pine
+  [solarized]=solarized
+  [tokyo-night]=tokyonight
+)
+for id in catppuccin dracula everforest gruvbox kanagawa matte-black nord one-dark osaka-jade ristretto rose-pine solarized tokyo-night; do
+  omamac theme "$id"
+  out=$(nvim --headless "+Lazy! sync" +qa 2>&1) || { print -r -- "$id: $out"; exit 1; }
+  if [[ $out == *"Error detected"* || $out == *E5108* ]]; then print -r -- "$id: $out"; exit 1; fi
+  name=$(nvim --headless -c 'lua io.write(tostring(vim.g.colors_name))' -c qa 2>&1)
+  [[ $name == "${scheme[$id]}"* ]] || { print -r -- "$id: colorscheme '$name', expected '${scheme[$id]}…'"; exit 1; }
+done
+# Ghostty gets Dracula's background; herdr accepts its config.
+omamac theme dracula
+# Ghostty may print the colour in another letter case, so compare in lower case.
+want=$(grep '^background' ~/.local/share/omamac/themes/dracula/ghostty.conf | tr '[:upper:]' '[:lower:]')
+cfg=$($G +show-config --no-pager | tr '[:upper:]' '[:lower:]')
+[[ $'\n'$cfg$'\n' == *$'\n'"$want"$'\n'* ]] || { print -r -- "Ghostty lacks: $want"; exit 1; }
+[[ $(zsh -ic 'herdr config check' 2>&1) == "config: ok"* ]]
+# Reloading a running herdr must work; a plain command, so a failure stops the run.
+zsh -ic 'herdr server reload-config'
+# The switches reloaded what was running; they must not have killed it.
+pgrep -x ghostty > /dev/null
+pgrep -f 'herdr server' > /dev/null
+# Same theme twice changes nothing.
+omamac theme tokyo-night
+before=$(fp)
+omamac theme tokyo-night
+after=$(fp)
+if [[ $before != "$after" ]]; then
+  diff <(print -r -- "$before") <(print -r -- "$after")
+  exit 1
+fi
 omamac doctor

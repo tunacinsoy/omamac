@@ -118,7 +118,7 @@ On today's `main` the new lines are the same before and after a run, so `bare` s
 
 ### Themes (4b)
 
-- **`themes/<id>/`** for the 13 ids in the theme question, holding `ghostty.conf` (converted from omawsl's palette), and `btop.theme`, `neovim.lua` and `starship.toml` copied from omawsl unchanged except for comments that mention files omamac doesn't have. omawsl's icon starship file is the one used: Ghostty's built-in font has the symbols. `themes/LICENSE.omarchy` comes along: the themes are MIT, from Omarchy.
+- **`themes/<id>/`** for the 13 ids in the theme question, holding `ghostty.conf` (converted from omawsl's palette), and `btop.theme`, `neovim.lua` and `starship.toml` copied from omawsl unchanged except for comments that mention files omamac doesn't have. omawsl's icon starship file is the one used: Ghostty's built-in font has the symbols. `themes/LICENSE.omarchy` comes along: the themes are MIT, from Omarchy. ristretto's neovim file uses the original loctvl842/monokai-pro.nvim because the fork omawsl names is gone.
 - **herdr's theme** comes from a table in `lib/theme.sh`, as on omawsl: the same name for catppuccin, dracula, gruvbox, kanagawa, nord, one-dark, solarized and tokyo-night; `rose-pine-dawn` for rose-pine; `terminal` for everforest, matte-black, osaka-jade and ristretto (herdr follows Ghostty's colours). `config/herdr.toml`'s `name = "tokyo-night"` becomes `@OMAMAC_HERDR_THEME@`.
 - **`theme_apply`** writes, compare-then-move, from `CHOICES[theme]`:
 
@@ -149,10 +149,16 @@ On today's `main` the new lines are the same before and after a run, so `bare` s
   - With no id it asks (single choice of the 13, labels as in the first-run question). An unknown id lists the valid ones and exits 2.
   - It saves `theme` in `choices.env`, then always runs `theme_apply`, even for the current theme. A switch that failed halfway is then fixed by running it again, and compare-then-move keeps a repeat from changing anything. `bin/omamac` gives `theme` the ERR trap and `OMAMAC_CMD`, like install and uninstall.
   - Then it reloads what's running, each only if running, and ignores a failure: `pkill -USR2 -x ghostty`, `herdr server reload-config`, `pkill -USR2 -x btop`.
-  - It ends with: "Theme: <label>. Ghostty, herdr, btop and your prompt show it now; neovim the next time it opens."
+  - It ends with: "Theme: <label>. What's running shows it now; neovim the next time it opens." Before it, one ℹ line for each config of the user's that is kept: herdr, starship, btop, neovim ("Your own starship config is kept, so the theme doesn't reach the prompt.", and alike).
 
   It asks no "Install?": it changes only omamac's own files. The user's choice is the confirmation.
 - **doctor:** ℹ "your own starship config is kept, so themes don't reach the prompt", and the same for btop. ✗ when one of the theme files above is missing, fix `omamac update`.
+- **Moving a user's neovim config aside** (vision, "Config folders with no include mechanism"; deferred from Phase 3 to come with themes, which it unlocks):
+  - When `~/.config/nvim` exists without omamac's `lua/plugins/omamac.lua`, doctor's ℹ also says themes don't reach neovim.
+  - After the report, and only with a terminal, doctor asks (single choice, "Leave it" first): "Move your neovim config aside so omamac can set up its own?"
+  - On "Move it aside", doctor renames the folder to `~/.config/nvim.bak-<YYYYMMDD>` (adding `-<HHMMSS>` if that name is taken) and runs `neovim_setup`. Nothing is deleted.
+  - If the LazyVim clone fails, doctor says so and names the backup. The user's folder stays at the backup name, and running the one-liner again sets up omamac's config.
+  - With no terminal (the VM) nothing is asked.
 
 ### Desktop and window-margin settings (4c)
 

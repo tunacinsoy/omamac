@@ -21,7 +21,7 @@ setup() {
   ORIGIN="$BATS_TEST_TMPDIR/origin"
   CHECKOUT="$HOME/.local/share/omamac"
   mkdir -p "$ORIGIN"
-  cp -R "$REPO_ROOT/update.sh" "$REPO_ROOT/lib" "$REPO_ROOT/config" "$ORIGIN/"
+  cp -R "$REPO_ROOT/update.sh" "$REPO_ROOT/lib" "$REPO_ROOT/config" "$REPO_ROOT/themes" "$ORIGIN/"
   git -C "$ORIGIN" init -q -b main
   commit_all "$ORIGIN" origin
   git clone -q "$ORIGIN" "$CHECKOUT"

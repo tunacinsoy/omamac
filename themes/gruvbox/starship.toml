@@ -1,0 +1,19 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+# The prompt keeps starship's own modules; only the named colours they use
+# come from this theme's palette.
+palette = "gruvbox"
+
+[palettes.gruvbox]
+red = "#cc241d"
+green = "#98971a"
+blue = "#3c8588"
+yellow = "#d79921"
+magenta = "#b16286"
+purple = "#b16286"
+orange = "#d65d0e"
+cyan = "#689d6a"
+black = "#3c3836"
+white = "#fbf1c7"
+bg = "#282828"
+fg = "#d5c4a1"

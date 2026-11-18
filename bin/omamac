@@ -26,6 +26,8 @@ source "$OMAMAC_CHECKOUT/lib/neovim.sh"
 source "$OMAMAC_CHECKOUT/lib/herdr.sh"
 # shellcheck source=lib/ghostty.sh
 source "$OMAMAC_CHECKOUT/lib/ghostty.sh"
+# shellcheck source=lib/theme.sh
+source "$OMAMAC_CHECKOUT/lib/theme.sh"
 # shellcheck source=lib/languages.sh
 source "$OMAMAC_CHECKOUT/lib/languages.sh"
 # shellcheck source=lib/clis.sh
@@ -131,8 +133,14 @@ omamac_main() {
       remove_run "${@:2}"
       ;;
     theme)
-      echo "omamac $cmd isn't available yet." >&2
-      return 1
+      if [ "$#" -gt 2 ]; then
+        omamac_usage >&2
+        return 2
+      fi
+      OMAMAC_CMD=theme
+      trap omamac_failed ERR
+      omamac_choices
+      theme_run "${@:2}"
       ;;
     *)
       echo "Unknown command: $cmd" >&2

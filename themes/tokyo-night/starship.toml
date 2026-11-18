@@ -1,0 +1,19 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+# The prompt keeps starship's own modules; only the named colours they use
+# come from this theme's palette.
+palette = "tokyo-night"
+
+[palettes.tokyo-night]
+red = "#F93357"
+green = "#9ECE6A"
+blue = "#7AA2F7"
+yellow = "#E0AF68"
+magenta = "#BB9AF7"
+purple = "#BB9AF7"
+orange = "#FF9E64"
+cyan = "#2AC3DE"
+black = "#383E5A"
+white = "#C0CAF5"
+bg = "#1A1B26"
+fg = "#A9B1D6"

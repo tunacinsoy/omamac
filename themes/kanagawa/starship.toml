@@ -1,0 +1,19 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+# The prompt keeps starship's own modules; only the named colours they use
+# come from this theme's palette.
+palette = "kanagawa"
+
+[palettes.kanagawa]
+red = "#C34043"
+green = "#76946A"
+blue = "#7E9CD8"
+yellow = "#FF9E3B"
+magenta = "#957FB8"
+purple = "#957FB8"
+orange = "#FFA066"
+cyan = "#7FB4CA"
+black = "#16161D"
+white = "#DCD7BA"
+bg = "#1F1F28"
+fg = "#DCD7BA"

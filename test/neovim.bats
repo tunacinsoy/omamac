@@ -19,7 +19,9 @@ in_lib() {
   [ "$status" -eq 0 ]
   [ -f "$HOME/.config/nvim/init.lua" ]
   [ ! -e "$HOME/.config/nvim/.git" ]
-  [ "$(cat "$HOME/.config/nvim/lua/plugins/omamac.lua")" = "$(printf -- '-- Set up by omamac.\nreturn {}')" ]
+  grep -qF 'return dofile(theme) end' "$HOME/.config/nvim/lua/plugins/omamac.lua"
+  [ "$(tail -n 1 "$HOME/.config/nvim/lua/plugins/omamac.lua")" = 'return {}' ]
+  [ -z "$(ls "$HOME"/.config/nvim/lua/plugins/ | grep -v '^omamac.lua$')" ]
   [[ "$output" == *"neovim is set up with LazyVim"* ]]
   [ -z "$(ls -d "$HOME"/.config/nvim.omamac.* 2>/dev/null)" ]
 }
@@ -91,4 +93,15 @@ in_lib() {
   [ "$status" -ne 0 ]
   [ ! -e "$HOME/.config/nvim" ]
   [ -z "$(ls -d "$HOME"/.config/nvim.omamac.* 2>/dev/null)" ]
+}
+
+@test "a failing marker write leaves no marker and no temp file" {
+  local d="$HOME/.config/nvim/lua/plugins"
+  mkdir -p "$d"
+  chmod 555 "$d"
+  # errexit is ignored in a && list, as in neovim_setup, so the failure must still be loud.
+  in_lib "neovim_marker_write || exit 3"
+  chmod 755 "$d"
+  [ "$status" -eq 3 ]
+  [ -z "$(ls -A "$d")" ]
 }
