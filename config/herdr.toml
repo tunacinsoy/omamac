@@ -22,7 +22,7 @@
 onboarding = false
 
 [theme]
-name = "tokyo-night"
+name = "@OMAMAC_HERDR_THEME@"
 
 [ui]
 # One bar, at the bottom.

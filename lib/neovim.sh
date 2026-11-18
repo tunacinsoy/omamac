@@ -1,5 +1,22 @@
-# shellcheck shell=bash
+# shellcheck shell=bash disable=SC2034 # OMAMAC_STEP is read by the caller's ERR trap
 # LazyVim on a fresh Mac. Sourced after lib/paths.sh and lib/ui.sh.
+
+# neovim_marker_write [<dest>]: omamac's lua/plugins/omamac.lua, the only writer of it.
+# It loads the theme from omamac's own file, so a theme switch never rewrites it.
+# Moved into place only if different, so a second run leaves its mtime alone.
+neovim_marker_write() {
+  local dest=${1:-$OMAMAC_NVIM_MARKER} tmp
+  OMAMAC_STEP="writing $dest"
+  mkdir -p "$(dirname "$dest")"
+  tmp=$(mktemp "$dest.XXXXXX")
+  cat > "$tmp" <<'LUA'
+-- Set up by omamac. The theme comes from omamac's own file, which omamac theme rewrites.
+local theme = vim.fn.expand("~/.config/omamac/neovim.lua")
+if vim.uv.fs_stat(theme) then return dofile(theme) end
+return {}
+LUA
+  if cmp -s "$tmp" "$dest"; then rm -f "$tmp"; else mv "$tmp" "$dest"; fi
+}
 
 # neovim_setup: install LazyVim when ~/.config/nvim is absent. Anything already
 # there (folder or symlink) is the user's and is never written.
@@ -25,7 +42,7 @@ neovim_setup() {
   {
     rm -rf "$tmp/.git" &&
     mkdir -p "$tmp/lua/plugins" &&
-    printf -- '-- Set up by omamac.\nreturn {}\n' > "$tmp/lua/plugins/omamac.lua" &&
+    neovim_marker_write "$tmp/lua/plugins/omamac.lua" &&
     mv "$tmp" "$OMAMAC_NVIM_DIR"
   } || { rm -rf "$tmp"; return 1; }
   ui_ok "neovim is set up with LazyVim"

@@ -19,7 +19,9 @@ in_lib() {
   [ "$status" -eq 0 ]
   [ -f "$HOME/.config/nvim/init.lua" ]
   [ ! -e "$HOME/.config/nvim/.git" ]
-  [ "$(cat "$HOME/.config/nvim/lua/plugins/omamac.lua")" = "$(printf -- '-- Set up by omamac.\nreturn {}')" ]
+  grep -qF 'return dofile(theme) end' "$HOME/.config/nvim/lua/plugins/omamac.lua"
+  [ "$(tail -n 1 "$HOME/.config/nvim/lua/plugins/omamac.lua")" = 'return {}' ]
+  [ -z "$(ls "$HOME"/.config/nvim/lua/plugins/ | grep -v '^omamac.lua$')" ]
   [[ "$output" == *"neovim is set up with LazyVim"* ]]
   [ -z "$(ls -d "$HOME"/.config/nvim.omamac.* 2>/dev/null)" ]
 }

@@ -15,8 +15,13 @@ in_lib() {
     source '$REPO_ROOT/lib/paths.sh'
     source '$REPO_ROOT/lib/ui.sh'
     source '$REPO_ROOT/lib/lines.sh'
+    source '$REPO_ROOT/lib/choices.sh'
+    source '$REPO_ROOT/lib/herdr.sh'
     source '$REPO_ROOT/lib/ghostty.sh'
+    source '$REPO_ROOT/lib/neovim.sh'
+    source '$REPO_ROOT/lib/theme.sh'
     source '$REPO_ROOT/lib/apply.sh'
+    CHOICES[theme]=tokyo-night
     $1"
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
 }
@@ -26,15 +31,17 @@ in_lib() {
   grep -qxF "command = direct:$HOME/.local/share/omamac/bin/omamac-terminal" "$BATS_TEST_TMPDIR/out"
   grep -qxF 'macos-option-as-alt = left' "$BATS_TEST_TMPDIR/out"
   ! grep -q '@' "$BATS_TEST_TMPDIR/out"
+  # The theme's colours come last, so they win over the template.
+  tail -n 20 "$BATS_TEST_TMPDIR/out" | grep -qxF "$(grep '^background = ' "$REPO_ROOT/themes/tokyo-night/ghostty.conf")"
 }
 
 @test "apply writes once" {
-  in_lib ghostty_config_apply
+  in_lib theme_apply
   local f="$HOME/.config/omamac/ghostty.conf" before
   [ -f "$f" ]
   before=$(stat -f %m "$f")
   sleep 1
-  in_lib ghostty_config_apply
+  in_lib theme_apply
   [ "$(stat -f %m "$f")" = "$before" ]
 }
 

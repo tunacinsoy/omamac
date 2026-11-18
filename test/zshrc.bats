@@ -120,3 +120,46 @@ zrc() { run zsh -f -i -c "source $REPO_ROOT/config/zshrc; $1" < /dev/null; }
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+@test "STARSHIP_CONFIG is omamac's when the user has none" {
+  unset STARSHIP_CONFIG
+  zrc 'echo "[$STARSHIP_CONFIG]"'
+  [[ "$output" == *"[$HOME/.config/omamac/starship.toml]"* ]]
+}
+
+@test "own starship.toml, own STARSHIP_CONFIG: left alone" {
+  unset STARSHIP_CONFIG
+  mkdir -p "$HOME/.config"
+  echo mine > "$HOME/.config/starship.toml"
+  zrc 'echo "[${STARSHIP_CONFIG-unset}]"'
+  [[ "$output" == *"[unset]"* ]]
+  rm "$HOME/.config/starship.toml"
+  ln -s "$HOME/nowhere" "$HOME/.config/starship.toml"
+  zrc 'echo "[${STARSHIP_CONFIG-unset}]"'
+  [[ "$output" == *"[unset]"* ]]
+  rm "$HOME/.config/starship.toml"
+  STARSHIP_CONFIG="$HOME/mine.toml" zrc 'echo "[$STARSHIP_CONFIG]"'
+  [[ "$output" == *"[$HOME/mine.toml]"* ]]
+}
+
+@test "STARSHIP_CONFIG is set before starship starts" {
+  unset STARSHIP_CONFIG
+  stub starship 'echo "echo \"seen:\$STARSHIP_CONFIG\""'
+  zrc 'true'
+  [[ "$output" == *"seen:$HOME/.config/omamac/starship.toml"* ]]
+}
+
+@test "btop alias only without the user's btop.conf" {
+  stub btop
+  zrc 'echo "[$aliases[btop]]"'
+  [[ "$output" == *"[btop -c ~/.config/omamac/btop.conf --themes-dir ~/.config/omamac/btop-themes]"* ]]
+  mkdir -p "$HOME/.config/btop"
+  echo mine > "$HOME/.config/btop/btop.conf"
+  zrc 'echo "[$aliases[btop]]"'
+  [[ "$output" == *"[]"* ]]
+}
+
+@test "no btop: no alias" {
+  zrc 'echo "[$aliases[btop]]"'
+  [[ "$output" == *"[]"* ]]
+}

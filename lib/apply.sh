@@ -1,6 +1,6 @@
 # shellcheck shell=bash disable=SC2034 # OMAMAC_STEP is read by the caller's ERR trap
 # The steps the one-liner, omamac update and omamac install share. Sourced
-# after lib/core.sh, lib/neovim.sh, lib/herdr.sh, lib/ghostty.sh, lib/languages.sh and
+# after lib/core.sh, lib/neovim.sh, lib/herdr.sh, lib/ghostty.sh, lib/theme.sh, lib/languages.sh and
 # lib/clis.sh. Each step sets OMAMAC_STEP, which the caller's ERR trap
 # (install.sh, update.sh or bin/omamac) reads to name the step that failed.
 
@@ -30,10 +30,7 @@ apply_zsh_file() {
 apply_all() {
   OMAMAC_STEP="writing $OMAMAC_ZSH_FILE"
   apply_zsh_file
-  OMAMAC_STEP="writing $OMAMAC_GHOSTTY_FILE"
-  ghostty_config_apply
-  OMAMAC_STEP="writing $OMAMAC_HERDR_FILE"
-  herdr_config_apply
+  theme_apply
   OMAMAC_STEP='writing ~/.config/mise/conf.d/omamac.toml'
   languages_write_dropin
   OMAMAC_STEP='installing the core tools'

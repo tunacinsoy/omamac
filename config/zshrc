@@ -18,6 +18,14 @@ if (( ! ${+HERDR_CONFIG_PATH} )) && [[ ! -L ~/.config/herdr/config.toml ]] &&
   export HERDR_CONFIG_PATH=~/.config/omamac/herdr.toml
 fi
 
+# starship and btop can't include another file either: same rule as herdr.
+if (( ! ${+STARSHIP_CONFIG} )) && [[ ! -e ~/.config/starship.toml && ! -L ~/.config/starship.toml ]]; then
+  export STARSHIP_CONFIG=~/.config/omamac/starship.toml
+fi
+if (( $+commands[btop] )) && [[ ! -e ~/.config/btop/btop.conf && ! -L ~/.config/btop/btop.conf ]]; then
+  alias btop='btop -c ~/.config/omamac/btop.conf --themes-dir ~/.config/omamac/btop-themes'
+fi
+
 # Homebrew's completions only load if their folder is on fpath before compinit.
 (( ${fpath[(Ie)/opt/homebrew/share/zsh/site-functions]} )) || fpath=(/opt/homebrew/share/zsh/site-functions $fpath)
 # Skip compinit when the user's own ~/.zshrc already ran it.

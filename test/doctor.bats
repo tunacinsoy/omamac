@@ -28,7 +28,7 @@ healthy_mac() {
   mkdir -p "$(dirname "$CHOICES_FILE")"
   cp "$REPO_ROOT/test/fixtures/bare.env" "$CHOICES_FILE"
   # omamac's herdr file and its copy, and the mise drop-in, written the way install writes them.
-  omamac_lib herdr_config_apply
+  omamac_lib theme_apply
   omamac_lib languages_write_dropin
   mkdir -p "$OMAMAC_TEST_BREW_PREFIX/mise"
   healthy_ghostty
@@ -38,7 +38,7 @@ healthy_mac() {
 omamac_lib() {
   "$BASH5" -c "set -Eeuo pipefail
     OMAMAC_CHECKOUT='$REPO_ROOT'
-    for lib in paths ui questions choices herdr languages apply; do source \"$REPO_ROOT/lib/\$lib.sh\"; done
+    for lib in paths ui questions choices herdr ghostty neovim theme languages apply; do source \"$REPO_ROOT/lib/\$lib.sh\"; done
     choices_load \"\$OMAMAC_CHOICES_FILE\"
     $1" >/dev/null
 }

@@ -1,26 +1,18 @@
 # shellcheck shell=bash
 # Ghostty opens into herdr. Sourced after lib/paths.sh and lib/ui.sh, before
-# lib/apply.sh (ghostty_config_apply uses apply_put). ghostty_line_file and
+# lib/apply.sh (lib/theme.sh writes the file). ghostty_line_file and
 # ghostty_line_add also need lib/lines.sh (install.sh and doctor have it;
 # update.sh doesn't call them).
 # omamac's file is rewritten each run; the user's own Ghostty config only gets one include line.
 
-# ghostty_render <out>: the template with the launcher's absolute path filled in.
+# ghostty_render <out>: the template with the launcher's absolute path filled in,
+# then the chosen theme's colours. Needs CHOICES[theme].
 ghostty_render() {
   local s
   s=$(<"$OMAMAC_CHECKOUT/config/ghostty.conf")
   # Not sed: a path may hold & or /. The quoted replacement keeps bash 5.2 from reading & too.
   printf '%s\n' "${s//@OMAMAC_TERMINAL@/"$OMAMAC_TERMINAL"}" > "$1"
-}
-
-ghostty_config_apply() {
-  local tmp
-  ui_step "Ghostty's config"
-  mkdir -p "$OMAMAC_CONFIG_DIR"
-  tmp=$(mktemp "$OMAMAC_CONFIG_DIR/ghostty.conf.XXXXXX")
-  ghostty_render "$tmp"
-  apply_put "$tmp" "$OMAMAC_GHOSTTY_FILE"
-  ui_ok "Ghostty's config is in place"
+  cat "$OMAMAC_CHECKOUT/themes/${CHOICES[theme]}/ghostty.conf" >> "$1"
 }
 
 # ghostty_user_files: Ghostty's four user files, in load order (a later one wins).
