@@ -104,7 +104,7 @@ On today's `main` the new lines are the same before and after a run, so `bare` s
   ```
 
   4b appends the theme's colours; until then Ghostty keeps its own.
-- **The include line** `config-file = ?~/.config/omamac/ghostty.conf # added by omamac` goes into the last existing file in Ghostty's load order (`~/.config/ghostty/config`, `~/.config/ghostty/config.ghostty`, then the same two in Application Support). With none, it goes into `~/.config/ghostty/config.ghostty`. If any of the four already holds the line, nothing is added. The builder checks in the VM that Ghostty accepts a trailing `#` comment on a `config-file` line; if not, the comment goes on the line above. Like the zsh lines, only the one-liner adds it (`install_lines`).
+- **The include line** `config-file = ?~/.config/omamac/ghostty.conf` goes into the last existing file in Ghostty's load order (`~/.config/ghostty/config`, `~/.config/ghostty/config.ghostty`, then the same two in Application Support). With none, it goes into `~/.config/ghostty/config.ghostty`. If any of the four already holds the line, nothing is added. The line has no comment: Ghostty reads everything after `=` as the value, so a trailing comment would become part of the path and, with `?`, silently never load. Like the zsh lines, only the one-liner adds it (`install_lines`).
 - **`bin/omamac-terminal`** (zsh, `#!/bin/zsh -il`):
   1. Runs `herdr`. If herdr exits 0 (the user quit or detached), the script exits and Ghostty closes the window.
   2. If herdr is missing or exits non-zero, it prints one line, "herdr didn't start, so this is a plain zsh window. Run omamac doctor to see why.", then `exec zsh -l`.

@@ -31,6 +31,8 @@ source "$OMAMAC_CHECKOUT/lib/core.sh"
 source "$OMAMAC_CHECKOUT/lib/neovim.sh"
 # shellcheck source=lib/herdr.sh
 source "$OMAMAC_CHECKOUT/lib/herdr.sh"
+# shellcheck source=lib/ghostty.sh
+source "$OMAMAC_CHECKOUT/lib/ghostty.sh"
 # shellcheck source=lib/languages.sh
 source "$OMAMAC_CHECKOUT/lib/languages.sh"
 # shellcheck source=lib/clis.sh
@@ -82,6 +84,9 @@ install_lines() {
   OMAMAC_STEP='adding omamac to ~/.zshrc'
   lines_add "$HOME/.zshrc" "$OMAMAC_ZSHRC_LINE"
   ui_ok "omamac is loaded by zsh"
+  OMAMAC_STEP="adding omamac's file to Ghostty's config"
+  ghostty_line_add
+  ui_ok "Ghostty starts herdr"
 }
 
 install_summary() {
