@@ -99,8 +99,9 @@ in_lib() {
   local d="$HOME/.config/nvim/lua/plugins"
   mkdir -p "$d"
   chmod 555 "$d"
-  in_lib "neovim_marker_write"
+  # errexit is ignored in a && list, as in neovim_setup, so the failure must still be loud.
+  in_lib "neovim_marker_write || exit 3"
   chmod 755 "$d"
-  [ "$status" -ne 0 ]
+  [ "$status" -eq 3 ]
   [ -z "$(ls -A "$d")" ]
 }

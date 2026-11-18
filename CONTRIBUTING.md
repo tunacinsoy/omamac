@@ -65,7 +65,7 @@ A fixture may have a `<name>.steps.sh`. Its commands run in the VM after the two
 
 ## Themes
 
-The 13 themes in `themes/` come from [omawsl](https://github.com/tunacinsoy/omawsl)'s themes, which are MIT-licensed through Omarchy (see `themes/LICENSE.omarchy`). Each `ghostty.conf` was converted once from omawsl's terminal palette: `background`, `foreground`, `cursor-color`, `selection-background` and `palette` 0 to 15.
+The 13 themes in `themes/` come from [omawsl](https://github.com/tunacinsoy/omawsl)'s themes, which are MIT-licensed through Omarchy (see `themes/LICENSE.omarchy`). Each `ghostty.conf` was converted once from omawsl's terminal palette: `background`, `foreground`, `cursor-color`, `selection-background` and `palette` 0 to 15. ristretto's `neovim.lua` uses the original loctvl842/monokai-pro.nvim, because the fork omawsl names is gone.
 
 ## Questions and fixtures
 

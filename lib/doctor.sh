@@ -148,7 +148,7 @@ doctor_check_theme_files() {
 }
 
 doctor_check_starship() {
-  if [ -e "$OMAMAC_STARSHIP_USER_FILE" ] || [ -L "$OMAMAC_STARSHIP_USER_FILE" ]; then
+  if theme_starship_user_config; then
     doctor_report info "starship config" "your own starship config is kept, so themes don't reach the prompt"
   else
     doctor_report ok "starship config"
@@ -156,7 +156,7 @@ doctor_check_starship() {
 }
 
 doctor_check_btop() {
-  if [ -e "$OMAMAC_BTOP_USER_FILE" ] || [ -L "$OMAMAC_BTOP_USER_FILE" ]; then
+  if theme_btop_user_config; then
     doctor_report info "btop config" "your own btop config is kept, so themes don't reach btop"
   else
     doctor_report ok "btop config"
@@ -332,6 +332,7 @@ doctor_offer_neovim() {
   log_start
   if ! neovim_setup; then
     ui_fail "omamac couldn't fetch LazyVim. Your config is safe at ${backup/#"$HOME"/\~}. Run the one-liner again to set up omamac's."
+    return 1
   fi
 }
 
@@ -359,6 +360,6 @@ doctor_run() {
   doctor_check_mise_dropin || status=1
   doctor_check_chosen || status=1
   doctor_offer
-  doctor_offer_neovim
+  doctor_offer_neovim || status=1
   return "$status"
 }

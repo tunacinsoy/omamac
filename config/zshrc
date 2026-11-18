@@ -19,6 +19,11 @@ if (( ! ${+HERDR_CONFIG_PATH} )) && [[ ! -L ~/.config/herdr/config.toml ]] &&
 fi
 
 # starship and btop can't include another file either: same rule as herdr.
+# herdr panes inherit the server's environment, so a user file added later would be
+# ignored while STARSHIP_CONFIG still names omamac's: drop it then.
+if [[ ${STARSHIP_CONFIG-} == ~/.config/omamac/starship.toml ]] && [[ -e ~/.config/starship.toml || -L ~/.config/starship.toml ]]; then
+  unset STARSHIP_CONFIG
+fi
 if (( ! ${+STARSHIP_CONFIG} )) && [[ ! -e ~/.config/starship.toml && ! -L ~/.config/starship.toml ]]; then
   export STARSHIP_CONFIG=~/.config/omamac/starship.toml
 fi

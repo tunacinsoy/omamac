@@ -20,8 +20,18 @@ theme_put() {
   OMAMAC_STEP="writing $dest"
   mkdir -p "$(dirname "$dest")"
   tmp=$(mktemp "$dest.XXXXXX")
-  "$@" "$tmp"
+  "$@" "$tmp" || { rm -f "$tmp"; return 1; }
   apply_put "$tmp" "$dest"
+}
+
+# theme_starship_user_config / theme_btop_user_config: starship or btop reads the
+# user's own config, not omamac's. Used by theme_apply and doctor.
+theme_starship_user_config() {
+  [ -e "$OMAMAC_STARSHIP_USER_FILE" ] || [ -L "$OMAMAC_STARSHIP_USER_FILE" ] ||
+    { [ -n "${STARSHIP_CONFIG+set}" ] && [ "$STARSHIP_CONFIG" != "$OMAMAC_STARSHIP_FILE" ]; }
+}
+theme_btop_user_config() {
+  [ -e "$OMAMAC_BTOP_USER_FILE" ] || [ -L "$OMAMAC_BTOP_USER_FILE" ]
 }
 
 # theme_btop_conf <id> <out>
@@ -49,6 +59,11 @@ theme_apply() {
     neovim_marker_write
   fi
   herdr_user_config && ui_info "Your own herdr config is kept."
+  theme_starship_user_config && ui_info "Your own starship config is kept, so the theme doesn't reach the prompt."
+  theme_btop_user_config && ui_info "Your own btop config is kept, so the theme doesn't reach btop."
+  if [ ! -e "$OMAMAC_NVIM_MARKER" ] && { [ -e "$OMAMAC_NVIM_DIR" ] || [ -L "$OMAMAC_NVIM_DIR" ]; }; then
+    ui_info "Your own neovim config is kept, so the theme doesn't reach neovim."
+  fi
   ui_ok "Theme files are in place"
 }
 
@@ -81,5 +96,5 @@ theme_run() {
   choices_save "$OMAMAC_CHOICES_FILE"
   theme_apply
   theme_reload
-  ui_ok "Theme: $(question_label theme "$id"). Ghostty, herdr, btop and your prompt show it now; neovim the next time it opens."
+  ui_ok "Theme: $(question_label theme "$id"). What's running shows it now; neovim the next time it opens."
 }

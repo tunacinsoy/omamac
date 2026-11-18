@@ -110,3 +110,16 @@ stamp() { (cd "$OM" && find ghostty.conf herdr.toml starship.toml btop.conf btop
   apply dracula
   [ "$(ls -A "$HOME/.config/nvim")" = init.lua ]
 }
+
+@test "a failing render leaves no temp file" {
+  mkdir -p "$OM"
+  run "$BASH5" -c "set -Eeuo pipefail
+    OMAMAC_CHECKOUT='$REPO_ROOT'
+    source '$REPO_ROOT/lib/paths.sh'
+    source '$REPO_ROOT/lib/ui.sh'
+    source '$REPO_ROOT/lib/apply.sh'
+    source '$REPO_ROOT/lib/theme.sh'
+    theme_put '$OM/x.conf' false || exit 3"
+  [ "$status" -eq 3 ]
+  [ -z "$(ls -A "$OM")" ]
+}

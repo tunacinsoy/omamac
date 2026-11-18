@@ -85,7 +85,7 @@ snapshot() {
 }
 
 @test "never-touch list stays untouched" {
-  local mine=(.config/herdr/config.toml .config/mise/config.toml .config/starship.toml) f before=''
+  local mine=(.config/herdr/config.toml .config/mise/config.toml .config/starship.toml .config/btop/btop.conf) f before=''
   for f in "${mine[@]}"; do
     mkdir -p "$(dirname "$HOME/$f")"
     echo 'mine' > "$HOME/$f"

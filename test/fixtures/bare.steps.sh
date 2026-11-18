@@ -72,6 +72,8 @@ want=$(grep '^background' ~/.local/share/omamac/themes/dracula/ghostty.conf | tr
 cfg=$($G +show-config --no-pager | tr '[:upper:]' '[:lower:]')
 [[ $'\n'$cfg$'\n' == *$'\n'"$want"$'\n'* ]] || { print -r -- "Ghostty lacks: $want"; exit 1; }
 [[ $(zsh -ic 'herdr config check' 2>&1) == "config: ok"* ]]
+# Reloading a running herdr must work; a plain command, so a failure stops the run.
+zsh -ic 'herdr server reload-config'
 # The switches reloaded what was running; they must not have killed it.
 pgrep -x ghostty > /dev/null
 pgrep -f 'herdr server' > /dev/null

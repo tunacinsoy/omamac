@@ -205,6 +205,20 @@ expect_fail() {
   [[ "$output" == *"ℹ starship config — your own starship config is kept, so themes don't reach the prompt"* ]]
 }
 
+@test "own STARSHIP_CONFIG is info" {
+  healthy_mac
+  STARSHIP_CONFIG="$BATS_TEST_TMPDIR/mine.toml" run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ starship config — your own starship config is kept"* ]]
+}
+
+@test "STARSHIP_CONFIG naming omamac's file is ok" {
+  healthy_mac
+  STARSHIP_CONFIG="$HOME/.config/omamac/starship.toml" run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ starship config"* ]]
+}
+
 @test "own btop config is info" {
   healthy_mac
   mkdir -p "$HOME/.config/btop"
@@ -279,6 +293,7 @@ own_nvim() {
   export OMAMAC_TEST_LAZYVIM_URL="file://$BATS_TEST_TMPDIR/no-such-repo"
   gum_answers move
   run doctor
+  [ "$status" -eq 1 ]
   [ "$(<"$HOME/.config/nvim.bak-$(date +%Y%m%d)/init.lua")" = mine ]
   [ ! -e "$HOME/.config/nvim" ]
   [[ "$output" == *"nvim.bak-$(date +%Y%m%d)"* ]]

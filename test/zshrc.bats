@@ -163,3 +163,12 @@ zrc() { run zsh -f -i -c "source $REPO_ROOT/config/zshrc; $1" < /dev/null; }
   zrc 'echo "[$aliases[btop]]"'
   [[ "$output" == *"[]"* ]]
 }
+
+@test "STARSHIP_CONFIG naming omamac's file is dropped once the user has their own" {
+  mkdir -p "$HOME/.config"
+  echo mine > "$HOME/.config/starship.toml"
+  run zsh -f -i -c "STARSHIP_CONFIG=$HOME/.config/omamac/starship.toml; source $REPO_ROOT/config/zshrc; echo \"[\${STARSHIP_CONFIG-unset}]\"" < /dev/null
+  [[ "$output" == *"[unset]"* ]]
+  run zsh -f -i -c "STARSHIP_CONFIG=/elsewhere.toml; source $REPO_ROOT/config/zshrc; echo \"[\${STARSHIP_CONFIG-unset}]\"" < /dev/null
+  [[ "$output" == *"[/elsewhere.toml]"* ]]
+}
