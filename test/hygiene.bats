@@ -5,7 +5,7 @@ setup() { setup_sandbox; }
 @test "users never see apt, Windows or WSL" {
   # grep exits 2 on missing paths, so only search paths that exist.
   local files=() p
-  for p in README.md CONTRIBUTING.md boot.sh install.sh update.sh bin lib config; do
+  for p in README.md CONTRIBUTING.md boot.sh install.sh update.sh bin lib config themes; do
     [ ! -e "$REPO_ROOT/$p" ] || files+=("$REPO_ROOT/$p")
   done
   [ "${#files[@]}" -eq 0 ] && return 0

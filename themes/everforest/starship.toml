@@ -1,0 +1,19 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+# The prompt keeps starship's own modules; only the named colours they use
+# come from this theme's palette.
+palette = "everforest"
+
+[palettes.everforest]
+red = "#e67e80"
+green = "#a7c080"
+blue = "#7fbbb3"
+yellow = "#dbbc7f"
+magenta = "#d699b6"
+purple = "#d699b6"
+orange = "#FF9E64"
+cyan = "#83c092"
+black = "#4b565c"
+white = "#d3c6aa"
+bg = "#2b3339"
+fg = "#d3c6aa"

@@ -1,0 +1,19 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+# The prompt keeps starship's own modules; only the named colours they use
+# come from this theme's palette.
+palette = "solarized"
+
+[palettes.solarized]
+red = "#DC322F"
+green = "#859900"
+blue = "#268BD2"
+yellow = "#B58900"
+magenta = "#D33682"
+purple = "#6C71C4"
+orange = "#CB4B16"
+cyan = "#2AA198"
+black = "#073642"
+white = "#EEE8D5"
+bg = "#002B36"
+fg = "#839496"

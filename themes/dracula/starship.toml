@@ -1,0 +1,19 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+# The prompt keeps starship's own modules; only the named colours they use
+# come from this theme's palette.
+palette = "dracula"
+
+[palettes.dracula]
+red = "#FF5555"
+green = "#50FA7B"
+blue = "#BD93F9"
+yellow = "#F1FA8C"
+magenta = "#FF79C6"
+purple = "#BD93F9"
+orange = "#FFB86C"
+cyan = "#8BE9FD"
+black = "#21222C"
+white = "#F8F8F2"
+bg = "#282A36"
+fg = "#F8F8F2"
