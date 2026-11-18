@@ -22,7 +22,7 @@ omamac() { "$BASH5" "$REPO_ROOT/bin/omamac" "$@"; }
   done
 }
 
-@test@test "unknown command" {
+@test "unknown command" {
   run --separate-stderr omamac frob
   [ "$status" -eq 2 ]
   [[ "$stderr" == *"Unknown command: frob"* ]]
