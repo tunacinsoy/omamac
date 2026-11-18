@@ -29,14 +29,14 @@ cfg=$($G +show-config --no-pager)
 open -a Ghostty
 pid=
 for _ in {1..30}; do
-  # Not anchored: "^herdr server" never matched, so the command starts otherwise (a full path, likely).
+  # Not anchored: the server runs as /opt/homebrew/bin/herdr server.
   pid=$(pgrep -f 'herdr server' | head -n 1) || true
   [[ -n $pid ]] && break
   sleep 1
 done
 if [[ -z $pid ]]; then
   print -r -- "herdr's server did not start within 30 s of opening Ghostty. herdr processes:"
-  ps -axww -o pid=,command= | grep -i '[h]erdr' || true
+  pgrep -fl herdr || true
   exit 1
 fi
 env=$(ps -E -ww -o command= -p "$pid")
