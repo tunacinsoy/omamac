@@ -91,8 +91,20 @@ install_lines() {
 
 install_summary() {
   OMAMAC_STEP='printing the summary'
-  # Two lines, so the box fits an 80-column terminal.
-  ui_box "Installed: Homebrew, bash, gum, omamac, the core tools" "and the languages and cloud CLIs you chose." "Log: $OMAMAC_LOG" "Open a new terminal window, then run omamac."
+  # Short lines, so the box fits an 80-column terminal.
+  ui_box \
+    "Installed: Homebrew, bash, gum, omamac, Ghostty and the core tools," \
+    "and the languages and cloud CLIs you chose." \
+    "" \
+    "omamac sets two Ghostty settings: command (starts herdr)" \
+    "and macos-option-as-alt." \
+    "Open Ghostty: it starts herdr. The first time, macOS asks you to" \
+    "confirm; click Open." \
+    "To let omamac update Ghostty: System Settings → Privacy & Security" \
+    "→ App Management → Ghostty." \
+    "" \
+    "Log: $OMAMAC_LOG" \
+    "Open a new terminal window, then run omamac."
 }
 
 install_main() {

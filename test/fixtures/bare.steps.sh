@@ -15,4 +15,23 @@ if print -r -- "$out" | grep -Eq 'Error detected|E5108'; then print -r -- "$out"
 [[ $(zsh -ic 'print -r -- $HERDR_CONFIG_PATH') == ~/.config/omamac/herdr.toml ]]
 [[ $(zsh -ic 'herdr config check' 2>&1) == "config: ok"* ]]
 { ~/.local/share/omamac/bin/omamac-herdr-mode bogus; [[ $? -eq 2 ]]; } || exit 1
+# Stands in for the user's Open click. It must come before anything starts
+# Ghostty: a quarantined Ghostty hangs on the Open? dialog.
+xattr -dr com.apple.quarantine /Applications/Ghostty.app
+G=/Applications/Ghostty.app/Contents/MacOS/ghostty
+cfg=$($G +show-config --no-pager)
+print -r -- "$cfg" | grep -qx "command = direct:$HOME/.local/share/omamac/bin/omamac-terminal"
+print -r -- "$cfg" | grep -qx 'macos-option-as-alt = left'
+# open -a reaches the logged-in GUI session; Ghostty then starts herdr, which
+# starts a detached server. Wait for it, then read its environment.
+open -a Ghostty
+pid=
+for _ in {1..30}; do
+  pid=$(pgrep -x herdr | head -n 1) || true
+  [[ -n $pid ]] && break
+  sleep 1
+done
+[[ -n $pid ]] || { print -r -- "herdr did not start within 30 s of opening Ghostty"; exit 1; }
+ps -E -ww -o command= -p "$pid" | grep -q "HERDR_CONFIG_PATH=$HOME/.config/omamac/herdr.toml" ||
+  { print -r -- "herdr (pid $pid) lacks HERDR_CONFIG_PATH"; exit 1; }
 omamac doctor

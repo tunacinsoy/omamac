@@ -121,6 +121,16 @@ snapshot() {
   [[ "$output" == *"Open a new terminal window, then run omamac"* ]]
 }
 
+@test "summary names Ghostty and the clicks" {
+  run install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Open Ghostty"* ]]
+  [[ "$output" == *"App Management"* ]]
+  [[ "$output" == *"click Open"* ]]
+  [[ "$output" == *"command"* ]]
+  [[ "$output" == *"macos-option-as-alt"* ]]
+}
+
 @test "fresh: asks, saves, then writes the Phase 1 files" {
   fresh_answers yes
   run install
@@ -225,7 +235,7 @@ snapshot() {
   [ "$status" -eq 0 ]
   [ "$(grep -c '^brew install .*starship' "$STUB_LOG")" = 1 ]
   [ -f "$HOME/.config/nvim/lua/plugins/omamac.lua" ]
-  [[ "$output" == *"Installed: Homebrew, bash, gum, omamac, the core tools"* ]]
+  [[ "$output" == *"Installed: Homebrew, bash, gum, omamac, Ghostty and the core tools"* ]]
   [[ "$output" == *"and the languages and cloud CLIs you chose."* ]]
 }
 

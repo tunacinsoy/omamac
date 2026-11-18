@@ -44,3 +44,10 @@ setup() { setup_sandbox; }
   [ "$output" = "hi" ]
   grep -qx 'hello there' "$STUB_LOG"
 }
+
+@test "omamac never runs Ghostty's binary" {
+  # On a fresh Mac it waits on macOS's "Open?" dialog. Only VM steps may run it.
+  cd "$REPO_ROOT"
+  run grep -rn 'MacOS/ghostty' bin lib install.sh update.sh
+  [ "$status" -eq 1 ]
+}
