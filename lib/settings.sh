@@ -72,49 +72,98 @@ settings_recorded() {
   return 1
 }
 
+# settings_note <domain> <key> <before>: after a successful write, tell the
+# user it was put back, or record the value from before omamac. The record
+# gets a line only after the first successful write and is never rewritten,
+# so uninstall can put that first value back.
+settings_note() {
+  if settings_recorded "$1" "$2"; then
+    ui_info "Put back: $(settings_label "$2")"
+  else
+    mkdir -p "$OMAMAC_STATE_DIR"
+    printf '%s\t%s\t%s\n' "$1" "$2" "${3// /$'\t'}" >> "$OMAMAC_SETTINGS_RECORD"
+  fi
+}
+
 # settings_one <domain> <key> <type> <value>: make the key the wanted value.
-# Returns 3 when the domain is protected. The record gets a line only after
-# the first successful write, and is never rewritten: it holds the value from
-# before omamac, so uninstall can put that back.
+# Returns 3 when the domain is protected.
 settings_one() {
-  local d=$1 k=$2 t=$3 v=$4 cur rc=0 recorded=0
+  local d=$1 k=$2 t=$3 v=$4 cur rc=0
   OMAMAC_STEP="setting $k in $d"
   cur=$(settings_read "$d" "$k") || rc=$?
   [ "$rc" -eq 0 ] || return "$rc"
   [ "$cur" != "$t $v" ] || return 0
-  ! settings_recorded "$d" "$k" || recorded=1
   settings_write "$d" "$k" "$t" "$v" || return $?
   case $d in com.apple.dock | NSGlobalDomain) SETTINGS_DOCK=1 ;; esac
-  if [ "$recorded" -eq 1 ]; then
-    ui_info "Put back: $(settings_label "$k")"
+  settings_note "$d" "$k" "$cur"
+}
+
+# settings_restore <domain> <key> <before>: undo one write.
+settings_restore() {
+  local t v
+  if [ "$3" = absent ]; then
+    defaults delete "$1" "$2"
   else
-    mkdir -p "$OMAMAC_STATE_DIR"
-    printf '%s\t%s\t%s\n' "$d" "$k" "${cur// /$'\t'}" >> "$OMAMAC_SETTINGS_RECORD"
+    read -r t v <<< "$3"
+    settings_write "$1" "$2" "$t" "$v"
   fi
 }
 
+# settings_unit <line>...: keys that only work together (Reduce motion). If
+# any is refused, none stays changed and none is recorded. Returns 3 then.
+settings_unit() {
+  local lines=("$@") i j rc=0 d k t v
+  local cur=() written=()
+  OMAMAC_STEP='setting Reduce motion'
+  for i in "${!lines[@]}"; do
+    read -r d k t v <<< "${lines[$i]}"
+    cur[i]=$(settings_read "$d" "$k") || return $?
+  done
+  for i in "${!lines[@]}"; do
+    read -r d k t v <<< "${lines[$i]}"
+    [ "${cur[$i]}" != "$t $v" ] || continue
+    rc=0
+    settings_write "$d" "$k" "$t" "$v" || rc=$?
+    if [ "$rc" -ne 0 ]; then
+      for j in "${!written[@]}"; do
+        read -r d k _ <<< "${lines[$j]}"
+        settings_restore "$d" "$k" "${cur[$j]}"
+      done
+      return "$rc"
+    fi
+    written[i]=1
+  done
+  for i in "${!written[@]}"; do
+    read -r d k _ <<< "${lines[$i]}"
+    settings_note "$d" "$k" "${cur[$i]}"
+  done
+}
+
 settings_apply() {
-  local answer line d k t v rc skip
+  local answer line d k t v rc unit=()
   SETTINGS_REFUSED=0
   SETTINGS_DOCK=0
   for answer in desktops window_margins; do
     [ "${CHOICES[$answer]:-}" = yes ] || continue
-    skip=0
+    unit=()
     while IFS= read -r line; do
       read -r d k t v <<< "$line"
-      [ "$skip" -eq 0 ] || [ "$(settings_label "$k")" != "Reduce motion" ] || continue
+      case $d in
+        com.apple.universalaccess | com.apple.Accessibility) unit+=("$line"); continue ;;
+      esac
+      settings_one "$d" "$k" "$t" "$v" || return 1
+    done < <(settings_keys "$answer")
+    if [ "${#unit[@]}" -gt 0 ]; then
       rc=0
-      settings_one "$d" "$k" "$t" "$v" || rc=$?
-      [ "$rc" -eq 0 ] && continue
-      # Reduce motion is one unit; a protected domain is not a failure.
-      if [ "$rc" -eq 3 ] && [ "$(settings_label "$k")" = "Reduce motion" ]; then
-        skip=1
+      settings_unit "${unit[@]}" || rc=$?
+      if [ "$rc" -eq 3 ]; then
+        # A protected domain is not a failure.
         SETTINGS_REFUSED=1
         ui_info "Turn on Reduce motion: search for Reduce motion in System Settings."
-        continue
+      elif [ "$rc" -ne 0 ]; then
+        return 1
       fi
-      return 1
-    done < <(settings_keys "$answer")
+    fi
     ui_ok "${QUESTION_TITLE[$answer]}"
   done
   if [ "$SETTINGS_DOCK" -eq 1 ]; then

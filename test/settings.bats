@@ -128,3 +128,38 @@ com.apple.Accessibility${TAB}ReduceMotionEnabled${TAB}integer${TAB}0" ]
   [ "$(grep -c mru-spaces "$REC")" -eq 1 ]
   [[ "$(grep mru-spaces "$REC")" == *"boolean${TAB}true" ]]
 }
+
+@test "Reduce motion domain refused for reading: neither key changed or recorded" {
+  seed com.apple.Accessibility ReduceMotionEnabled integer 0
+  export T_DEFAULTS_REFUSE=com.apple.Accessibility
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Turn on Reduce motion: search for Reduce motion in System Settings."* ]]
+  [ "$(value com.apple.universalaccess reduceMotion)" = absent ]
+  [[ "$(cat "$REC")" != *educeMotion* ]]
+  [ "$(value com.apple.dock mru-spaces)" = 0 ]
+  [ "$(grep -c '^killall Dock' "$STUB_LOG")" -eq 1 ]
+}
+
+@test "second Reduce motion key refused on write: the first is put back, nothing recorded" {
+  seed com.apple.Accessibility ReduceMotionEnabled integer 0
+  export T_DEFAULTS_REFUSE_WRITE=com.apple.Accessibility
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Turn on Reduce motion: search for Reduce motion in System Settings."* ]]
+  [ "$(value com.apple.universalaccess reduceMotion)" = absent ]
+  [ "$(value com.apple.Accessibility ReduceMotionEnabled)" = 0 ]
+  [[ "$(cat "$REC")" != *educeMotion* ]]
+  [ "$(value com.apple.dock mru-spaces)" = 0 ]
+  [ "$(grep -c '^killall Dock' "$STUB_LOG")" -eq 1 ]
+}
+
+@test "second Reduce motion key refused on write: a present first key gets its old value back" {
+  seed com.apple.universalaccess reduceMotion boolean false
+  seed com.apple.Accessibility ReduceMotionEnabled integer 0
+  export T_DEFAULTS_REFUSE_WRITE=com.apple.Accessibility
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [ "$(value com.apple.universalaccess reduceMotion)" = 0 ]
+  [[ "$(cat "$REC")" != *educeMotion* ]]
+}

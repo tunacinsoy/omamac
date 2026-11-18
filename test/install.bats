@@ -242,6 +242,20 @@ snapshot() {
   [[ "$output" == *"and the languages and cloud CLIs you chose."* ]]
 }
 
+@test "summary names Reduce motion only when macOS refused it" {
+  fresh_answers yes
+  export T_DEFAULTS_REFUSE=com.apple.universalaccess
+  run install
+  [ "$status" -eq 0 ]
+  # Once from the step, once from the summary box.
+  [ "$(grep -c 'Turn on Reduce motion' <<< "$output")" -eq 2 ]
+  unset T_DEFAULTS_REFUSE
+  fresh_answers yes
+  run install
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"Turn on Reduce motion"* ]]
+}
+
 @test "installs the chosen languages after Install?" {
   fresh_answers yes
   run install

@@ -2,6 +2,7 @@
 # Test double for macOS `defaults`. Bash 3.2 safe. One file per domain/key under
 # $T_DEFAULTS_DIR holds "<boolean|integer> <value>".
 # T_DEFAULTS_REFUSE=<domain>: reads and writes of that domain are refused.
+# T_DEFAULTS_REFUSE_WRITE=<domain>: only writes of that domain are refused.
 # T_DEFAULTS_FAIL=<domain>:<key>: writes and deletes of that key fail.
 dir="${T_DEFAULTS_DIR:?fake-defaults needs T_DEFAULTS_DIR}"
 [ -z "${STUB_LOG:-}" ] || echo "defaults $*" >> "$STUB_LOG"
@@ -9,6 +10,10 @@ cmd="${1:-}" d="${2:-}" k="${3:-}"
 f="$dir/$d/$k"
 
 if [ -n "${T_DEFAULTS_REFUSE:-}" ] && [ "$d" = "$T_DEFAULTS_REFUSE" ]; then
+  echo "Could not write domain $d; exiting" >&2
+  exit 1
+fi
+if [ "$cmd" = write ] && [ -n "${T_DEFAULTS_REFUSE_WRITE:-}" ] && [ "$d" = "$T_DEFAULTS_REFUSE_WRITE" ]; then
   echo "Could not write domain $d; exiting" >&2
   exit 1
 fi
