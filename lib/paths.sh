@@ -37,6 +37,10 @@ OMAMAC_TERMINAL=$OMAMAC_HOME/bin/omamac-terminal
 OMAMAC_GHOSTTY_LINE='config-file = ?~/.config/omamac/ghostty.conf'
 # One line per macOS setting omamac changed, with its earlier value (lib/settings.sh).
 OMAMAC_SETTINGS_RECORD=$OMAMAC_STATE_DIR/macos-settings.tsv
+# The Dock as it was before omamac cleaned it, written once (lib/dock.sh).
+OMAMAC_DOCK_RECORD=$OMAMAC_STATE_DIR/dock-before.plist
+# Every app omamac put in the Dock or found there, one file name per line: none is added again.
+OMAMAC_DOCK_ADDED=$OMAMAC_STATE_DIR/dock-added
 # Written once omamac has started colima's login service (lib/docker.sh). With
 # it, omamac never starts the service again, so a user's stop stays.
 OMAMAC_COLIMA_MARKER=$OMAMAC_STATE_DIR/colima-service

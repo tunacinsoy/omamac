@@ -247,7 +247,8 @@ desktops_on() {
     OMAMAC_CHECKOUT='$REPO_ROOT'
     source '$REPO_ROOT/lib/paths.sh'; source '$REPO_ROOT/lib/ui.sh'
     source '$REPO_ROOT/lib/questions.sh'; source '$REPO_ROOT/lib/choices.sh'
-    source '$REPO_ROOT/lib/settings.sh'
+    source '$REPO_ROOT/lib/core.sh'; source '$REPO_ROOT/lib/apps.sh'
+    source '$REPO_ROOT/lib/settings.sh'; source '$REPO_ROOT/lib/dock.sh'
     CHOICES[desktops]=yes; settings_apply" > /dev/null
   choose desktops yes
   : > "$STUB_LOG"

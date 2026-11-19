@@ -1,6 +1,8 @@
 # shellcheck shell=bash disable=SC2034 # OMAMAC_STEP is read by the caller's ERR trap; SETTINGS_REFUSED by install_summary
-# The macOS settings behind the yes/no answers `desktops` and `window_margins`.
-# Sourced after lib/ui.sh, lib/questions.sh and lib/choices.sh, before lib/apply.sh.
+# The macOS settings behind the yes/no answers `desktops`, `window_margins`,
+# `dock` and `dock_autohide`.
+# Sourced after lib/ui.sh, lib/questions.sh and lib/choices.sh, before lib/dock.sh
+# (settings_apply calls its dock_apply) and lib/apply.sh.
 # Each key is "domain key type value"; the type is the word `defaults read-type`
 # gives (boolean or integer).
 
@@ -200,6 +202,7 @@ settings_apply() {
         return 1
       fi
     fi
+    if [ "$answer" = dock ]; then dock_apply || { settings_dock_restart; return 1; }; fi
     ui_ok "${QUESTION_TITLE[$answer]}"
   done
   settings_dock_restart
