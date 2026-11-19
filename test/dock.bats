@@ -217,6 +217,14 @@ user_tile() {
   [ "$(count 'defaults export')" -eq 0 ]
 }
 
+@test "dock_restore with no record drops a stale dock-added" {
+  mkdir -p "$(dirname "$ADDED")"
+  echo VLC.app > "$ADDED"
+  in_lib "$CHOOSE; dock_restore"
+  [ "$status" -eq 0 ]
+  [ ! -e "$ADDED" ]
+}
+
 @test "dock_restore: a failed import keeps the record" {
   dock_seed file:///Applications/Things.app/
   in_lib "$CHOOSE; settings_apply"
@@ -234,6 +242,8 @@ user_tile() {
   : > "$STUB_LOG"
   in_lib "$CHOOSE; dock_restore"
   [ "$status" -ne 0 ]
+  [[ "$output" == *"✗ omamac's saved Dock (~/.local/state/omamac/dock-before.plist) is damaged, so your Dock was left as it is."* ]]
+  [[ "$output" == *"✗ Fix: delete that file, then run omamac uninstall dock again."* ]]
   [ "$(count 'defaults import')" -eq 0 ]
   [ -f "$RECORD" ]
 }

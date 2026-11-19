@@ -92,7 +92,7 @@ dock_change() {
 # dock_edit <copy>: the Dock step, on a temp file the caller removes. Each
 # command is checked: errexit is off in a function called with ||.
 dock_edit() {
-  local copy=$1 app fresh=0
+  local copy=$1 app tmp fresh=0
   local -a todo=()
   local -A listed=()
   if [ -f "$OMAMAC_DOCK_ADDED" ]; then
@@ -108,7 +108,13 @@ dock_edit() {
   if [ "$fresh" -eq 1 ]; then
     mkdir -p "$OMAMAC_STATE_DIR" || return 1
     # Written once, before any change, so uninstall can put this Dock back.
-    cp -- "$copy" "$OMAMAC_DOCK_RECORD" || return 1
+    # Temp file then mv, so the record is never half-written; the mv stays
+    # before the import, or a cleaned Dock could be saved as the "before" Dock.
+    tmp=$(mktemp "$OMAMAC_DOCK_RECORD.XXXXXX") || return 1
+    if ! { cp -- "$copy" "$tmp" && mv -- "$tmp" "$OMAMAC_DOCK_RECORD"; }; then
+      rm -f -- "$tmp"
+      return 1
+    fi
   fi
   if ! dock_change "$copy" "$fresh" "${todo[@]}"; then
     # No change made: the next run starts over.
@@ -136,7 +142,11 @@ dock_apply() {
 dock_put_back() {
   local f=$1 key xml
   # A damaged record reads as no arrays, which would empty the Dock.
-  plutil -lint -s "$OMAMAC_DOCK_RECORD" || return 1
+  if ! plutil -lint -s "$OMAMAC_DOCK_RECORD" > /dev/null 2>&1; then
+    ui_fail "omamac's saved Dock (~/.local/state/omamac/dock-before.plist) is damaged, so your Dock was left as it is."
+    ui_fail "Fix: delete that file, then run omamac uninstall dock again."
+    return 1
+  fi
   defaults export com.apple.dock "$f" || return 1
   for key in persistent-apps persistent-others; do
     if dock_get "$f" "$key" > /dev/null; then plutil -remove "$key" "$f" || return 1; fi
@@ -148,9 +158,10 @@ dock_put_back() {
 }
 
 # dock_restore: put the Dock back as the record has it and restart it, then
-# forget the record and dock-added. No record: nothing.
+# forget the record and dock-added. No record: only a stale dock-added goes.
 dock_restore() {
-  [ -f "$OMAMAC_DOCK_RECORD" ] || return 0
+  # A stale list would make a later fresh cleanup skip apps.
+  [ -f "$OMAMAC_DOCK_RECORD" ] || { rm -f -- "$OMAMAC_DOCK_ADDED"; return 0; }
   local copy rc=0
   OMAMAC_STEP='putting the Dock back'
   copy=$(mktemp) || return 1

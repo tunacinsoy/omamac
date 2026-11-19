@@ -227,7 +227,7 @@ snapshot() {
   gum_answers
   run omamac_uninstall
   [ "$status" -eq 0 ]
-  [[ "$output" == *"omamac installed no languages, cloud CLIs, Docker or apps, so there's nothing to remove."* ]]
+  [[ "$output" == *"omamac installed nothing you can remove."* ]]
   [ -z "$(prompts)" ]
 }
 
@@ -908,7 +908,7 @@ DOCK_RECORD_REL=.local/state/omamac/dock-before.plist
   run omamac_uninstall vlc
   [ "$status" -eq 0 ]
   [[ "$(dock_urls persistent-apps)" != *VLC* ]]
-  run ! grep -qx VLC.app "$HOME/.local/state/omamac/dock-added"
+  [ "$(cat "$HOME/.local/state/omamac/dock-added")" = Ghostty.app ]
 }
 
 @test "uninstall vlc installed by hand keeps its tile" {

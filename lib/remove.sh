@@ -187,7 +187,7 @@ remove_run() {
       docker-desktop) options+=("$(question_label docker docker-desktop):docker-desktop") ;;
     esac
     if [ "${#options[@]}" -eq 0 ]; then
-      ui_info "omamac installed no languages, cloud CLIs, Docker or apps, so there's nothing to remove."
+      ui_info "omamac installed nothing you can remove."
       exit 0
     fi
     ask_choose "What should omamac remove?" "Nothing:none" "${options[@]}"
