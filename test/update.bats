@@ -341,3 +341,22 @@ ghostty_outdated() { echo ghostty > "$OMAMAC_TEST_BREW_PREFIX/outdated"; }
   grep -qx 'brew upgrade --cask --greedy gcloud-cli' "$STUB_LOG"
   grep -qx 'mise upgrade go' "$STUB_LOG"
 }
+
+# update's apply_all installs a missing lazydocker first, so all five are upgraded.
+@test "update upgrades colima's installed formulas by name" {
+  choose docker colima
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install colima docker docker-compose docker-buildx
+  : > "$STUB_LOG"
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(grep '^brew upgrade' "$STUB_LOG")" = "brew upgrade $OMAMAC_FORMULAS colima docker docker-compose docker-buildx lazydocker" ]
+}
+
+@test "update leaves the user's own docker alone with none" {
+  choose docker none
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install docker
+  : > "$STUB_LOG"
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(grep '^brew upgrade' "$STUB_LOG")" = "brew upgrade $OMAMAC_FORMULAS" ]
+}

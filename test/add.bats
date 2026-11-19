@@ -16,7 +16,8 @@ setup() {
   mkdir -p "$(dirname "$CHOICES_FILE")"
   cp "$REPO_ROOT/test/fixtures/bare.env" "$CHOICES_FILE"
   # Answered yes, so install doesn't ask about them (tests below ask on purpose).
-  sed -i '' -e 's/^desktops=.*/desktops=yes/' -e 's/^window_margins=.*/window_margins=yes/' "$CHOICES_FILE"
+  # docker-desktop installs nothing in 5a and isn't asked about.
+  sed -i '' -e 's/^desktops=.*/desktops=yes/' -e 's/^window_margins=.*/window_margins=yes/' -e 's/^docker=.*/docker=docker-desktop/' "$CHOICES_FILE"
   # Only the run's own calls.
   : > "$STUB_LOG"
 }
@@ -196,4 +197,37 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   grep -qx 'desktops=no' "$CHOICES_FILE"
   [ "$(choices_stamp)" = "$before" ]
   run ! grep -q '^defaults write' "$STUB_LOG"
+}
+
+@test "install asks Docker only when the answer is none" {
+  choose docker colima
+  gum_answers "" ""
+  run omamac_install
+  [[ "$(prompts)" != *"How should Docker run?"* ]]
+  [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
+}
+
+@test "install: Enter on Docker picks No Docker, nothing changes" {
+  choose docker none
+  before=$(choices_stamp)
+  gum_answers "" "" none
+  sleep 1.1
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Nothing picked, so nothing changed."* ]]
+  grep -qx 'docker=none' "$CHOICES_FILE"
+  [ "$(choices_stamp)" = "$before" ]
+}
+
+@test "install: picking colima replaces none and installs it" {
+  choose docker none
+  gum_answers "" "" colima yes
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [[ "$(prompts)" == *"How should Docker run?"* ]]
+  [[ "$output" == *"Docker: colima"* ]]
+  [[ "$output" == *"colima starts Docker in the background now and at each login."* ]]
+  [[ "$output" == *"The first start downloads Linux and takes a few minutes."* ]]
+  grep -qx 'docker=colima' "$CHOICES_FILE"
+  grep -q '^brew install colima ' "$STUB_LOG"
 }

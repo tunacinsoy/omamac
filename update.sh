@@ -25,6 +25,8 @@ source "$OMAMAC_CHECKOUT/lib/questions.sh"
 source "$OMAMAC_CHECKOUT/lib/choices.sh"
 # shellcheck source=lib/core.sh
 source "$OMAMAC_CHECKOUT/lib/core.sh"
+# shellcheck source=lib/docker.sh
+source "$OMAMAC_CHECKOUT/lib/docker.sh"
 # shellcheck source=lib/neovim.sh
 source "$OMAMAC_CHECKOUT/lib/neovim.sh"
 # shellcheck source=lib/herdr.sh
@@ -85,6 +87,13 @@ update_upgrade() {
     for name in "${chosen[@]}"; do
       [ -z "${CLI_FORMULA[$name]:-}" ] || installed+=("${CLI_FORMULA[$name]}")
     done
+  fi
+  # Only the answer's own Docker formulas: with none, a user's own docker is theirs.
+  list=$(docker_formulas "${CHOICES[docker]:-none}")
+  if [ -n "$list" ]; then
+    mapfile -t chosen <<< "$list"
+    list=$(core_where installed "${chosen[@]}")
+    [ -z "$list" ] || { mapfile -t chosen <<< "$list"; installed+=("${chosen[@]}"); }
   fi
   # brew upgrade fails when a named formula is pinned, so leave those out.
   # brew list --pinned prints short names, so compare the last / part.
