@@ -227,7 +227,12 @@ apps_install() {
           OMAMAC_STEP="handing $label to Homebrew"
           ui_run "Handing $label to Homebrew" "$brew" install --cask --adopt "$cask" || return
         else
-          ui_info "$label is already installed, not through Homebrew. omamac won't update it."
+          # A password app can't be adopted (Homebrew would install it again), so no command for it.
+          if [ "${APP_PASSWORD[$id]}" = yes ]; then
+            ui_info "$label is already installed, not through Homebrew. omamac won't update it."
+          else
+            ui_info "$label is already installed, not through Homebrew. omamac won't update it. To let Homebrew take it over: brew install --cask --adopt $cask"
+          fi
         fi
         ;;
     esac
