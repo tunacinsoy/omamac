@@ -55,6 +55,13 @@ setup() { setup_sandbox; }
 @test "omamac never deletes colima's VM" {
   # colima delete removes the user's images, containers and volumes.
   cd "$REPO_ROOT"
-  run grep -rn 'colima delete' bin lib
+  run grep -rn 'colima delete' bin lib install.sh update.sh
+  [ "$status" -eq 1 ]
+}
+
+@test "omamac never zaps Docker Desktop or removes quarantine" {
+  # --zap deletes the user's Docker data; xattr would clear a security check.
+  cd "$REPO_ROOT"
+  run grep -rnE -e '--zap|xattr' bin lib install.sh update.sh
   [ "$status" -eq 1 ]
 }

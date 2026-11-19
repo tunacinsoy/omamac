@@ -178,7 +178,7 @@ docker_uninstall_colima() {
 
 # docker_uninstall_desktop: the Docker Desktop cask when Homebrew lists it
 # (a hand-installed app has no cask, so it stays), then lazydocker. Never
-# --zap and never the user's Docker data. Safe to run again: each step looks first.
+# the zap option and never the user's Docker data. Safe to run again: each step looks first.
 docker_uninstall_desktop() {
   local list
   OMAMAC_STEP="removing Docker Desktop"
@@ -195,6 +195,13 @@ docker_uninstall_desktop() {
 # (doctor_check_chosen reports its formulas). Returns 1 only for a ✗.
 docker_check() {
   local plugin state rc list status=0
+  if [ "${CHOICES[docker]:-none}" = docker-desktop ]; then
+    # The ✓ comes from Your tools; only a hand-installed app needs a word.
+    if [ "$(core_cask_state docker-desktop 2>/dev/null)" = hand ]; then
+      doctor_report info "Docker Desktop" "installed by hand, so omamac won't update it"
+    fi
+    return 0
+  fi
   [ "${CHOICES[docker]:-none}" = colima ] || return 0
   for plugin in "${DOCKER_PLUGINS[@]}"; do
     state=$(docker_link_state "$plugin")

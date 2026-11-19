@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2088 # the ~ in messages is shown to the user, not expanded
 # omamac doctor. Sourced after the libraries it checks. It reports, then offers
-# fixes as questions: only for a chosen language, cloud CLI or colima that is gone.
+# fixes as questions: only for a chosen language, cloud CLI, colima or Docker Desktop that is gone.
 
 # doctor_report <ok|fail|info> <what> [<why>] [<fix>]. Returns 1 for fail so callers can count it.
 doctor_report() {
@@ -259,7 +259,7 @@ doctor_check_settings() {
 
 # doctor_key <id>: the question a gone id answers.
 doctor_key() {
-  if [ "$1" = colima ]; then
+  if [ "$1" = colima ] || [ "$1" = docker-desktop ]; then
     echo docker
   elif [ -n "${LANGUAGE_TOOLS[$1]:-}" ]; then
     echo languages
@@ -269,9 +269,9 @@ doctor_key() {
 }
 
 # Sets DOCTOR_GONE to the chosen language and CLI ids that are gone, and
-# colima when any of its formulas is, for doctor_offer.
+# colima or docker-desktop when any of its parts is, for doctor_offer.
 doctor_check_chosen() {
-  local what="Your tools" id tool status=0 out key why result=0 tools=() langs=() clis=() skipped=() colima_gone=
+  local what="Your tools" id tool status=0 out key why result=0 state formulas=() tools=() langs=() clis=() skipped=() docker_gone=
   DOCTOR_GONE=()
   if [ "$DOCTOR_HAS_CHOICES" -ne 1 ]; then
     doctor_report info "$what" "skipped, your saved answers can't be read"
@@ -304,26 +304,42 @@ doctor_check_chosen() {
       skipped+=(Homebrew)
     fi
   fi
-  # colima is one entry, however many of its formulas are gone.
-  if [ "${CHOICES[docker]:-none}" = colima ]; then
-    mapfile -t tools < <(docker_formulas colima)
-    if out=$(core_where missing "${tools[@]}" 2>/dev/null); then
-      if [ -n "$out" ]; then
-        mapfile -t tools <<< "$out"
-        colima_gone=$(clis_join "${tools[@]}")
-        DOCTOR_GONE+=(colima)
+  # colima and Docker Desktop are one entry each, however many of their parts are gone.
+  case ${CHOICES[docker]:-none} in
+    colima)
+      mapfile -t tools < <(docker_formulas colima)
+      if out=$(core_where missing "${tools[@]}" 2>/dev/null); then
+        if [ -n "$out" ]; then
+          mapfile -t tools <<< "$out"
+          docker_gone=$(clis_join "${tools[@]}")
+          DOCTOR_GONE+=(colima)
+        fi
+      elif [[ " ${skipped[*]} " != *" Homebrew "* ]]; then
+        skipped+=(Homebrew)
       fi
-    elif [[ " ${skipped[*]} " != *" Homebrew "* ]]; then
-      skipped+=(Homebrew)
-    fi
-  fi
+      ;;
+    docker-desktop)
+      tools=()
+      mapfile -t formulas < <(docker_formulas docker-desktop)
+      if state=$(core_cask_state docker-desktop 2>/dev/null) && out=$(core_where missing "${formulas[@]}" 2>/dev/null); then
+        [ "$state" != missing ] || tools+=("Docker Desktop")
+        [ -z "$out" ] || { mapfile -t formulas <<< "$out"; tools+=("${formulas[@]}"); }
+        if [ "${#tools[@]}" -gt 0 ]; then
+          docker_gone=$(clis_join "${tools[@]}")
+          DOCTOR_GONE+=(docker-desktop)
+        fi
+      elif [[ " ${skipped[*]} " != *" Homebrew "* ]]; then
+        skipped+=(Homebrew)
+      fi
+      ;;
+  esac
   for tool in "${skipped[@]}"; do
     doctor_report info "$what" "skipped, $tool can't list what's installed"
   done
   for id in "${DOCTOR_GONE[@]}"; do
     key=$(doctor_key "$id") tool=Homebrew why=it
     [ "$key" != languages ] || tool=mise
-    [ "$key" != docker ] || why=$colima_gone
+    [ "$key" != docker ] || why=$docker_gone
     doctor_report fail "$(question_label "$key" "$id")" "you chose it, but $tool no longer has $why" \
       "omamac update puts it back; omamac uninstall $id drops it" || result=1
   done
