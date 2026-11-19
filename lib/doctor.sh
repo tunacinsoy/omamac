@@ -372,7 +372,7 @@ doctor_check_apps() {
   for id in "${ids[@]}"; do
     if ! state=$(core_cask_state "${APP_CASK[$id]}" 2>/dev/null); then
       doctor_report info "$what" "skipped, Homebrew can't list what's installed"
-      return 0
+      return "$result"
     fi
     label=$(apps_label "$id")
     case $state in

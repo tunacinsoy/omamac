@@ -40,7 +40,7 @@ The first time you open each app, macOS asks you to confirm; click Open. Some ap
 
 If you chose Docker Desktop, open it once to finish its setup.
 
-To let `omamac update` upgrade Ghostty, Docker Desktop and your apps, and `omamac uninstall` remove them, allow App Management for your terminal (Ghostty): System Settings → Privacy & Security → App Management.
+To let `omamac update` upgrade Ghostty, Docker Desktop and your apps, and `omamac uninstall` remove them, allow App Management for your terminal (Ghostty): System Settings → Privacy & Security → App Management. Zoom and Google Drive don't need it: Homebrew changes them with your password.
 
 ## Keeping it up to date
 
@@ -48,7 +48,7 @@ To let `omamac update` upgrade Ghostty, Docker Desktop and your apps, and `omama
 omamac update
 ```
 
-It updates omamac and what omamac installed, nothing else. It pulls omamac (and stops if you edited its files), rewrites the files omamac writes, puts back any core tool, app, language or cloud CLI that is missing, puts back the macOS settings you chose if you changed them, then upgrades only what omamac installed: the core tools, Ghostty, Docker Desktop and your apps (apps update themselves, so omamac upgrades one only when Homebrew lists it as outdated, and only if your terminal has App Management; otherwise update says what to click and exits 1), bash, gum, the cloud CLIs you chose (Google Cloud's cask with `--greedy`), colima and its tools if you chose it, and the languages you chose. After that, `mise prune` deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`. The log goes to `~/.local/state/omamac/logs/`.
+It updates omamac and what omamac installed, nothing else. It pulls omamac (and stops if you edited its files), rewrites the files omamac writes, puts back any core tool, app, language or cloud CLI that is missing, puts back the macOS settings you chose if you changed them, then upgrades only what omamac installed: the core tools, Ghostty, Docker Desktop and your apps (only if your terminal has App Management; otherwise update says what to click and exits 1. Apps update themselves, so omamac upgrades one only when Homebrew lists it as outdated), bash, gum, the cloud CLIs you chose (Google Cloud's cask with `--greedy`), colima and its tools if you chose it, and the languages you chose. After that, `mise prune` deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`. The log goes to `~/.local/state/omamac/logs/`.
 
 ## What it changes
 

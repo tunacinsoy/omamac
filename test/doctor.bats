@@ -985,6 +985,20 @@ healthy_apps() {
   [[ "$output" == *"ℹ Your apps — skipped, Homebrew can't list what's installed"* ]]
 }
 
+@test "doctor: Homebrew can't list partway through: an earlier ✗ still counts" {
+  # The second app's list fails after the first app was found gone.
+  run "$BASH5" -c "set -Eeuo pipefail
+    OMAMAC_CHECKOUT='$REPO_ROOT'
+    for lib in paths ui questions choices core apps doctor; do source \"$REPO_ROOT/lib/\$lib.sh\"; done
+    DOCTOR_HAS_CHOICES=1 DOCTOR_GONE=()
+    CHOICES[apps_media]='spotify vlc'
+    core_cask_state() { [ \"\$1\" = spotify ] && echo missing; }
+    doctor_check_apps || echo rc=\$?"
+  [[ "$output" == *"✗ Spotify — you chose it, but it's gone from Applications"* ]]
+  [[ "$output" == *"ℹ Your apps — skipped, Homebrew can't list what's installed"* ]]
+  [[ "$output" == *"rc=1" ]]
+}
+
 @test "doctor: Reinstall for an app Homebrew doesn't list runs brew install --cask" {
   healthy_mac
   healthy_apps vlc

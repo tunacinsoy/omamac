@@ -691,6 +691,8 @@ brew uninstall --cask --zap vlc" ]
   [ "$status" -eq 0 ]
   [[ "$output" == *"VLC: installed by hand, so the app stays. omamac only forgets your pick."* ]]
   [ "$(prompts)" = "gum confirm --default=false Remove VLC?" ]
+  [[ "$output" == *"✓ VLC is removed from your answers"* ]]
+  [ -n "$(ls "$HOME/.local/state/omamac/logs")" ]
   no_brew_changes
   [ -e "$OMAMAC_TEST_APPLICATIONS/VLC.app" ]
   grep -qx 'apps_media=' "$CHOICES_FILE"
@@ -733,6 +735,19 @@ brew uninstall --cask --zap vlc" ]
   [ -z "$(prompts)" ]
   no_brew_changes
   grep -qx 'apps_media=vlc' "$CHOICES_FILE"
+}
+
+@test "uninstall zoom: a root-owned app isn't write-tested; the data question comes first" {
+  app_run apps_communication zoom zoom
+  # Zoom's installer package leaves the app owned by root.
+  stub touch 'case "$1" in *.omamac-write-test) echo "touch: $1: Permission denied" >&2; exit 1 ;; esac; exec /usr/bin/touch "$@"'
+  gum_answers no yes
+  run omamac_uninstall zoom
+  [ "$status" -eq 0 ]
+  run ! grep -q 'omamac-write-test' "$STUB_LOG"
+  [ "$(prompts | head -1)" = "gum confirm --default=false Also remove Zoom's settings and data?" ]
+  grep -qx 'brew uninstall --cask zoom' "$STUB_LOG"
+  grep -qx 'apps_communication=' "$CHOICES_FILE"
 }
 
 @test "uninstall vlc: a failed brew uninstall keeps the pick" {

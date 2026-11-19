@@ -166,8 +166,12 @@ update_upgrade_apps() {
     label=${label_of[$cask]:-}
     [ -n "$label" ] || continue
     app="$OMAMAC_APPLICATIONS/${CASK_APP[$cask]}"
-    status=0
-    app_management_ok "$app" || status=$?
+    id=${id_of[$cask]:-} status=0
+    # An installer-package app (password=yes) is root-owned, so the write test
+    # can't reach it; Homebrew upgrades it with sudo. Docker.app is the user's.
+    if [ -z "$id" ] || [ "${APP_PASSWORD[$id]:-}" != yes ]; then
+      app_management_ok "$app" || status=$?
+    fi
     case $status in
       0)
         if [ "${password_of[$cask]:-}" = yes ]; then

@@ -19,7 +19,9 @@ if [[ $before != "$after" ]]; then
   exit 1
 fi
 # Uninstall takes the app, the cask's links and lazydocker away; the yes to
-# the data question takes ~/.docker too.
+# the data question takes ~/.docker too. Docker Desktop is never opened here,
+# so put a file in ~/.docker for the zap to delete.
+mkdir -p ~/.docker && print -r -- '{}' > ~/.docker/omamac-test.json
 omamac uninstall docker-desktop
 [[ ! -e /Applications/Docker.app ]]
 if brew list --cask docker-desktop; then exit 1; fi

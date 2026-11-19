@@ -217,6 +217,27 @@ changes() { grep -E '^brew (install|reinstall|uninstall|upgrade|tap|services)' "
   [ -d "$OMAMAC_TEST_APPLICATIONS/VLC.app" ]
 }
 
+@test "apps_install: a hand-installed Zoom or Google Drive gets the hand line too" {
+  apps_brew
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/zoom.us.app" "$OMAMAC_TEST_APPLICATIONS/Google Drive.app"
+  in_steps 'CHOICES[apps_communication]=zoom; CHOICES[apps_storage]=google-drive; apps_install'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ Zoom is already installed, not through Homebrew. omamac won't update it."* ]]
+  [[ "$output" == *"ℹ Google Drive is already installed, not through Homebrew. omamac won't update it."* ]]
+  [ -z "$(changes)" ]
+}
+
+@test "apps_install: ✓ when any app is chosen, even with nothing to install; nothing when none is" {
+  apps_brew
+  "$P/bin/brew" install --cask zoom
+  in_steps 'CHOICES[apps_communication]=zoom; apps_install'
+  [ "$status" -eq 0 ]
+  [ "$output" = "✓ Your apps are installed" ]
+  in_steps 'apps_install'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "apps_install: listed but the app is gone, reinstalled; only the given ids" {
   apps_brew
   "$P/bin/brew" install --cask vlc

@@ -170,15 +170,12 @@ apps_install_password() {
   fi
 }
 
-# apps_install [<id>…]: the chosen apps without password=yes, or the given
-# ids, one Homebrew call each, so a failure names the app.
+# apps_install [<id>…]: the chosen apps, or the given ids. Each missing app
+# without password=yes gets its own Homebrew call, so a failure names the app.
 apps_install() {
   local ids=("$@") id label cask state brew="$OMAMAC_BREW_PREFIX/bin/brew"
-  if [ "$#" -eq 0 ]; then
-    while IFS= read -r id; do
-      [ "${APP_PASSWORD[$id]}" = yes ] || ids+=("$id")
-    done < <(apps_chosen)
-  fi
+  [ "$#" -gt 0 ] || mapfile -t ids < <(apps_chosen)
+  [ "${#ids[@]}" -gt 0 ] || return 0
   for id in "${ids[@]}"; do
     label=$(apps_label "$id") || return
     cask=${APP_CASK[$id]}
@@ -186,6 +183,8 @@ apps_install() {
     state=$(core_cask_state "$cask") || return
     case $state in
       missing)
+        # The password step installs these in the open; never under a spinner.
+        [ "${APP_PASSWORD[$id]}" != yes ] || continue
         # A plain install of a cask Homebrew lists does nothing; reinstall puts the app back.
         if core_cask_listed "$cask"; then
           ui_run "Reinstalling $label" "$brew" reinstall --cask "$cask" || return
@@ -196,4 +195,5 @@ apps_install() {
       hand) ui_info "$label is already installed, not through Homebrew. omamac won't update it." ;;
     esac
   done
+  ui_ok "Your apps are installed"
 }

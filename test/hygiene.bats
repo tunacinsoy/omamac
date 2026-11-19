@@ -68,11 +68,11 @@ setup() { setup_sandbox; }
 
 @test "--zap only in the uninstall path" {
   # --zap deletes the user's data, so only uninstall passes it, after a yes;
-  # lib/docker.sh passes on what lib/remove.sh gives it.
+  # lib/docker.sh gets it from lib/remove.sh through "$@".
   cd "$REPO_ROOT"
   run grep -rn -e '--zap' bin lib install.sh update.sh
   [ "$status" -eq 0 ]
-  [ -z "$(grep -vE '^lib/(remove|docker)\.sh:' <<< "$output")" ]
+  [ -z "$(grep -v '^lib/remove\.sh:' <<< "$output")" ]
 }
 
 @test "omamac never answers Homebrew's password prompt itself" {
@@ -83,10 +83,10 @@ setup() { setup_sandbox; }
   [ "$status" -eq 1 ]
 }
 
-@test "no cask command passes --force" {
-  # --force would overwrite an app the user installed by hand.
+@test "omamac never passes --force" {
+  # On a cask it would overwrite an app the user installed by hand.
   cd "$REPO_ROOT"
-  run grep -rnE -e '--cask.*(--force|[[:space:]]-f([[:space:]]|$))' bin lib install.sh update.sh
+  run grep -rnE -e '--force|--cask.*[[:space:]]-f([[:space:]]|$)' bin lib install.sh update.sh
   [ "$status" -eq 1 ]
 }
 

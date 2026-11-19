@@ -501,7 +501,7 @@ app_installed() {
   run ! grep -q '^brew upgrade --cask vlc' "$STUB_LOG"
 }
 
-@test "apps: Ghostty, VLC and Zoom refused: all three named" {
+@test "apps: Ghostty and VLC refused: both named; Zoom isn't write-tested and upgrades" {
   app_installed vlc
   choose apps_communication zoom
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask zoom
@@ -511,8 +511,22 @@ app_installed() {
   stub open
   run update
   [ "$status" -eq 1 ]
-  [[ "$output" == *"Ghostty, Zoom, VLC are not."* ]]
-  run ! grep -q '^brew upgrade --cask' "$STUB_LOG"
+  [[ "$output" == *"Ghostty, VLC are not."* ]]
+  [ "$(grep '^brew upgrade --cask' "$STUB_LOG")" = "brew upgrade --cask zoom" ]
+}
+
+@test "apps: an outdated Zoom isn't write-tested; an outdated Docker Desktop still is" {
+  desktop_installed
+  choose apps_communication zoom
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask zoom
+  printf 'zoom\ndocker-desktop\n' > "$OMAMAC_TEST_BREW_PREFIX/outdated"
+  # Zoom's installer package leaves the app owned by root.
+  stub touch 'case "$1" in *zoom.us.app/.omamac-write-test) echo "touch: $1: Permission denied" >&2; exit 1 ;; esac; exec /usr/bin/touch "$@"'
+  run update
+  [ "$status" -eq 0 ]
+  run ! grep -q '^touch .*zoom.us.app' "$STUB_LOG"
+  grep -q '^touch .*Docker.app/.omamac-write-test' "$STUB_LOG"
+  grep -qx 'brew upgrade --cask docker-desktop zoom' "$STUB_LOG"
 }
 
 @test "apps: Zoom and Docker Desktop outdated: one open upgrade, no spinner" {

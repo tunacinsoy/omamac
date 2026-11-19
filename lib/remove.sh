@@ -65,9 +65,12 @@ remove_app() {
   if [ "$state" = hand ]; then
     ui_box "$label: installed by hand, so the app stays. omamac only forgets your pick."
     ask_yes "Remove $label?" || { ui_info "Nothing was removed."; exit 0; }
+    log_start
   else
-    # A trashed app has nothing to write to.
-    [ "$state" != brew ] || remove_app_management_ok "$OMAMAC_APPLICATIONS/${APP_BUNDLE[$id]}" "$id"
+    # A trashed app has nothing to write to. An installer-package app is
+    # root-owned, so the write test can't reach it; Homebrew removes it with sudo.
+    [ "$state" != brew ] || [ "${APP_PASSWORD[$id]}" = yes ] \
+      || remove_app_management_ok "$OMAMAC_APPLICATIONS/${APP_BUNDLE[$id]}" "$id"
     # Without the cask Homebrew has no data list to delete, so nothing to ask.
     if core_cask_listed "$cask"; then
       listed=1
@@ -89,7 +92,7 @@ remove_app() {
   apps_drop "$id"
   OMAMAC_STEP='saving your answers'
   choices_save "$OMAMAC_CHOICES_FILE"
-  [ "$state" = hand ] || ui_ok "$label is removed"
+  if [ "$state" = hand ]; then ui_ok "$label is removed from your answers"; else ui_ok "$label is removed"; fi
 }
 
 # remove_docker <colima|docker-desktop>: take that away. The user's Docker
