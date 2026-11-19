@@ -132,9 +132,10 @@ update_upgrade_casks() {
 # Ghostty, Docker Desktop (when chosen) and the chosen apps. Homebrew replaces
 # the app, which needs App Management; without it, skip only that app, say how
 # to fix it, and let update_main finish and exit 1. The password apps share one
-# call in the open, so Homebrew asks once.
+# call, so Homebrew asks once. Every upgrade runs in the open: it runs the old
+# version's uninstall steps, which ask for the password for some casks (Discord, Dropbox).
 update_upgrade_apps() {
-  local id cask state out label app status
+  local id cask state out label app status said=0
   local order=(ghostty) casks=() outdated=() pids=() pcasks=()
   local -A label_of=() password_of=() id_of=()
   OMAMAC_STEP='upgrading your apps'
@@ -178,7 +179,8 @@ update_upgrade_apps() {
           pids+=("${id_of[$cask]}") pcasks+=("$cask")
         else
           OMAMAC_STEP="upgrading $label"
-          ui_run "Upgrading $label" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask "$cask"
+          [ "$said" -eq 1 ] || { ui_info "Homebrew may ask for your password."; said=1; }
+          ui_run_open "Upgrading $label" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask "$cask"
         fi
         ;;
       1)

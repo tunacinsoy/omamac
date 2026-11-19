@@ -138,6 +138,7 @@ allow=Cap: allow Screen Recording, and Camera and Microphone if you use them.
 - `update_upgrade_app` takes the label and whether Homebrew asks for the password. Update calls it for Ghostty, Docker Desktop (when chosen) and each chosen app that Homebrew manages.
 - One `brew outdated --cask --quiet <casks…>` for all of them first, instead of one call each. Only the listed ones go on to the App Management check and the upgrade; installer-package apps skip the check, as on uninstall. The closing ✗ line still names the apps that weren't upgraded.
 - The outdated password apps (and Docker Desktop) are upgraded in one `brew upgrade --cask …` in the open, after the same line as the install, so Homebrew asks once.
+- The other apps (and Ghostty) are upgraded one call each, also in the open, after "Homebrew may ask for your password." once: an upgrade runs the old version's uninstall steps, which ask for the password for some casks (Discord, Dropbox).
 - update's closing ✗ line joins every app in `UPDATE_NOT_UPGRADED` with `clis_join` (today it names only the first two).
 - `apply_all` puts back a chosen app that is missing, as it does a CLI.
 

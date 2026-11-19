@@ -485,6 +485,19 @@ app_installed() {
   run ! grep -q 'greedy.*vlc' "$STUB_LOG"
 }
 
+@test "apps: Ghostty and VLC outdated: upgraded in the open, the password line once" {
+  app_installed vlc
+  ghostty_app
+  printf 'ghostty\nvlc\n' > "$OMAMAC_TEST_BREW_PREFIX/outdated"
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(grep -c 'ℹ Homebrew may ask for your password.' <<< "$output")" -eq 1 ]
+  [[ "$output" == *"ℹ Homebrew may ask for your password."$'\n'"Upgrading Ghostty"* ]]
+  grep -qx 'brew upgrade --cask ghostty' "$STUB_LOG"
+  grep -qx 'brew upgrade --cask vlc' "$STUB_LOG"
+  run ! grep -q '^gum spin.*Upgrading \(Ghostty\|VLC\)' "$STUB_LOG"
+}
+
 @test "apps: VLC outdated, App Management off: Zoom is upgraded, VLC named, exit 1" {
   app_installed vlc
   choose apps_communication zoom
