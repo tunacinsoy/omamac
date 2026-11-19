@@ -1,6 +1,6 @@
 # omamac — vision
 
-Status: living document · Owner: Tuna Cinsoy · Started Nov 9, 2026 · Updated Nov 18, 2026
+Status: living document · Owner: Tuna Cinsoy · Started Nov 9, 2026 · Updated Nov 19, 2026
 
 What omamac is, who it's for and why, in as much detail as we have today.
 
@@ -78,7 +78,7 @@ What that means in practice:
 - `omamac doctor` — check that everything is healthy and explain anything that isn't (see below).
 - `omamac uninstall <thing>` — remove one thing omamac installed, safely, putting the Mac back the way it was before that thing. With nothing named, it asks what to remove. Core tools (Ghostty, herdr, starship…) can't be uninstalled one by one: omamac says they're part of the core and stops.
 
-To change an earlier answer (for example colima → OrbStack), the user uninstalls one and installs the other. There is no separate "edit answers" command.
+To change an earlier answer (for example colima → Docker Desktop), the user uninstalls one and installs the other. There is no separate "edit answers" command.
 
 **Known v1 gap: omamac can't remove itself.** Uninstall works per thing, so in v1 nothing removes the core tools, omamac's include lines, its generated files or the checkout. This goes against the principle "uninstall restores the previous state"; it is accepted for v1 to keep the scope down, and removing omamac itself is in the Backlog.
 
@@ -140,7 +140,7 @@ omamac configures tools whose config files the user may already have written, on
 - Multiplexer: **herdr only** (`brew install herdr`), with omawsl's herdr config and key bindings. zellij is not offered: one multiplexer means one config, one set of bindings and no question to ask.
 - Languages via mise, at the latest version when chosen: Ruby on Rails, Node.js, Go, Python, Elixir, Rust, Java. PHP is left out for now (see "Backlog").
 - Cloud CLIs via Homebrew: Azure CLI, AWS CLI, Google Cloud CLI, GitHub CLI (`gh`), and Terraform from HashiCorp's official tap (`hashicorp/tap/terraform`), since it's no longer in Homebrew's main repository.
-- Docker: one choice, nothing pre-selected: colima, OrbStack, Docker Desktop or none.
+- Docker: one choice, nothing pre-selected: colima, Docker Desktop or none. colima runs as a background service that starts at login.
 
 **Terminal and look**
 - **Ghostty and herdr are the terminal pair.** Ghostty is the only terminal app and herdr runs inside it. Opening Ghostty runs `herdr`, which attaches to the running herdr session or starts one: the user never starts, configures or thinks about herdr. If herdr fails to start, Ghostty falls back to plain zsh with a one-line message, so the terminal is never empty. Ghostty's own tabs and splits still work but omamac doesn't promote them; herdr does that job. Ghostty gets `macos-option-as-alt = left` so the left Option key is Alt for herdr and the right one still types special characters (Polish letters and the like).
@@ -212,7 +212,7 @@ This is why the repo is public from day one: the VM must fetch omamac with no cr
 
 **Gate A (end of Phase 1):** the one-liner works in a fresh VM, and a second run changes nothing.
 
-**Gate B (v1):** Tuna backs up, erases the Mac (System Settings → General → Transfer or Reset → Erase All Content and Settings), sets it up again using only the README, runs the one-liner, and works on it for a day. Anything that feels off, or any step the README missed, becomes an issue before release. This is also where Tuna first lives with the Mac-only tools he hasn't used before (Ghostty, Raycast, Cap, colima or OrbStack). Tools are not trialled by hand beforehand, because that would mean configuring them manually, the very thing omamac exists to avoid. Since nothing is pre-selected, a tool that doesn't earn its place is simply answered "no", or dropped from the catalog.
+**Gate B (v1):** Tuna backs up, erases the Mac (System Settings → General → Transfer or Reset → Erase All Content and Settings), sets it up again using only the README, runs the one-liner, and works on it for a day. Anything that feels off, or any step the README missed, becomes an issue before release. This is also where Tuna first lives with the Mac-only tools he hasn't used before (Ghostty, Raycast, Cap, colima or Docker Desktop). Tools are not trialled by hand beforehand, because that would mean configuring them manually, the very thing omamac exists to avoid. Since nothing is pre-selected, a tool that doesn't earn its place is simply answered "no", or dropped from the catalog.
 
 Until Gate B, omamac never runs on Tuna's Mac. That Mac is the development machine, kept stable; whatever is installed on it by hand until then is wiped at Gate B.
 
@@ -234,7 +234,7 @@ A suggested order, not a contract. Phases may be split, merged or reordered if t
 | 2 | First-run questions, answer fixtures for tests, saved choices | Answers saved; re-runs skip them; nothing pre-selected |
 | 3 | Shell, prompt, editor, monitor, languages, cloud CLIs, herdr | Each installs, updates and uninstalls idempotently in the VM |
 | 4 | Ghostty (opening straight into herdr), themes, macOS desktop and window-margin settings | Opening Ghostty lands in herdr; theme switching works everywhere at once; desktop settings apply, re-run changes nothing, uninstall restores them |
-| 5 | Docker options, background services | A container runs in the VM |
+| 5 | Docker options; colima as a background service that starts at login | A container runs in the VM |
 | 6 | Desktop app catalog, including Wispr Flow and Cap; adoption of hand-installed apps; uninstall with app-only or zap; Dock cleanup and Dock auto-hide, since the Dock needs to know which apps were installed | Apps install, update and uninstall cleanly, including ones already present by hand or through Homebrew; the Dock holds the installed apps, uninstall restores the old Dock |
 | 7 | Docs, full VM run of every option, release | **Gate B**, then v1 |
 
@@ -269,7 +269,7 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - The core, installed for everyone without a question: Ghostty, herdr, the zsh config, starship, neovim, btop, mise, and the tools the aliases and LazyVim need (eza, bat, zoxide, fzf, ripgrep, fd, lazygit, tree-sitter-cli). "Nothing pre-selected" applies to everything else.
 - The first run asks for a theme (all 13 of omawsl's themes, nothing pre-selected) and applies it, so the user sees it on first opening Ghostty.
 - mise is the one exception to "Homebrew is the only record": it manages language runtimes; Homebrew manages apps and tools, herdr included.
-- Docker is one choice with nothing pre-selected: colima, OrbStack, Docker Desktop or none. OrbStack is not also listed under Developer apps.
+- Docker is one choice with nothing pre-selected: colima, Docker Desktop or none. OrbStack is not offered: its install stops at macOS's "Open?" dialog, so it can't run unattended.
 - omamac's checkout is read-only code; generated configs live in `~/.config/omamac/`, choices and migration state in `~/.local/state/omamac/`.
 - Ghostty runs `herdr`, which attaches or starts a session; if herdr fails, Ghostty falls back to zsh with a one-line message. Ghostty tabs and splits are not promoted.
 - One admin password prompt per run, kept valid until the run ends and never stored; all questions come before any install.
@@ -435,3 +435,4 @@ One line per decision: date, question, answer, who decided. Move the item out of
 - 2026-11-17 — A user's own herdr or starship config (no include possible) — left untouched, doctor explains; omamac's file is used only when there is none; the user's mise pins win — Tuna
 - 2026-11-17 — PHP — dropped from the languages for now (mise compiles it on macOS); in the Backlog — Tuna
 - 2026-11-17 — herdr's settings screen writes into omamac's herdr file — omamac rewrites its file anyway, so herdr always follows omamac's theme; the README warns; own settings go in `~/.config/herdr/config.toml` — Tuna
+- 2026-11-19 — Docker — OrbStack dropped; the choice is colima, Docker Desktop or none (OrbStack's install waits on macOS's "Open?" dialog, so it can't run unattended or be tested in the VM) — Tuna
