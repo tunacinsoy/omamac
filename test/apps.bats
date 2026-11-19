@@ -213,7 +213,7 @@ changes() { grep -E '^brew (install|reinstall|uninstall|upgrade|tap|services)' "
   [ "$(changes)" = $'brew install --cask vlc\nbrew install --cask visual-studio-code' ]
   grep -q '^gum spin --title Installing VLC ' "$STUB_LOG"
   grep -q '^gum spin --title Installing VS Code ' "$STUB_LOG"
-  [[ "$output" == *"ℹ Obsidian is already installed, not through Homebrew. omamac won't update it."* ]]
+  [[ "$output" == *"ℹ Obsidian is already installed, not through Homebrew. omamac won't update it. To let Homebrew take it over: brew install --cask --adopt obsidian"* ]]
   [ -d "$OMAMAC_TEST_APPLICATIONS/VLC.app" ]
 }
 
@@ -367,7 +367,7 @@ vlc_by_hand() {
   vlc_by_hand
   in_steps 'CHOICES[apps_media]=vlc; apps_install'
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ VLC is already installed, not through Homebrew. omamac won't update it."* ]]
+  [[ "$output" == *"ℹ VLC is already installed, not through Homebrew. omamac won't update it. To let Homebrew take it over: brew install --cask --adopt vlc"* ]]
   [ -z "$(changes)" ]
 }
 

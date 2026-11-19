@@ -328,11 +328,32 @@ by_hand() { # <cask> <App.app>
   gum_answers vlc no vscode "" "" yes
   run omamac_install
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Developer tools: VS Code"* || "$output" == *"VS Code"* ]]
+  [[ "$output" == *"Developer: VS Code"* ]]
   [[ "$output" != *"Media: VLC"* ]]
   grep -qx 'apps_media=spotify' "$CHOICES_FILE"
   run ! grep -qE '^brew .*vlc' "$STUB_LOG"
   grep -qx 'brew install --cask visual-studio-code' "$STUB_LOG"
+}
+
+@test "install adopt: VLC by hand, yes, the adopt fails: exit 1, the pick is kept" {
+  choose apps_media spotify
+  by_hand vlc VLC.app
+  gum_answers vlc yes "" "" yes
+  T_BREW_FAIL_CASK=vlc run omamac_install
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"omamac stopped while handing VLC to Homebrew."* ]]
+  grep -qx 'apps_media=spotify vlc' "$CHOICES_FILE"
+  [ "$(cat "$OMAMAC_TEST_APPLICATIONS/VLC.app/marker")" = mine ]
+}
+
+@test "install adopt: Wispr Flow by hand, yes: brew adopts it and wispr_flow is yes" {
+  choose wispr_flow no
+  by_hand wispr-flow "Wispr Flow.app"
+  gum_answers yes yes "" "" yes
+  run omamac_install
+  [ "$status" -eq 0 ]
+  grep -qx 'brew install --cask --adopt wispr-flow' "$STUB_LOG"
+  grep -qx 'wispr_flow=yes' "$CHOICES_FILE"
 }
 
 @test "install adopt: every pick answered no: nothing changed, exit 0" {
