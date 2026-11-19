@@ -3,13 +3,27 @@
 prefix="${OMAMAC_TEST_BREW_PREFIX:?fake-brew needs OMAMAC_TEST_BREW_PREFIX}"
 [ -z "${STUB_LOG:-}" ] || echo "brew $*" >> "$STUB_LOG"
 
-# fake_cask <cask>: the Caskroom entry; Ghostty and Docker Desktop also put their app in Applications.
-fake_cask() {
-  mkdir -p "$prefix/Caskroom/$1"
+# fake_cask_app <cask>: the app it puts in Applications, for Ghostty, Docker
+# Desktop and every cask in apps/; nothing for any other cask.
+fake_cask_app() {
+  local f
   case "$1" in
-    ghostty) mkdir -p "${OMAMAC_TEST_APPLICATIONS:?fake-brew needs OMAMAC_TEST_APPLICATIONS}/Ghostty.app" ;;
-    docker-desktop) mkdir -p "${OMAMAC_TEST_APPLICATIONS:?fake-brew needs OMAMAC_TEST_APPLICATIONS}/Docker.app" ;;
+    ghostty) echo Ghostty.app ;;
+    docker-desktop) echo Docker.app ;;
+    *)
+      for f in "${REPO_ROOT:?fake-brew needs REPO_ROOT}"/apps/*; do
+        if [ "$(sed -n 's/^cask=//p' "$f")" = "$1" ]; then sed -n 's/^app=//p' "$f"; fi
+      done
+      ;;
   esac
+}
+
+# fake_cask <cask>: the Caskroom entry and its app.
+fake_cask() {
+  local app
+  mkdir -p "$prefix/Caskroom/$1"
+  app=$(fake_cask_app "$1")
+  [ -z "$app" ] || mkdir -p "${OMAMAC_TEST_APPLICATIONS:?fake-brew needs OMAMAC_TEST_APPLICATIONS}/$app"
 }
 
 case "${1:-}" in
@@ -63,7 +77,12 @@ case "${1:-}" in
     root=Cellar
     if [ "${1:-}" = "--cask" ]; then root=Caskroom; shift; fi
     for f in "$@"; do
-      if [ "$root" = Caskroom ]; then fake_cask "$f"; continue; fi
+      if [ "$root" = Caskroom ]; then
+        # A dropped download: the cask fails before Homebrew records it.
+        [ "$f" != "${T_BREW_FAIL_CASK:-}" ] || { echo "Error: Download failed on Cask '$f'" >&2; exit 1; }
+        fake_cask "$f"
+        continue
+      fi
       # Like Homebrew: no two formulas with the same name from different taps.
       d="$prefix/Cellar/${f##*/}" tap=''
       case "$f" in */*/*) tap=${f%/*} ;; esac
@@ -101,14 +120,16 @@ case "${1:-}" in
     shift
     root=Cellar
     if [ "${1:-}" = "--cask" ]; then root=Caskroom; shift; fi
+    # --zap: the app goes as without it; the call log records the flag.
+    [ "${1:-}" != --zap ] || shift
     for f in "$@"; do
       [ "${T_BREW_UNINSTALL_FAIL:-0}" != 1 ] || { echo "Error: $f is required by other" >&2; exit 1; }
       rm -rf "${prefix:?}/$root/${f##*/}"
       # Like Homebrew: a cask uninstall takes its app too.
-      case "$root/$f" in
-        Caskroom/ghostty) rm -rf "${OMAMAC_TEST_APPLICATIONS:?}/Ghostty.app" ;;
-        Caskroom/docker-desktop) rm -rf "${OMAMAC_TEST_APPLICATIONS:?}/Docker.app" ;;
-      esac
+      if [ "$root" = Caskroom ]; then
+        app=$(fake_cask_app "$f")
+        [ -z "$app" ] || rm -rf "${OMAMAC_TEST_APPLICATIONS:?}/$app"
+      fi
     done
     ;;
   reinstall)
@@ -153,12 +174,16 @@ case "${1:-}" in
     esac
     ;;
   outdated)
-    # Like Homebrew: a named item that is outdated is printed, and the status is 1.
-    name="${*: -1}"
-    if [ -f "$prefix/outdated" ] && grep -qx "$name" "$prefix/outdated"; then
-      echo "$name"
-      exit 1
-    fi
+    # Like Homebrew: each named item that is outdated is printed, and the status is 1.
+    status=0
+    for name in "${@:2}"; do
+      case "$name" in -*) continue ;; esac
+      if [ -f "$prefix/outdated" ] && grep -qx "$name" "$prefix/outdated"; then
+        echo "$name"
+        status=1
+      fi
+    done
+    exit "$status"
     ;;
 esac
 exit 0

@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2088 # the ~ in messages is shown to the user, not expanded
 # omamac doctor. Sourced after the libraries it checks. It reports, then offers
-# fixes as questions: only for a chosen language, cloud CLI, colima or Docker Desktop that is gone.
+# fixes as questions: only for a chosen language, cloud CLI, colima, Docker Desktop or app that is gone.
 
 # doctor_report <ok|fail|info> <what> [<why>] [<fix>]. Returns 1 for fail so callers can count it.
 doctor_report() {
@@ -263,9 +263,21 @@ doctor_key() {
     echo docker
   elif [ -n "${LANGUAGE_TOOLS[$1]:-}" ]; then
     echo languages
+  elif apps_key "$1" 2>/dev/null; then
+    :
   else
     echo cloud_clis
   fi
+}
+
+# doctor_label <id>: the name shown for a gone id, app or not.
+doctor_label() {
+  local key
+  key=$(doctor_key "$1")
+  case $key in
+    apps_* | wispr_flow) apps_label "$1" ;;
+    *) question_label "$key" "$1" ;;
+  esac
 }
 
 # Sets DOCTOR_GONE to the chosen language and CLI ids that are gone, and
@@ -347,6 +359,35 @@ doctor_check_chosen() {
   return "$result"
 }
 
+# doctor_check_apps: "Your apps". Appends the chosen apps that are gone to DOCTOR_GONE,
+# after the tools'. Says nothing when no app is chosen.
+doctor_check_apps() {
+  local what="Your apps" id label state result=0 ids=()
+  if [ "$DOCTOR_HAS_CHOICES" -ne 1 ]; then
+    doctor_report info "$what" "skipped, your saved answers can't be read"
+    return 0
+  fi
+  mapfile -t ids < <(apps_chosen)
+  [ "${#ids[@]}" -gt 0 ] || return 0
+  for id in "${ids[@]}"; do
+    if ! state=$(core_cask_state "${APP_CASK[$id]}" 2>/dev/null); then
+      doctor_report info "$what" "skipped, Homebrew can't list what's installed"
+      return "$result"
+    fi
+    label=$(apps_label "$id")
+    case $state in
+      missing)
+        DOCTOR_GONE+=("$id")
+        doctor_report fail "$label" "you chose it, but it's gone from Applications" \
+          "omamac update puts it back; omamac uninstall $id drops it" || result=1
+        ;;
+      hand) doctor_report info "$label" "installed by hand, so omamac won't update it" ;;
+    esac
+  done
+  if [ "$result" -eq 0 ]; then doctor_report ok "$what"; fi
+  return "$result"
+}
+
 # doctor_offer: for each gone choice, ask what to do, when a terminal is there.
 # A failed reinstall is said and the next one is asked; the report's status stays doctor's.
 doctor_offer() {
@@ -354,7 +395,7 @@ doctor_offer() {
   if [ "${#DOCTOR_GONE[@]}" -eq 0 ] || ! ask_has_tty; then return 0; fi
   for id in "${DOCTOR_GONE[@]}"; do
     key=$(doctor_key "$id")
-    label=$(question_label "$key" "$id")
+    label=$(doctor_label "$id")
     if [ "$key" = docker ]; then
       # No drop here: dropping colima also removes it, which is omamac uninstall colima.
       ask_choose "$label is gone. What should omamac do?" "Leave it:leave" "Reinstall it:reinstall"
@@ -367,12 +408,30 @@ doctor_offer() {
         [ "$logged" -eq 1 ] || { log_start; logged=1; }
         case $key in
           languages) languages_install "$id" || ui_fail "omamac couldn't reinstall $label." ;;
-          docker) docker_install || ui_fail "omamac couldn't reinstall $label." ;;
+          # Docker Desktop's cask is the password step's.
+          docker)
+            if [ "$id" = docker-desktop ]; then
+              apps_install_password docker-desktop && docker_install
+            else
+              docker_install
+            fi || ui_fail "omamac couldn't reinstall $label."
+            ;;
+          apps_* | wispr_flow)
+            # A password app's cask is the password step's, run in the open.
+            if [ "${APP_PASSWORD[$id]}" = yes ]; then
+              apps_install_password "$id"
+            else
+              apps_install "$id"
+            fi || ui_fail "omamac couldn't reinstall $label."
+            ;;
           *) clis_install "$id" || ui_fail "omamac couldn't reinstall $label." ;;
         esac
         ;;
       drop)
-        choices_drop "$key" "$id"
+        case $key in
+          apps_* | wispr_flow) apps_drop "$id" ;;
+          *) choices_drop "$key" "$id" ;;
+        esac
         choices_save "$OMAMAC_CHOICES_FILE"
         [ "$key" != languages ] || languages_write_dropin
         ui_ok "$label is dropped from your answers"
@@ -427,6 +486,7 @@ doctor_run() {
   doctor_check_choices || status=1
   doctor_check_mise_dropin || status=1
   doctor_check_chosen || status=1
+  doctor_check_apps || status=1
   if [ "$DOCTOR_HAS_CHOICES" -eq 1 ]; then docker_check || status=1; fi
   doctor_check_settings || status=1
   doctor_offer

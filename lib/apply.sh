@@ -1,6 +1,6 @@
 # shellcheck shell=bash disable=SC2034 # OMAMAC_STEP is read by the caller's ERR trap
 # The steps the one-liner, omamac update and omamac install share. Sourced
-# after lib/core.sh, lib/neovim.sh, lib/herdr.sh, lib/ghostty.sh, lib/theme.sh, lib/languages.sh,
+# after lib/core.sh, lib/apps.sh, lib/neovim.sh, lib/herdr.sh, lib/ghostty.sh, lib/theme.sh, lib/languages.sh,
 # lib/clis.sh, lib/docker.sh and lib/settings.sh. Each step sets OMAMAC_STEP, which the caller's ERR trap
 # (install.sh, update.sh or bin/omamac) reads to name the step that failed.
 
@@ -28,9 +28,14 @@ apply_zsh_file() {
 }
 
 apply_all() {
-  # First: Homebrew may ask for the password (Docker Desktop's cask), so ask
-  # while the user is still at the keyboard. It needs no earlier step; colima's
-  # service check reads jq from /usr/bin (macOS 27), not Homebrew's.
+  # Here, not in a step: the password step adds Docker Desktop's note.
+  DOCKER_NOTES=()
+  # First: Homebrew may ask for the password (Zoom, Google Drive, Docker
+  # Desktop), so ask while the user is still at the keyboard. It needs no
+  # earlier step; neither does Docker (colima's service check reads jq from
+  # /usr/bin on macOS 27, not Homebrew's).
+  OMAMAC_STEP='installing the apps that need your password'
+  apps_install_password
   OMAMAC_STEP='installing Docker'
   docker_install
   OMAMAC_STEP="writing $OMAMAC_ZSH_FILE"
@@ -46,5 +51,6 @@ apply_all() {
   languages_install
   OMAMAC_STEP='installing your cloud CLIs'
   clis_install
+  apps_install
   settings_apply
 }

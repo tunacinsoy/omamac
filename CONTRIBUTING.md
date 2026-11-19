@@ -59,9 +59,9 @@ It runs the one-liner twice in a throwaway VM, checks that the second run change
 
 Tests that need mise use a fake, `test/helpers/fake-mise`. Its `T_*` knobs (for example `T_MISE_KEEP`) set what it reports and which tools it keeps.
 
-A change to languages or CLIs runs the `bare`, `languages` and `cloud` fixtures. A change to the macOS settings runs `bare` and `desktop`. A change to Docker runs `bare`, `colima` and `docker-desktop`.
+A change to languages or CLIs runs the `bare`, `languages` and `cloud` fixtures. A change to the macOS settings runs `bare` and `desktop`. A change to Docker runs `bare`, `colima` and `docker-desktop`. A change to apps runs `bare`, `apps` and `docker-desktop`.
 
-A fixture may have a `<name>.brew-passwords`, one digit: how many more times per command Homebrew itself asks for the password. Homebrew resets sudo before a cask step that needs it (Docker Desktop's links in `/usr/local`), so omamac's one prompt doesn't cover it. `test/vm.sh` lets the one-liner and the steps type that many more.
+A fixture may have a `<name>.brew-passwords`, one digit: how many more times per command Homebrew itself asks for the password. Homebrew resets sudo before a cask step that needs it (Docker Desktop's links in `/usr/local`, Zoom's and Google Drive's installers), so omamac's one prompt doesn't cover it. `test/vm.sh` lets the one-liner and the steps type that many more.
 
 A fixture may have a `<name>.before.sh`. It runs in the VM before the first run, in `zsh -eux` with stdin closed and no Homebrew yet, to set the VM up like a used Mac: an app installed by hand, or a Dock saved to compare with later.
 

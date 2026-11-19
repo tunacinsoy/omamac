@@ -59,9 +59,54 @@ setup() { setup_sandbox; }
   [ "$status" -eq 1 ]
 }
 
-@test "omamac never zaps Docker Desktop or removes quarantine" {
-  # --zap deletes the user's Docker data; xattr would clear a security check.
+@test "omamac never runs xattr" {
+  # It would clear macOS's first-open check. Only VM steps may run it.
   cd "$REPO_ROOT"
-  run grep -rnE -e '--zap|xattr' bin lib install.sh update.sh
+  run grep -rn 'xattr' bin lib install.sh update.sh
   [ "$status" -eq 1 ]
+}
+
+@test "--zap only in the uninstall path" {
+  # --zap deletes the user's data, so only uninstall passes it, after a yes;
+  # lib/docker.sh gets it from lib/remove.sh through "$@".
+  cd "$REPO_ROOT"
+  run grep -rn -e '--zap' bin lib install.sh update.sh
+  [ "$status" -eq 0 ]
+  [ -z "$(grep -v '^lib/remove\.sh:' <<< "$output")" ]
+}
+
+@test "omamac never answers Homebrew's password prompt itself" {
+  # Homebrew asks for the password itself; skipping or feeding that prompt
+  # would hide from the user what runs as root.
+  cd "$REPO_ROOT"
+  run grep -rnE 'HOMEBREW_SUDO_CHECKED|SUDO_ASKPASS' bin lib install.sh update.sh
+  [ "$status" -eq 1 ]
+}
+
+@test "omamac never passes --force" {
+  # On a cask it would overwrite an app the user installed by hand.
+  cd "$REPO_ROOT"
+  run grep -rnE -e '--force|--cask.*[[:space:]]-f([[:space:]]|$)' bin lib install.sh update.sh
+  [ "$status" -eq 1 ]
+}
+
+@test "--greedy only in update_upgrade_casks" {
+  # Apps update themselves; --greedy would call them outdated forever. Only
+  # the cloud CLI casks need it. Comments may name it (no # before it).
+  cd "$REPO_ROOT"
+  local all inside
+  all=$(grep -rhE -e '^[^#]*--greedy' bin lib install.sh update.sh | wc -l)
+  inside=$(sed -n '/^update_upgrade_casks()/,/^}/p' update.sh | grep -cE -e '^[^#]*--greedy')
+  [ "$all" -ge 1 ]
+  [ "$all" -eq "$inside" ]
+}
+
+@test "the README holds every allow line from apps/" {
+  local line
+  while IFS= read -r line; do
+    grep -qF -- "${line#allow=}" "$REPO_ROOT/README.md" || {
+      echo "README lacks: ${line#allow=}"
+      return 1
+    }
+  done < <(grep -h '^allow=' "$REPO_ROOT"/apps/*)
 }

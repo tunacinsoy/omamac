@@ -926,7 +926,119 @@ healthy_desktop() {
   [ "$status" -eq 1 ]
   grep -qx 'gum choose --header Docker Desktop is gone. What should omamac do? --label-delimiter=: Leave it:leave Reinstall it:reinstall' "$STUB_LOG"
   grep -qx 'brew reinstall --cask docker-desktop' "$STUB_LOG"
+  # The password step runs in the open, so a prompt shows.
+  [ -z "$(grep '^gum spin' "$STUB_LOG")" ]
   grep -qx 'docker=docker-desktop' "$CHOICES_FILE"
+}
+
+# Apps the way install leaves them: chosen, and Homebrew has each with its app.
+healthy_apps() {
+  local id
+  for id in "$@"; do
+    case $id in
+      wispr-flow) choose wispr_flow yes ;;
+      zoom) choose apps_communication zoom ;;
+      *) choose apps_media "$id" ;;
+    esac
+    "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask "$id"
+  done
+  : > "$STUB_LOG"
+}
+
+@test "doctor: chosen apps all there is ✓" {
+  healthy_mac
+  healthy_apps vlc
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ Your apps"* ]]
+}
+
+@test "doctor: no apps chosen, no Your apps line" {
+  healthy_mac
+  run doctor
+  [[ "$output" != *"Your apps"* ]]
+}
+
+@test "doctor: a gone app is ✗ and its id is offered" {
+  healthy_mac
+  healthy_apps vlc
+  rm -r "$OMAMAC_TEST_APPLICATIONS/VLC.app"
+  gum_answers leave
+  expect_fail "VLC — you chose it, but it's gone from Applications" \
+    "omamac update puts it back; omamac uninstall vlc drops it"
+  grep -qx 'gum choose --header VLC is gone. What should omamac do? --label-delimiter=: Leave it:leave Reinstall it:reinstall Remove it from my answers:drop' "$STUB_LOG"
+}
+
+@test "doctor: a hand-installed app is ℹ, exit 0" {
+  healthy_mac
+  healthy_apps vlc
+  rm -r "$OMAMAC_TEST_BREW_PREFIX/Caskroom/vlc"
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ VLC — installed by hand, so omamac won't update it"* ]]
+}
+
+@test "doctor: Homebrew can't list: Your apps skipped" {
+  healthy_mac
+  healthy_apps vlc
+  T_BREW_LIST_FAIL=1 run doctor
+  [[ "$output" == *"ℹ Your apps — skipped, Homebrew can't list what's installed"* ]]
+}
+
+@test "doctor: Homebrew can't list partway through: an earlier ✗ still counts" {
+  # The second app's list fails after the first app was found gone.
+  run "$BASH5" -c "set -Eeuo pipefail
+    OMAMAC_CHECKOUT='$REPO_ROOT'
+    for lib in paths ui questions choices core apps doctor; do source \"$REPO_ROOT/lib/\$lib.sh\"; done
+    DOCTOR_HAS_CHOICES=1 DOCTOR_GONE=()
+    CHOICES[apps_media]='spotify vlc'
+    core_cask_state() { [ \"\$1\" = spotify ] && echo missing; }
+    doctor_check_apps || echo rc=\$?"
+  [[ "$output" == *"✗ Spotify — you chose it, but it's gone from Applications"* ]]
+  [[ "$output" == *"ℹ Your apps — skipped, Homebrew can't list what's installed"* ]]
+  [[ "$output" == *"rc=1" ]]
+}
+
+@test "doctor: Reinstall for an app Homebrew doesn't list runs brew install --cask" {
+  healthy_mac
+  healthy_apps vlc
+  rm -r "$OMAMAC_TEST_APPLICATIONS/VLC.app" "$OMAMAC_TEST_BREW_PREFIX/Caskroom/vlc"
+  gum_answers reinstall
+  run doctor
+  [ "$status" -eq 1 ]
+  grep -qx 'brew install --cask vlc' "$STUB_LOG"
+  [ -e "$OMAMAC_TEST_APPLICATIONS/VLC.app" ]
+}
+
+@test "doctor: Reinstall for an app Homebrew lists runs brew reinstall --cask" {
+  healthy_mac
+  healthy_apps vlc
+  rm -r "$OMAMAC_TEST_APPLICATIONS/VLC.app"
+  gum_answers reinstall
+  run doctor
+  grep -qx 'brew reinstall --cask vlc' "$STUB_LOG"
+  [ -e "$OMAMAC_TEST_APPLICATIONS/VLC.app" ]
+}
+
+@test "doctor: Reinstall for a password app runs without a spinner" {
+  healthy_mac
+  healthy_apps zoom
+  rm -r "$OMAMAC_TEST_APPLICATIONS/zoom.us.app"
+  gum_answers reinstall
+  run doctor
+  grep -qx 'brew reinstall --cask zoom' "$STUB_LOG"
+  [ -z "$(grep '^gum spin' "$STUB_LOG")" ]
+  [[ "$output" == *"Homebrew asks for your password for: Zoom."* ]]
+}
+
+@test "doctor: Remove it from my answers drops the app" {
+  healthy_mac
+  healthy_apps wispr-flow
+  rm -r "$OMAMAC_TEST_APPLICATIONS/Wispr Flow.app"
+  gum_answers drop
+  run doctor
+  [ "$status" -eq 1 ]
+  grep -qx 'wispr_flow=no' "$CHOICES_FILE"
 }
 
 @test "doctor: with colima, a Docker Desktop app isn't reported" {

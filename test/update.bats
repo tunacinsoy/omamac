@@ -21,7 +21,7 @@ setup() {
   ORIGIN="$BATS_TEST_TMPDIR/origin"
   CHECKOUT="$HOME/.local/share/omamac"
   mkdir -p "$ORIGIN"
-  cp -R "$REPO_ROOT/update.sh" "$REPO_ROOT/lib" "$REPO_ROOT/config" "$REPO_ROOT/themes" "$ORIGIN/"
+  cp -R "$REPO_ROOT/update.sh" "$REPO_ROOT/lib" "$REPO_ROOT/apps" "$REPO_ROOT/config" "$REPO_ROOT/themes" "$ORIGIN/"
   git -C "$ORIGIN" init -q -b main
   commit_all "$ORIGIN" origin
   git clone -q "$ORIGIN" "$CHECKOUT"
@@ -397,9 +397,9 @@ desktop_installed() {
   echo docker-desktop > "$OMAMAC_TEST_BREW_PREFIX/outdated"
   run update
   [ "$status" -eq 0 ]
-  grep -qx 'brew outdated --cask --quiet docker-desktop' "$STUB_LOG"
+  grep -qx 'brew outdated --cask --quiet ghostty docker-desktop' "$STUB_LOG"
   grep -qx 'brew upgrade --cask docker-desktop' "$STUB_LOG"
-  [[ "$output" == *"ℹ Homebrew asks for your password once Docker Desktop is downloaded, for its links in /usr/local."* ]]
+  [[ "$output" == *"ℹ Homebrew asks for your password for: Docker Desktop."* ]]
   run ! grep '^gum spin.*docker-desktop' "$STUB_LOG"
   run ! grep -q 'greedy.*docker-desktop' "$STUB_LOG"
 }
@@ -450,8 +450,116 @@ desktop_installed() {
   stub open
   run update
   [ "$status" -eq 1 ]
-  [[ "$output" == *"Ghostty and Docker Desktop are not"* ]]
+  [[ "$output" == *"Ghostty, Docker Desktop are not"* ]]
   [[ "$output" == *"Docker Desktop has an update, but macOS won't let your terminal change apps."* ]]
   grep -q '^brew upgrade ' "$STUB_LOG"
   run ! grep -q '^brew upgrade --cask' "$STUB_LOG"
+}
+
+# app_installed vlc|zoom…: choose them and install their casks, as install leaves them.
+app_installed() {
+  local id cask
+  for id in "$@"; do
+    case $id in
+      vlc) choose apps_media vlc ;;
+      zoom) choose apps_communication zoom ;;
+    esac
+    cask=$(sed -n 's/^cask=//p' "$REPO_ROOT/apps/$id")
+    "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask "$cask"
+  done
+  : > "$STUB_LOG"
+}
+
+@test "apps: one outdated call for Ghostty, VLC and Zoom; only the listed ones upgrade" {
+  app_installed vlc
+  choose apps_communication zoom
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask zoom
+  : > "$STUB_LOG"
+  echo vlc > "$OMAMAC_TEST_BREW_PREFIX/outdated"
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^brew outdated' "$STUB_LOG")" -eq 1 ]
+  grep -qx 'brew outdated --cask --quiet ghostty zoom vlc' "$STUB_LOG"
+  grep -qx 'brew upgrade --cask vlc' "$STUB_LOG"
+  run ! grep -q '^brew upgrade --cask.*\(zoom\|ghostty\)' "$STUB_LOG"
+  run ! grep -q 'greedy.*vlc' "$STUB_LOG"
+}
+
+@test "apps: Ghostty and VLC outdated: upgraded in the open, the password line once" {
+  app_installed vlc
+  ghostty_app
+  printf 'ghostty\nvlc\n' > "$OMAMAC_TEST_BREW_PREFIX/outdated"
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(grep -c 'ℹ Homebrew may ask for your password.' <<< "$output")" -eq 1 ]
+  [[ "$output" == *"ℹ Homebrew may ask for your password."$'\n'"Upgrading Ghostty"* ]]
+  grep -qx 'brew upgrade --cask ghostty' "$STUB_LOG"
+  grep -qx 'brew upgrade --cask vlc' "$STUB_LOG"
+  run ! grep -q '^gum spin.*Upgrading \(Ghostty\|VLC\)' "$STUB_LOG"
+}
+
+@test "apps: VLC outdated, App Management off: Zoom is upgraded, VLC named, exit 1" {
+  app_installed vlc
+  choose apps_communication zoom
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask zoom
+  printf 'vlc\nzoom\n' > "$OMAMAC_TEST_BREW_PREFIX/outdated"
+  stub open
+  # Only VLC's folder refuses.
+  stub touch 'case "$1" in *VLC.app/.omamac-write-test) echo "touch: $1: Operation not permitted" >&2; exit 1 ;; esac; exec /usr/bin/touch "$@"'
+  run update
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"VLC is not."* ]]
+  [[ "$output" == *"VLC has an update, but macOS won't let your terminal change apps."* ]]
+  grep -qx 'brew upgrade --cask zoom' "$STUB_LOG"
+  run ! grep -q '^brew upgrade --cask vlc' "$STUB_LOG"
+}
+
+@test "apps: Ghostty and VLC refused: both named; Zoom isn't write-tested and upgrades" {
+  app_installed vlc
+  choose apps_communication zoom
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask zoom
+  ghostty_app
+  printf 'ghostty\nvlc\nzoom\n' > "$OMAMAC_TEST_BREW_PREFIX/outdated"
+  deny_app_management
+  stub open
+  run update
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Ghostty, VLC are not."* ]]
+  [ "$(grep '^brew upgrade --cask' "$STUB_LOG")" = "brew upgrade --cask zoom" ]
+}
+
+@test "apps: an outdated Zoom isn't write-tested; an outdated Docker Desktop still is" {
+  desktop_installed
+  choose apps_communication zoom
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask zoom
+  printf 'zoom\ndocker-desktop\n' > "$OMAMAC_TEST_BREW_PREFIX/outdated"
+  # Zoom's installer package leaves the app owned by root.
+  stub touch 'case "$1" in *zoom.us.app/.omamac-write-test) echo "touch: $1: Permission denied" >&2; exit 1 ;; esac; exec /usr/bin/touch "$@"'
+  run update
+  [ "$status" -eq 0 ]
+  run ! grep -q '^touch .*zoom.us.app' "$STUB_LOG"
+  grep -q '^touch .*Docker.app/.omamac-write-test' "$STUB_LOG"
+  grep -qx 'brew upgrade --cask docker-desktop zoom' "$STUB_LOG"
+}
+
+@test "apps: Zoom and Docker Desktop outdated: one open upgrade, no spinner" {
+  desktop_installed
+  choose apps_communication zoom
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask zoom
+  printf 'zoom\ndocker-desktop\n' > "$OMAMAC_TEST_BREW_PREFIX/outdated"
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^brew upgrade --cask' "$STUB_LOG")" -eq 1 ]
+  grep -qx 'brew upgrade --cask docker-desktop zoom' "$STUB_LOG"
+  [[ "$output" == *"ℹ Homebrew asks for your password for: Docker Desktop, Zoom."* ]]
+  run ! grep '^gum spin.*\(zoom\|Zoom\)' "$STUB_LOG"
+}
+
+@test "apps: an app installed by hand gets no outdated query" {
+  choose apps_media vlc
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/VLC.app"
+  echo vlc > "$OMAMAC_TEST_BREW_PREFIX/outdated"
+  run update
+  [ "$status" -eq 0 ]
+  run ! grep -q 'outdated.*vlc' "$STUB_LOG"
 }

@@ -2,7 +2,7 @@
 
 omamac sets up a fresh Mac for development in one command: Homebrew, a modern bash, your terminal, editor, apps, Docker and theme. After that, one command, `omamac`, keeps it all up to date. It is the sister project of [omawsl](https://github.com/tunacinsoy/omawsl).
 
-omamac is still being built. Today the one-liner installs Homebrew, bash, gum, the `omamac` command and the core tools: Ghostty (which opens into herdr), starship, neovim with LazyVim, btop, mise, herdr, eza, bat, zoxide, fzf, ripgrep, fd, lazygit, tree-sitter-cli and jq. It asks the first-run questions, saves your answers, and installs the languages, cloud CLIs and Docker (colima or Docker Desktop) you picked. Apps and the Dock settings come later. It sets the desktop and window-margin settings you chose. `omamac install`, `uninstall`, `theme`, `doctor` and `update` work. `omamac theme [name]` switches the theme for Ghostty, herdr, btop, the prompt and neovim, and reloads what is running.
+omamac is still being built. Today the one-liner installs Homebrew, bash, gum, the `omamac` command and the core tools: Ghostty (which opens into herdr), starship, neovim with LazyVim, btop, mise, herdr, eza, bat, zoxide, fzf, ripgrep, fd, lazygit, tree-sitter-cli and jq. It asks the first-run questions, saves your answers, and installs the apps, languages, cloud CLIs and Docker (colima or Docker Desktop) you picked. The Dock settings come later. It sets the desktop and window-margin settings you chose. `omamac install`, `uninstall`, `theme`, `doctor` and `update` work. `omamac theme [name]` switches the theme for Ghostty, herdr, btop, the prompt and neovim, and reloads what is running.
 
 ## Before you begin
 
@@ -20,7 +20,7 @@ Open Terminal and paste:
 curl -fsSL https://raw.githubusercontent.com/tunacinsoy/omamac/main/boot.sh | bash
 ```
 
-omamac asks for your password once and never stores it. Then it asks a few questions: theme, apps, macOS settings, languages and Docker. Nothing is chosen for you: press x or Tab to pick, Enter to go on. It shows your answers and asks "Install?"; after that it runs on its own. The exception: if you chose Docker Desktop, Homebrew asks for your password once more, for Docker Desktop's links in `/usr/local`. It asks once Docker Desktop is downloaded, early in the run, so stay at the keyboard until it has asked. It asks again when `omamac update` upgrades Docker Desktop and when you uninstall it. Answer no the first time and nothing is saved, so the next run asks again. Once you've said yes, your answers are kept and later runs only ask "Install?".
+omamac asks for your password once and never stores it. Then it asks a few questions: theme, apps, macOS settings, languages and Docker. Nothing is chosen for you: press x or Tab to pick, Enter to go on. It shows your answers and asks "Install?"; after that it runs on its own. The exception: if you chose Zoom, Google Drive or Docker Desktop, Homebrew asks for your password once more, right after "Install?", once for all of them. It asks once they are downloaded, so stay at the keyboard until it has asked. It may ask again when `omamac update` upgrades one of them and when you uninstall an app. Answer no the first time and nothing is saved, so the next run asks again. Once you've said yes, your answers are kept and later runs only ask "Install?".
 
 Allow about 10 minutes, mostly for Apple's Command Line Tools. If it stops, fix what it says and run the same line again; it picks up where it stopped.
 
@@ -32,9 +32,15 @@ Open Ghostty. It starts herdr. The first time, macOS asks you to confirm; click 
 
 If you chose Desktops as workspaces, give an app its own desktop: right-click its Dock icon, then Options, then Assign To. Reduce motion may need one click: macOS can refuse the setting, and omamac then says so; search for Reduce motion in System Settings and turn it on.
 
+The first time you open each app, macOS asks you to confirm; click Open. Some apps need a permission, in System Settings → Privacy & Security:
+
+- Cap: allow Screen Recording, and Camera and Microphone if you use them.
+- Wispr Flow: allow Microphone and Accessibility.
+- Zoom: allow Camera and Microphone, and Screen Recording to share.
+
 If you chose Docker Desktop, open it once to finish its setup.
 
-To let `omamac update` upgrade Ghostty and Docker Desktop, allow App Management for your terminal (Ghostty): System Settings → Privacy & Security → App Management.
+To let `omamac update` upgrade Ghostty, Docker Desktop and your apps, and `omamac uninstall` remove them, allow App Management for your terminal (Ghostty): System Settings → Privacy & Security → App Management. Zoom and Google Drive don't need it: Homebrew changes them with your password.
 
 ## Keeping it up to date
 
@@ -42,12 +48,13 @@ To let `omamac update` upgrade Ghostty and Docker Desktop, allow App Management 
 omamac update
 ```
 
-It updates omamac and what omamac installed, nothing else. It pulls omamac (and stops if you edited its files), rewrites the files omamac writes, puts back any core tool, language or cloud CLI that is missing, puts back the macOS settings you chose if you changed them, then upgrades only what omamac installed: the core tools, Ghostty and Docker Desktop (only if your terminal has App Management; otherwise update says what to click and exits 1), bash, gum, the cloud CLIs you chose (Google Cloud's cask with `--greedy`), colima and its tools if you chose it, and the languages you chose. After that, `mise prune` deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`. The log goes to `~/.local/state/omamac/logs/`.
+It updates omamac and what omamac installed, nothing else. It pulls omamac (and stops if you edited its files), rewrites the files omamac writes, puts back any core tool, app, language or cloud CLI that is missing, puts back the macOS settings you chose if you changed them, then upgrades only what omamac installed: the core tools, Ghostty, Docker Desktop and your apps (only if your terminal has App Management; otherwise update says what to click and exits 1. Apps update themselves, so omamac upgrades one only when Homebrew lists it as outdated), bash, gum, the cloud CLIs you chose (Google Cloud's cask with `--greedy`), colima and its tools if you chose it, and the languages you chose. After that, `mise prune` deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`. The log goes to `~/.local/state/omamac/logs/`.
 
 ## What it changes
 
 - Homebrew, in `/opt/homebrew`. It brings Apple's Command Line Tools.
 - Ghostty, installed with Homebrew (a cask). A Ghostty you installed by hand is used as is and not updated.
+- The apps you chose, installed with Homebrew (casks) in Applications. An app you installed by hand is used as is and not updated. Zoom and Google Drive run an installer, so Homebrew asks for your password; omamac says so first. Google Drive also brings Google Docs, Sheets and Slides. VS Code, Obsidian, VLC and Firefox add a command to `/opt/homebrew/bin`, such as `code`.
 - bash, gum and the core tools (`starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`), installed with Homebrew.
 - The languages you chose (Ruby on Rails, Node.js, Go, Python, Elixir, Rust, Java), installed with mise, and the cloud CLIs you chose (Azure, AWS, Google Cloud, GitHub, Terraform), installed with Homebrew. Terraform comes from `hashicorp/tap`.
 - `~/.config/mise/conf.d/omamac.toml`: the languages, written by omamac again on every run. Your own pins in `~/.config/mise/config.toml` win and are never touched.
@@ -65,7 +72,7 @@ It updates omamac and what omamac installed, nothing else. It pulls omamac (and 
 - If you chose Docker Desktop: the `docker-desktop` cask and `lazydocker`, installed with Homebrew. Homebrew asks for your password for the cask's links in `/usr/local`; omamac says so first.
 - macOS settings, only for the answers you chose, written with `defaults` and the Dock restarted once. Desktops as workspaces: `com.apple.dock mru-spaces` (off, so Spaces keep their order), `NSGlobalDomain AppleSpacesSwitchOnActivate` (on, so switching to an app goes to its desktop), and Reduce motion (`com.apple.universalaccess reduceMotion` and `com.apple.Accessibility ReduceMotionEnabled`, both on). Window margins: `com.apple.WindowManager EnableTiledWindowMargins` (on). macOS may refuse Reduce motion; omamac then leaves it alone and tells you to turn it on in System Settings. `omamac update` sets them again if you changed them; the first earlier value stays in `macos-settings.tsv`.
 
-`omamac install` adds the languages and cloud CLIs you didn't pick before, and asks again the two settings you answered no and the Docker question if you answered No Docker. `omamac uninstall <name>` removes one, after asking; a version another mise config uses stays, and Homebrew taps stay. `omamac uninstall desktops` and `omamac uninstall window-margins` put the earlier values back and turn the answer to no. `omamac uninstall colima` removes colima, its tools, links and service; your Docker data stays in `~/.colima`. `omamac uninstall docker-desktop` removes the Docker Desktop app and lazydocker (a hand-installed app stays); your images, containers and volumes stay.
+`omamac install` adds the apps, languages and cloud CLIs you didn't pick before, and asks again the two settings you answered no and the Docker question if you answered No Docker. `omamac uninstall <name>` removes one, after asking; a version another mise config uses stays, and Homebrew taps stay. The apps' names are `brave`, `chrome`, `firefox`, `whatsapp`, `telegram`, `signal`, `discord`, `slack`, `zoom`, `spotify`, `vlc`, `cap`, `dropbox`, `google-drive`, `vscode`, `raycast`, `obsidian` and `wispr-flow`. For an app it first asks whether to remove its settings and data too; Enter alone is no, and yes lets Homebrew delete what the app keeps in `~/Library`. Homebrew may ask for your password. An app you installed by hand stays; omamac only forgets your pick. `omamac uninstall desktops` and `omamac uninstall window-margins` put the earlier values back and turn the answer to no. `omamac uninstall colima` removes colima, its tools, links and service; your Docker data stays in `~/.colima`. `omamac uninstall docker-desktop` removes the Docker Desktop app and lazydocker (a hand-installed app stays); your images, containers and volumes stay unless you say yes to removing its settings and data, which also deletes `~/.docker`.
 
 `omamac uninstall` removes your picks one at a time. For the rest, undo by hand: delete the two lines ending in `# added by omamac`, delete the line naming `~/.config/omamac/ghostty.conf` from your Ghostty config, delete the three folders (`~/.config/omamac` holds `starship.toml`, `btop.conf`, `btop-themes` and `neovim.lua` too) and `~/.config/mise/conf.d/omamac.toml`, put the macOS settings back with `omamac uninstall desktops` and `omamac uninstall window-margins`, delete `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`), and, if omamac installed them, run `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`, and `brew uninstall --cask ghostty`. To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
 
