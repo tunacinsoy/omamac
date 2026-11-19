@@ -10,7 +10,7 @@ ADD_KEYS=("${APPS_KEYS[@]}" wispr_flow languages cloud_clis desktops window_marg
 # add_run: CHOICES is loaded (bin/omamac did that). Ask, show the additions,
 # and save and apply them only after "Install?" is yes, so a no changes nothing.
 add_run() {
-  local key v had=() left=() lines=() labels=() names=() apps=() allow=() joined asked=''
+  local key v had=() new=() left=() lines=() labels=() names=() apps=() allow=() joined asked=''
   local -A picks=()
   OMAMAC_STEP='asking the questions'
   for key in "${ADD_KEYS[@]}"; do
@@ -19,6 +19,8 @@ add_run() {
       [ -n "$asked" ] || ask_need_tty
       asked=1
       ask_one "$key"
+      # A hand-installed Wispr Flow is offered to Homebrew; a no sets the answer to no.
+      if [ "$key" = wispr_flow ] && [ "${CHOICES[$key]}" = yes ]; then apps_ask_adopt wispr-flow; fi
       # A yes is applied only after "Install?"; put the saved answer back.
       [ "${CHOICES[$key]}" != yes ] || picks[$key]=yes
       CHOICES[$key]=no
@@ -46,6 +48,11 @@ add_run() {
     asked=1
     # ask_one sets CHOICES[key] to the new picks; put the saved answer back.
     ask_one "$key" "${left[@]}"
+    if [[ $key == apps_* ]]; then
+      # A hand-installed pick is offered to Homebrew; a no drops it from CHOICES.
+      read -ra new <<< "${CHOICES[$key]}"
+      if [ "${#new[@]}" -gt 0 ]; then apps_ask_adopt "${new[@]}"; fi
+    fi
     picks[$key]=${CHOICES[$key]}
     CHOICES[$key]=${had[*]}
   done
