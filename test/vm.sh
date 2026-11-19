@@ -29,6 +29,13 @@ tart get "$IMAGE" >/dev/null 2>&1 || refuse "$IMAGE is missing: run test/image.s
 [[ $branch =~ ^[A-Za-z0-9._/-]+$ ]] || refuse "'$branch' isn't a plain branch name"
 [[ $fixture =~ ^[A-Za-z0-9_-]+$ ]] || refuse "'$fixture' isn't a plain fixture name"
 [ -f "$TEST_DIR/fixtures/$fixture.env" ] || refuse "No fixture '$fixture': test/fixtures/$fixture.env is missing"
+# Homebrew resets sudo before a cask step that needs it, then asks for the
+# password itself. A fixture whose casks do that says how often per command.
+brew_passwords=0
+if [ -f "$TEST_DIR/fixtures/$fixture.brew-passwords" ]; then
+  brew_passwords=$(<"$TEST_DIR/fixtures/$fixture.brew-passwords")
+  [[ $brew_passwords =~ ^[0-9]$ ]] || refuse "test/fixtures/$fixture.brew-passwords must hold one digit"
+fi
 cd "$TEST_DIR/.."
 changes=$(git status --porcelain)
 [ -z "$changes" ] || refuse "The working tree has changes; commit or stash them first:
@@ -103,8 +110,9 @@ vm "mkdir -p ~/.local/state/omamac && curl -fsSL $raw/test/fixtures/$fixture.env
 # window (zsh -lc skips it). zsh has no pipefail by default: without it a
 # failed fetch feeds bash nothing, and bash exits 0.
 one_liner="zsh -lic 'set -o pipefail; curl -fsSL $raw/boot.sh | OMAMAC_REF=$branch bash'"
-# Two password prompts: the ssh login and omamac's one sudo prompt. A third fails.
-run_one_liner() { OMAMAC_VM_MAX_PASSWORDS=2 vm "$one_liner"; }
+# Two password prompts: the ssh login and omamac's one sudo prompt, plus the
+# fixture's Homebrew prompts. One more fails.
+run_one_liner() { OMAMAC_VM_MAX_PASSWORDS=$((2 + brew_passwords)) vm "$one_liner"; }
 step='first run'
 info "Running the one-liner"
 run_one_liner
@@ -143,7 +151,7 @@ steps="test/fixtures/$fixture.steps.sh"
 if [ -f "$steps" ]; then
   step=steps
   info "Running $steps"
-  vm "set -o pipefail; f=\$(mktemp) && curl -fsSL $raw/$steps -o \$f && zsh -lic \"zsh -eux -o pipefail \$f </dev/null\""
+  OMAMAC_VM_MAX_PASSWORDS=$((1 + brew_passwords)) vm "set -o pipefail; f=\$(mktemp) && curl -fsSL $raw/$steps -o \$f && zsh -lic \"zsh -eux -o pipefail \$f </dev/null\""
   step='doctor after the steps'
   vm "zsh -lic 'omamac doctor'"
 fi
