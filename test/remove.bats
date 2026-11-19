@@ -388,6 +388,16 @@ brew uninstall colima docker docker-compose docker-buildx lazydocker" ]
   [ -e "$HOME/.colima/default/x" ]
 }
 
+@test "uninstall colima: keeps a user's link that points at nothing" {
+  MARKER=$HOME/$MARKER_REL; colonized
+  rm "$HOME/.docker/cli-plugins/docker-buildx"
+  ln -s /Applications/Docker.app/Contents/Resources/cli-plugins/docker-buildx "$HOME/.docker/cli-plugins/docker-buildx"
+  gum_answers yes
+  run omamac_uninstall colima
+  [ "$status" -eq 0 ]
+  [ "$(readlink "$HOME/.docker/cli-plugins/docker-buildx")" = /Applications/Docker.app/Contents/Resources/cli-plugins/docker-buildx ]
+}
+
 @test "uninstall colima: a second run changes nothing" {
   MARKER=$HOME/$MARKER_REL; colonized
   gum_answers yes

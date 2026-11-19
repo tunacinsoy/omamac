@@ -99,7 +99,7 @@ New `lib/docker.sh`, sourced where `lib/clis.sh` is, and called from `apply_all`
 
 - **`docker_install`**, for `docker=colima`:
   1. `brew install` only the missing ones of `colima docker docker-compose docker-buildx lazydocker`, in one call.
-  2. Plugin links, for `docker-compose` and `docker-buildx`: if the path doesn't exist, create the link (and `~/.docker/cli-plugins/`) to `$OMAMAC_BREW_PREFIX/opt/<formula>/bin/<formula>`. If it's omamac's link, nothing. Anything else is left alone, with one ℹ line.
+  2. Plugin links, for `docker-compose` and `docker-buildx`: if the path doesn't exist, create the link (and `~/.docker/cli-plugins/`) to `$OMAMAC_BREW_PREFIX/opt/<formula>/bin/<formula>`. If it's omamac's link, nothing. Anything else is left alone, with one ℹ line: a user's link that points at nothing (Docker Desktop leaves one when its app is trashed) gets "Your docker-compose link in ~/.docker/cli-plugins points at nothing. Remove it, then run omamac update."
   3. If the marker `~/.local/state/omamac/colima-service` doesn't exist: if the service isn't registered, `brew services start colima`; then write the marker. The run's summary gets: "colima starts Docker in the background now and at each login. The first start downloads Linux and takes a few minutes."
 - **`docker_install`**, for `docker=none`: nothing.
 - **Summary lines.** `docker_install` adds its lines to `DOCKER_NOTES` (an array, like `SETTINGS_REFUSED` is a flag). `install_summary` and `add_run`'s closing box print them. `install_summary`'s "Installed:" line also names Docker when the answer isn't `none`.
@@ -112,7 +112,7 @@ New `lib/docker.sh`, sourced where `lib/clis.sh` is, and called from `apply_all`
   - `remove_run` dispatches `colima` and `docker-desktop` by name with a `case`, as it does `desktops`, not through `REMOVE_KEYS` (that would accept `none`). Both join the "It can remove" list. `omamac uninstall` with no name offers the Docker answer when it isn't `none`, and the "nothing to remove" message names Docker too.
 - **doctor:**
   - ✗ "colima: you chose it, but Homebrew no longer has <formulas>", in today's "Languages and cloud CLIs" check (renamed "Your tools"). It adds one entry, the answer `colima`, to `DOCTOR_GONE`, not one per formula. `doctor_offer` offers Reinstall (`docker_install`) or Leave for it; dropping it is `omamac uninstall colima`, printed as the fix. (`choices_drop` is for multi answers only.)
-  - ✗ "docker can't find compose (or buildx)" when omamac's link is missing or dangling; fix `omamac update`. ℹ when the user's own file is at the path.
+  - ✗ "docker can't find compose (or buildx)" when omamac's link is missing or dangling; fix `omamac update`. ℹ when the user's own file is at the path. ✗ "your link in ~/.docker/cli-plugins points at nothing" when the user's link is dangling; fix "Remove it, then run omamac update" (omamac never deletes it).
   - ℹ "colima doesn't start at login. To start it: brew services start colima" when the service isn't registered. A registered service in `error` is ℹ too ("colima didn't start; see $OMAMAC_BREW_PREFIX/var/log/colima.log"), not ✗: it's colima's state, not omamac's, and it's what the VM shows.
 
 ### Docker Desktop (5b)

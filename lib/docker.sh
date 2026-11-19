@@ -20,12 +20,19 @@ docker_link_path() { echo "$HOME/.docker/cli-plugins/$1"; }
 docker_link_target() { echo "$OMAMAC_BREW_PREFIX/opt/$1/bin/$1"; }
 
 # docker_link_state <plugin>: ours (a link to Homebrew's plugin, even a
-# dangling one), missing (nothing at the path) or theirs (anything else).
+# dangling one), missing (nothing at the path), broken (the user's link to
+# nothing, such as one Docker Desktop left) or theirs (anything else).
 docker_link_state() {
   local path
   path=$(docker_link_path "$1")
   if [ -L "$path" ]; then
-    if [ "$(readlink "$path")" = "$(docker_link_target "$1")" ]; then echo ours; else echo theirs; fi
+    if [ "$(readlink "$path")" = "$(docker_link_target "$1")" ]; then
+      echo ours
+    elif [ -e "$path" ]; then
+      echo theirs
+    else
+      echo broken
+    fi
   elif [ -e "$path" ]; then
     echo theirs
   else
@@ -69,6 +76,8 @@ docker_install() {
         ln -s "$(docker_link_target "$plugin")" "$(docker_link_path "$plugin")"
         ;;
       theirs) ui_info "Your own $plugin in ~/.docker/cli-plugins stays, and docker uses it." ;;
+      # The user's, so it stays; docker can't use it.
+      broken) ui_info "Your $plugin link in ~/.docker/cli-plugins points at nothing. Remove it, then run omamac update." ;;
     esac
   done
   if [ ! -e "$OMAMAC_COLIMA_MARKER" ]; then
@@ -134,6 +143,9 @@ docker_check() {
     state=$(docker_link_state "$plugin")
     if [ "$state" = theirs ]; then
       doctor_report info "$plugin" "your own file in ~/.docker/cli-plugins is kept, and docker uses it"
+    elif [ "$state" = broken ]; then
+      doctor_report fail "$plugin" "your link in ~/.docker/cli-plugins points at nothing" \
+        "Remove it, then run omamac update" || status=1
     elif [ "$state" = ours ] && [ -e "$(docker_link_path "$plugin")" ]; then
       doctor_report ok "$plugin"
     else

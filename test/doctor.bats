@@ -792,6 +792,15 @@ healthy_colima() {
   [[ "$output" == *"ℹ docker-compose — your own file in ~/.docker/cli-plugins is kept, and docker uses it"* ]]
 }
 
+@test "doctor: a user's link that points at nothing is ✗, and stays" {
+  healthy_mac
+  healthy_colima
+  rm "$HOME/.docker/cli-plugins/docker-compose"
+  ln -s /Applications/Docker.app/Contents/Resources/cli-plugins/docker-compose "$HOME/.docker/cli-plugins/docker-compose"
+  expect_fail "docker-compose — your link in ~/.docker/cli-plugins points at nothing" "Remove it, then run omamac update"
+  [ -L "$HOME/.docker/cli-plugins/docker-compose" ]
+}
+
 @test "doctor: an unregistered service is ℹ with the command" {
   healthy_mac
   healthy_colima

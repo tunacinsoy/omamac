@@ -54,18 +54,34 @@ starts() { grep -c '^brew services start colima$' "$STUB_LOG" || true; }
   [ "$(readlink "$PLUGINS/docker-buildx")" = "$P/opt/docker-buildx/bin/docker-buildx" ]
 }
 
-@test "docker_link_state: ours, missing or theirs" {
+@test "docker_link_state: ours, missing, theirs or broken" {
   mkdir -p "$PLUGINS"
   ln -s "$P/opt/docker-compose/bin/docker-compose" "$PLUGINS/docker-compose"
-  ln -s /somewhere/else "$PLUGINS/docker-buildx"
+  echo x > "$BATS_TEST_TMPDIR/their-buildx"
+  ln -s "$BATS_TEST_TMPDIR/their-buildx" "$PLUGINS/docker-buildx"
   in_lib colima 'docker_link_state docker-compose; docker_link_state docker-buildx
     rm "$HOME/.docker/cli-plugins/docker-buildx"; docker_link_state docker-buildx
-    echo x > "$HOME/.docker/cli-plugins/docker-buildx"; docker_link_state docker-buildx'
+    echo x > "$HOME/.docker/cli-plugins/docker-buildx"; docker_link_state docker-buildx
+    rm "$HOME/.docker/cli-plugins/docker-buildx"; ln -s /somewhere/else "$HOME/.docker/cli-plugins/docker-buildx"
+    docker_link_state docker-buildx'
   [ "$status" -eq 0 ]
   [ "$output" = "ours
 theirs
 missing
-theirs" ]
+theirs
+broken" ]
+}
+
+@test "colima: a user's link that points at nothing stays, with what to do" {
+  # What Docker Desktop leaves behind once its app is trashed.
+  mkdir -p "$PLUGINS"
+  ln -s /Applications/Docker.app/Contents/Resources/cli-plugins/docker-compose "$PLUGINS/docker-compose"
+  in_lib colima 'docker_install'
+  [ "$status" -eq 0 ]
+  [ "$(readlink "$PLUGINS/docker-compose")" = /Applications/Docker.app/Contents/Resources/cli-plugins/docker-compose ]
+  [[ "$output" == *"ℹ Your docker-compose link in ~/.docker/cli-plugins points at nothing. Remove it, then run omamac update."* ]]
+  [[ "$output" != *"docker uses it"* ]]
+  [ "$(readlink "$PLUGINS/docker-buildx")" = "$P/opt/docker-buildx/bin/docker-buildx" ]
 }
 
 @test "colima: starts the service once and writes the marker" {
