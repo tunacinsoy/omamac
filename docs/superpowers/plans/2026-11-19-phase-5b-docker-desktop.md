@@ -174,7 +174,7 @@ The existing Ghostty update tests stay unchanged and must pass.
 
 Found in the VM: Homebrew resets sudo (`utils/sudo.sh`) and asks itself on every Docker Desktop cask step, so `docker_sudo` is dropped. Brief: `.superpowers/sdd/2026-11-19-phase-5b-docker-desktop/task-6-brief.md`.
 
-- [ ] `ui_run_open` in `lib/ui.sh` (no spinner; `ui_run` without gum calls it). `docker_cask_run` prints "Homebrew asks for your password for Docker Desktop's links in /usr/local." and runs the brew command with it, for install, reinstall, upgrade and uninstall. `UPDATE_NOT_UPGRADED`'s password branch goes.
+- [ ] `ui_run_open` in `lib/ui.sh` (no spinner; `ui_run` without gum calls it). `docker_cask_run` prints "Homebrew asks for your password once Docker Desktop is downloaded, for its links in /usr/local." and runs the brew command with it, for install, reinstall, upgrade and uninstall. `UPDATE_NOT_UPGRADED`'s password branch goes.
 - [ ] `apply_all` runs `docker_install` first.
 - [ ] Tests: the ℹ line before the cask call, no `gum spin` for the cask, a failed install returns non-zero with errexit off, Docker before the core formulas.
 - [ ] VM fixture: `docker-desktop.brew-passwords` = `1`; the `sudo -S` stand-in goes.

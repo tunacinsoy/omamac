@@ -62,7 +62,7 @@ docker_service_registered() {
 docker_cask_run() {
   local title=$1
   shift
-  ui_info "Homebrew asks for your password for Docker Desktop's links in /usr/local."
+  ui_info "Homebrew asks for your password once Docker Desktop is downloaded, for its links in /usr/local."
   ui_run_open "$title" "$OMAMAC_BREW_PREFIX/bin/brew" "$@"
 }
 

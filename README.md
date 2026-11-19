@@ -20,7 +20,7 @@ Open Terminal and paste:
 curl -fsSL https://raw.githubusercontent.com/tunacinsoy/omamac/main/boot.sh | bash
 ```
 
-omamac asks for your password once and never stores it. The exception: if you chose Docker Desktop, Homebrew asks once more, right after "Install?", for Docker Desktop's links in `/usr/local`. It asks again when `omamac update` upgrades Docker Desktop and when you uninstall it. Then it asks a few questions: theme, apps, macOS settings, languages and Docker. Nothing is chosen for you: press x or Tab to pick, Enter to go on. It shows your answers and asks "Install?"; after that it runs on its own. Answer no the first time and nothing is saved, so the next run asks again. Once you've said yes, your answers are kept and later runs only ask "Install?".
+omamac asks for your password once and never stores it. Then it asks a few questions: theme, apps, macOS settings, languages and Docker. Nothing is chosen for you: press x or Tab to pick, Enter to go on. It shows your answers and asks "Install?"; after that it runs on its own. The exception: if you chose Docker Desktop, Homebrew asks for your password once more, for Docker Desktop's links in `/usr/local`. It asks once Docker Desktop is downloaded, early in the run, so stay at the keyboard until it has asked. It asks again when `omamac update` upgrades Docker Desktop and when you uninstall it. Answer no the first time and nothing is saved, so the next run asks again. Once you've said yes, your answers are kept and later runs only ask "Install?".
 
 Allow about 10 minutes, mostly for Apple's Command Line Tools. If it stops, fix what it says and run the same line again; it picks up where it stopped.
 

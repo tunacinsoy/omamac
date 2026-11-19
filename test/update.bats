@@ -399,7 +399,7 @@ desktop_installed() {
   [ "$status" -eq 0 ]
   grep -qx 'brew outdated --cask --quiet docker-desktop' "$STUB_LOG"
   grep -qx 'brew upgrade --cask docker-desktop' "$STUB_LOG"
-  [[ "$output" == *"ℹ Homebrew asks for your password for Docker Desktop's links in /usr/local."* ]]
+  [[ "$output" == *"ℹ Homebrew asks for your password once Docker Desktop is downloaded, for its links in /usr/local."* ]]
   run ! grep '^gum spin.*docker-desktop' "$STUB_LOG"
   run ! grep -q 'greedy.*docker-desktop' "$STUB_LOG"
 }
@@ -439,6 +439,7 @@ desktop_installed() {
   run update
   [ "$status" -ne 0 ]
   [[ "$output" == *"Log: $OMAMAC_LOG"* ]]
+  [[ "$output" == *"omamac stopped while upgrading Docker Desktop."* ]]
 }
 
 @test "Ghostty and Docker Desktop not allowed: both named, exit 1" {

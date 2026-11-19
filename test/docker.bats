@@ -235,7 +235,7 @@ DESKTOP_NOTE="Open Docker Desktop once to finish its setup."
   in_lib docker-desktop 'docker_install; printf "%s\n" "${DOCKER_NOTES[@]}"'
   [ "$status" -eq 0 ]
   [ -d "$OMAMAC_TEST_APPLICATIONS/Docker.app" ]
-  [[ "$output" == *"ℹ Homebrew asks for your password for Docker Desktop's links in /usr/local."* ]]
+  [[ "$output" == *"ℹ Homebrew asks for your password once Docker Desktop is downloaded, for its links in /usr/local."* ]]
   [[ "$output" == *"✓ Docker Desktop is installed"* ]]
   [[ "$output" == *"$DESKTOP_NOTE"* ]]
   [ "$(stub_calls | grep -c '^brew install lazydocker$')" -eq 1 ]
@@ -246,7 +246,7 @@ DESKTOP_NOTE="Open Docker Desktop once to finish its setup."
   # ui_run_open stands in for the brew call: the line must already be printed.
   in_lib docker-desktop 'ui_run_open() { echo "RUN $*"; }; docker_cask_run "Installing Docker Desktop" install --cask docker-desktop'
   [ "$status" -eq 0 ]
-  [ "${lines[0]}" = "ℹ Homebrew asks for your password for Docker Desktop's links in /usr/local." ]
+  [ "${lines[0]}" = "ℹ Homebrew asks for your password once Docker Desktop is downloaded, for its links in /usr/local." ]
   [[ "${lines[1]}" == "RUN Installing Docker Desktop "*"brew install --cask docker-desktop" ]]
 }
 
@@ -274,9 +274,9 @@ DESKTOP_NOTE="Open Docker Desktop once to finish its setup."
   : > "$STUB_LOG"
   in_lib docker-desktop 'docker_install; echo "notes=${#DOCKER_NOTES[@]}"'
   [ "$status" -eq 0 ]
-  ! stub_calls | grep -Eq '^brew (install|reinstall)'
   [[ "$output" == *"notes=0"* ]]
   [[ "$output" == *"✓ Docker Desktop is installed"* ]]
+  run ! grep -Eq '^brew (install|reinstall)' "$STUB_LOG"
 }
 
 @test "desktop: listed by Homebrew but the app is gone, reinstalls it" {

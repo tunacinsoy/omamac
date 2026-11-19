@@ -358,7 +358,7 @@ MARKER_REL=.local/state/omamac/colima-service
   run omamac_uninstall colima
   [ "$status" -eq 0 ]
   [[ "$output" == *"Nothing was removed."* ]]
-  ! grep -q '^brew ' "$STUB_LOG"
+  run ! grep -q '^brew ' "$STUB_LOG"
   grep -qx 'docker=colima' "$CHOICES_FILE"
 }
 
@@ -440,7 +440,7 @@ brew uninstall colima docker docker-compose docker-buildx lazydocker" ]
   gum_answers yes
   run omamac_uninstall colima
   [ "$status" -eq 0 ]
-  ! grep -qE '^(brew services|colima)' "$STUB_LOG"
+  run ! grep -qE '^(brew services|colima)' "$STUB_LOG"
   grep -qx 'brew uninstall docker docker-compose docker-buildx lazydocker' "$STUB_LOG"
   [ ! -e "$MARKER" ]
   grep -qx 'docker=none' "$CHOICES_FILE"
@@ -546,6 +546,7 @@ brew uninstall lazydocker" ]
   gum_answers yes
   run omamac_uninstall docker-desktop
   [ "$status" -ne 0 ]
+  run ! grep -qx 'brew uninstall lazydocker' "$STUB_LOG"
   grep -qx 'docker=docker-desktop' "$CHOICES_FILE"
 }
 

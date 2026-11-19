@@ -29,7 +29,8 @@ apply_zsh_file() {
 
 apply_all() {
   # First: Homebrew may ask for the password (Docker Desktop's cask), so ask
-  # while the user is still at the keyboard. Docker needs nothing set up before it.
+  # while the user is still at the keyboard. Nothing before it is needed: colima's service
+  # check reads jq from /usr/bin (macOS 27), so don't move jq-dependent code ahead of core elsewhere.
   OMAMAC_STEP='installing Docker'
   docker_install
   OMAMAC_STEP="writing $OMAMAC_ZSH_FILE"
