@@ -71,7 +71,12 @@ case "${1:-}" in
     root=Cellar
     if [ "${1:-}" = "--cask" ]; then root=Caskroom; shift; fi
     for f in "$@"; do
-      if [ "$root" = Caskroom ]; then fake_cask "$f"; continue; fi
+      if [ "$root" = Caskroom ]; then
+        # A dropped download: the cask fails before Homebrew records it.
+        [ "$f" != "${T_BREW_FAIL_CASK:-}" ] || { echo "Error: Download failed on Cask '$f'" >&2; exit 1; }
+        fake_cask "$f"
+        continue
+      fi
       # Like Homebrew: no two formulas with the same name from different taps.
       d="$prefix/Cellar/${f##*/}" tap=''
       case "$f" in */*/*) tap=${f%/*} ;; esac

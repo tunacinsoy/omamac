@@ -325,6 +325,50 @@ snapshot() {
   : > "$STUB_LOG"
   run install
   [ "$status" -eq 0 ]
-  [ "$(grep -nE '^brew install' "$STUB_LOG" | head -1 | cut -d: -f2-)" = "brew install lazydocker" ]
+  [ "$(grep -nE '^brew install' "$STUB_LOG" | head -1 | cut -d: -f2-)" = "brew install --cask docker-desktop" ]
   [ "$(grep -n 'brew install --cask docker-desktop' "$STUB_LOG" | cut -d: -f1)" -lt "$(grep -n '^brew install .*jq' "$STUB_LOG" | head -1 | cut -d: -f1)" ]
+}
+
+# answer <key> <value>: change one saved answer.
+answer() { sed -i '' "s/^$1=.*/$1=$2/" "$CHOICES_FILE"; }
+
+@test "the password step is named before Install?, in no line that says Install?" {
+  answer apps_communication zoom
+  gum_answers no
+  run install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ Homebrew asks for your password once more, after you confirm, for: Zoom."* ]]
+  [[ "$output" != *"Install?"* ]]
+  run ! grep -q '^brew install --cask' "$STUB_LOG"
+}
+
+@test "no password app: no once-more line" {
+  run install
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"once more"* ]]
+}
+
+@test "summary names the apps and what they ask macOS for" {
+  answer apps_screen_recording cap
+  answer wispr_flow yes
+  run install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"and the languages, cloud CLIs and apps you chose."* ]]
+  [[ "$output" == *"The first time you open Ghostty and each app, macOS asks you"$'\n'"to confirm; click Open."$'\n'"Cap: allow Screen Recording, and Camera and Microphone if you use them."$'\n'"Wispr Flow: allow Microphone and Accessibility."$'\n'* ]]
+  [[ "$output" != *"Zoom: allow"* ]]
+}
+
+@test "summary with apps and Docker names all four" {
+  answer apps_media vlc
+  answer docker colima
+  run install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"and the languages, cloud CLIs, apps and Docker you chose."* ]]
+}
+
+@test "no apps: the summary's Ghostty lines are today's" {
+  run install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"The first time you open Ghostty, macOS asks you to confirm;"$'\n'"click Open."$'\n'* ]]
+  [[ "$output" != *"each app"* ]]
 }

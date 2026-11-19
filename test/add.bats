@@ -5,6 +5,10 @@ bats_require_minimum_version 1.5.0
 # The formulas a finished first run has: the core, then bash, gum and lazydocker.
 OMAMAC_FORMULAS='starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq bash gum lazydocker'
 
+ALL_BROWSERS='brave chrome firefox'
+ALL_COMMUNICATION='whatsapp telegram signal discord slack zoom'
+ALL_CASKS='brave-browser google-chrome firefox whatsapp telegram signal discord slack zoom spotify vlc cap dropbox google-drive visual-studio-code raycast obsidian wispr-flow'
+
 setup() {
   setup_sandbox
   install_fake_brew
@@ -18,6 +22,12 @@ setup() {
   # Answered yes, so install doesn't ask about them (tests below ask on purpose).
   # Docker Desktop is already installed, so its step does nothing.
   sed -i '' -e 's/^desktops=.*/desktops=yes/' -e 's/^window_margins=.*/window_margins=yes/' -e 's/^docker=.*/docker=docker-desktop/' "$CHOICES_FILE"
+  # Every app picked and installed, so install doesn't ask about them either.
+  sed -i '' -e "s/^apps_browsers=.*/apps_browsers=$ALL_BROWSERS/" -e "s/^apps_communication=.*/apps_communication=$ALL_COMMUNICATION/" \
+    -e 's/^apps_media=.*/apps_media=spotify vlc/' -e 's/^apps_screen_recording=.*/apps_screen_recording=cap/' \
+    -e 's/^apps_storage=.*/apps_storage=dropbox google-drive/' -e 's/^apps_developer=.*/apps_developer=vscode/' \
+    -e 's/^apps_productivity=.*/apps_productivity=raycast obsidian/' -e 's/^wispr_flow=.*/wispr_flow=yes/' "$CHOICES_FILE"
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask $ALL_CASKS
   # Only the run's own calls.
   : > "$STUB_LOG"
 }
@@ -241,4 +251,52 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   [[ "$output" == *"Docker: Docker Desktop"* ]]
   [[ "$output" == *"Installed: Go, Docker Desktop"* ]]
   grep -qx 'docker=docker-desktop' "$CHOICES_FILE"
+}
+
+@test "install: the app groups and Wispr Flow come first, with only the unpicked apps" {
+  choose apps_media spotify
+  choose wispr_flow no
+  gum_answers "" no "" ""
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 4 ]
+  [ "$(prompts | sed -n 1p)" = "gum choose --no-limit --header Media --label-delimiter=: VLC:vlc" ]
+  [ "$(prompts | sed -n 2p)" = "gum confirm --default=false Install Wispr Flow for voice dictation?" ]
+  [[ "$(prompts | sed -n 3p)" == *"Programming languages"* ]]
+}
+
+@test "install: a picked app is installed after Install?" {
+  choose apps_media spotify
+  rm -rf "$OMAMAC_TEST_BREW_PREFIX/Caskroom/vlc" "$OMAMAC_TEST_APPLICATIONS/VLC.app"
+  gum_answers vlc "" "" yes
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Media: VLC"* ]]
+  grep -qx 'apps_media=spotify vlc' "$CHOICES_FILE"
+  [ "$(grep -E '^brew (install|reinstall)' "$STUB_LOG")" = "brew install --cask vlc" ]
+  # Install? first, then the cask.
+  [ "$(grep -nx 'gum confirm --default=false Install?' "$STUB_LOG" | cut -d: -f1)" -lt "$(grep -nx 'brew install --cask vlc' "$STUB_LOG" | cut -d: -f1)" ]
+  [[ "$output" == *"Installed: VLC"* ]]
+  [[ "$output" == *"The first time you open each app, macOS asks you to confirm; click Open."* ]]
+}
+
+@test "install: Zoom's password step is named before Install?" {
+  choose apps_communication 'whatsapp telegram signal discord slack'
+  rm -rf "$OMAMAC_TEST_BREW_PREFIX/Caskroom/zoom" "$OMAMAC_TEST_APPLICATIONS/zoom.us.app"
+  gum_answers zoom "" "" no
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Communication: Zoom"* ]]
+  [[ "$output" == *"ℹ Homebrew asks for your password once more, after you confirm, for: Zoom."* ]]
+  [[ "$output" != *"Install?"* ]]
+  run ! grep -q '^brew install' "$STUB_LOG"
+}
+
+@test "install: a picked app's allow line is in the box" {
+  choose apps_screen_recording ''
+  rm -rf "$OMAMAC_TEST_BREW_PREFIX/Caskroom/cap" "$OMAMAC_TEST_APPLICATIONS/Cap.app"
+  gum_answers cap "" "" yes
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Installed: Cap"$'\n'*"Cap: allow Screen Recording, and Camera and Microphone if you use them."* ]]
 }

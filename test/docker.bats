@@ -17,7 +17,8 @@ setup() {
 # CHOICES[docker] set to <docker>.
 in_lib() {
   run "$BASH5" -c "set -Eeuo pipefail
-    for f in paths ui questions choices core clis docker; do source '$REPO_ROOT/lib/'\$f.sh; done
+    export OMAMAC_CHECKOUT='$REPO_ROOT'
+    for f in paths ui questions choices core apps clis docker; do source '$REPO_ROOT/lib/'\$f.sh; done
     CHOICES[docker]='$1'
     $2"
 }
@@ -231,15 +232,30 @@ DESKTOP_NOTE="Open Docker Desktop once to finish its setup."
   [ "$output" = lazydocker ]
 }
 
-@test "desktop: installs lazydocker and the cask, saying why Homebrew asks first" {
-  in_lib docker-desktop 'docker_install; printf "%s\n" "${DOCKER_NOTES[@]}"'
+# DESKTOP: the steps apply_all runs for Docker Desktop, in its order.
+DESKTOP='DOCKER_NOTES=(); apps_install_password; docker_install'
+
+@test "desktop: the password step installs the cask, docker_install lazydocker" {
+  in_lib docker-desktop "$DESKTOP"'; printf "%s\n" "${DOCKER_NOTES[@]}"'
   [ "$status" -eq 0 ]
   [ -d "$OMAMAC_TEST_APPLICATIONS/Docker.app" ]
-  [[ "$output" == *"ℹ Homebrew asks for your password once Docker Desktop is downloaded, for its links in /usr/local."* ]]
+  [[ "$output" == *"ℹ Homebrew asks for your password for: Docker Desktop."* ]]
   [[ "$output" == *"✓ Docker Desktop is installed"* ]]
-  [[ "$output" == *"$DESKTOP_NOTE"* ]]
   [ "$(stub_calls | grep -c '^brew install lazydocker$')" -eq 1 ]
-  stub_calls | grep -qx 'brew install --cask docker-desktop'
+  [ "$(stub_calls | grep -c '^brew install --cask docker-desktop$')" -eq 1 ]
+}
+
+@test "desktop: docker_install makes no cask call" {
+  in_lib docker-desktop 'docker_install'
+  [ "$status" -eq 0 ]
+  stub_calls | grep -qx 'brew install lazydocker'
+  run ! grep -Eq '^brew (install|reinstall) --cask' "$STUB_LOG"
+}
+
+@test "desktop: the password step's note survives docker_install" {
+  in_lib docker-desktop "$DESKTOP"'; printf "%s\n" "${DOCKER_NOTES[@]}"'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *$'\n'"$DESKTOP_NOTE" ]]
 }
 
 @test "desktop: the ℹ line comes before the cask call" {
@@ -252,7 +268,7 @@ DESKTOP_NOTE="Open Docker Desktop once to finish its setup."
 
 @test "desktop: cask steps don't run under gum spin" {
   "$P/bin/brew" install gum
-  in_lib docker-desktop 'docker_install'
+  in_lib docker-desktop "$DESKTOP"
   [ "$status" -eq 0 ]
   stub_calls | grep -qx 'brew install --cask docker-desktop'
   grep -q '^gum spin.*lazydocker' "$STUB_LOG"
@@ -262,17 +278,16 @@ DESKTOP_NOTE="Open Docker Desktop once to finish its setup."
 @test "desktop: a failed cask install returns non-zero with errexit off" {
   "$P/bin/brew" install lazydocker
   export T_BREW_FAIL=1
-  in_lib docker-desktop 'set +e; docker_install || echo "rc=$?"'
+  in_lib docker-desktop 'set +e; apps_install_password docker-desktop || echo "rc=$?"'
   [[ "$output" == *"rc=1"* ]]
   [[ "$output" == *"Log: $OMAMAC_LOG"* ]]
-  [[ "$output" != *"✓ Docker Desktop is installed"* ]]
 }
 
 @test "desktop: already from Homebrew, a second run changes nothing" {
   "$P/bin/brew" install lazydocker
   "$P/bin/brew" install --cask docker-desktop
   : > "$STUB_LOG"
-  in_lib docker-desktop 'docker_install; echo "notes=${#DOCKER_NOTES[@]}"'
+  in_lib docker-desktop "$DESKTOP"'; echo "notes=${#DOCKER_NOTES[@]}"'
   [ "$status" -eq 0 ]
   [[ "$output" == *"notes=0"* ]]
   [[ "$output" == *"✓ Docker Desktop is installed"* ]]
@@ -284,7 +299,7 @@ DESKTOP_NOTE="Open Docker Desktop once to finish its setup."
   "$P/bin/brew" install --cask docker-desktop
   rm -rf "$OMAMAC_TEST_APPLICATIONS/Docker.app"
   : > "$STUB_LOG"
-  in_lib docker-desktop 'docker_install; printf "%s\n" "${DOCKER_NOTES[@]}"'
+  in_lib docker-desktop "$DESKTOP"'; printf "%s\n" "${DOCKER_NOTES[@]}"'
   [ "$status" -eq 0 ]
   stub_calls | grep -qx 'brew reinstall --cask docker-desktop'
   [ -d "$OMAMAC_TEST_APPLICATIONS/Docker.app" ]
@@ -295,18 +310,19 @@ DESKTOP_NOTE="Open Docker Desktop once to finish its setup."
   "$P/bin/brew" install lazydocker
   mkdir -p "$OMAMAC_TEST_APPLICATIONS/Docker.app"
   : > "$STUB_LOG"
-  in_lib docker-desktop 'docker_install; echo "notes=${#DOCKER_NOTES[@]}"'
+  in_lib docker-desktop "$DESKTOP"'; echo "notes=${#DOCKER_NOTES[@]}"'
   [ "$status" -eq 0 ]
   [[ "$output" == *"ℹ Docker Desktop is already installed, not through Homebrew. omamac won't update it."* ]]
   [[ "$output" == *"✓ Docker Desktop is installed"* ]]
   [[ "$output" == *"notes=0"* ]]
+  [[ "$output" != *"asks for your password"* ]]
   run ! grep -E '^brew (install|reinstall) --cask' "$STUB_LOG"
 }
 
 @test "desktop: the user's own docker formula stays, the cask installs" {
   "$P/bin/brew" install docker
   : > "$STUB_LOG"
-  in_lib docker-desktop 'docker_install'
+  in_lib docker-desktop "$DESKTOP"
   [ "$status" -eq 0 ]
   stub_calls | grep -qx 'brew install --cask docker-desktop'
   ! stub_calls | grep -Eq '^brew (uninstall|install) docker$'

@@ -1,16 +1,16 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2034 # OMAMAC_STEP is read by bin/omamac's ERR trap
 # shellcheck disable=SC2004 # CHOICES is associative (lib/choices.sh), so $key is needed
-# omamac install: add languages and cloud CLIs to the saved answers, then
-# apply. Sourced after lib/ask.sh, lib/log.sh and lib/apply.sh.
+# omamac install: add apps, languages, cloud CLIs and more to the saved
+# answers, then apply. Sourced after lib/ask.sh, lib/log.sh, lib/apps.sh and lib/apply.sh.
 
 # The questions omamac install asks again, with only their unpicked options.
-ADD_KEYS=(languages cloud_clis desktops window_margins docker)
+ADD_KEYS=("${APPS_KEYS[@]}" wispr_flow languages cloud_clis desktops window_margins docker)
 
 # add_run: CHOICES is loaded (bin/omamac did that). Ask, show the additions,
 # and save and apply them only after "Install?" is yes, so a no changes nothing.
 add_run() {
-  local key v had=() left=() lines=() labels=() names=() joined asked=''
+  local key v had=() left=() lines=() labels=() names=() apps=() allow=() joined asked=''
   local -A picks=()
   OMAMAC_STEP='asking the questions'
   for key in "${ADD_KEYS[@]}"; do
@@ -57,6 +57,7 @@ add_run() {
     [ -n "${picks[$key]:-}" ] || continue
     if [ "${QUESTION_KIND[$key]}" = yesno ]; then
       CHOICES[$key]=yes
+      [ "$key" != wispr_flow ] || apps+=(wispr-flow)
       names+=("${QUESTION_TITLE[$key]}")
       lines+=("${QUESTION_TITLE[$key]}")
       continue
@@ -70,6 +71,7 @@ add_run() {
     fi
     read -ra had <<< "${picks[$key]}"
     choices_add "$key" "${had[@]}"
+    [[ $key != apps_* ]] || apps+=("${had[@]}")
     labels=()
     for v in "${had[@]}"; do labels+=("$(question_label "$key" "$v")"); done
     names+=("${labels[@]}")
@@ -81,6 +83,7 @@ add_run() {
     exit 0
   fi
   ui_box "${lines[@]}"
+  apps_password_ahead
   if ! ask_yes "Install?"; then
     ui_info "Stopped. Nothing else was changed."
     exit 0
@@ -94,6 +97,11 @@ add_run() {
   if [ "${#names[@]}" -gt 0 ]; then
     printf -v joined '%s, ' "${names[@]}"
     lines=("Installed: ${joined%, }")
+  fi
+  if [ "${#apps[@]}" -gt 0 ]; then
+    lines+=("The first time you open each app, macOS asks you to confirm; click Open.")
+    mapfile -t allow < <(apps_allow "${apps[@]}")
+    [ "${#allow[@]}" -eq 0 ] || lines+=("${allow[@]}")
   fi
   [ "${#DOCKER_NOTES[@]}" -eq 0 ] || lines+=("${DOCKER_NOTES[@]}")
   ui_box "${lines[@]}" "Log: $OMAMAC_LOG" "Open a new terminal window to use them."

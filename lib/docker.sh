@@ -58,7 +58,8 @@ docker_service_registered() {
 
 # docker_cask_run <title> <brew args…>: a Docker Desktop cask step. Homebrew
 # resets sudo before a cask that needs it (its links in /usr/local) and asks
-# for the password itself, so no spinner hides the prompt.
+# for the password itself, so no spinner hides the prompt. For update and
+# uninstall; install's cask is the password step's (apps_install_password).
 docker_cask_run() {
   local title=$1
   shift
@@ -66,8 +67,8 @@ docker_cask_run() {
   ui_run_open "$title" "$OMAMAC_BREW_PREFIX/bin/brew" "$@"
 }
 
-# docker_install_desktop: lazydocker, then the Docker Desktop cask in the
-# state it is in (the same three as Ghostty's, see core_cask_state).
+# docker_install_desktop: lazydocker, and a word when the app is there by
+# hand. The cask is the password step's (apps_install_password), which runs first.
 docker_install_desktop() {
   local list missing=() state
   list=$(core_where missing lazydocker) || return
@@ -76,27 +77,18 @@ docker_install_desktop() {
     ui_run "Installing lazydocker" "$OMAMAC_BREW_PREFIX/bin/brew" install "${missing[@]}" || return
   fi
   state=$(core_cask_state docker-desktop) || return
-  case $state in
-    missing)
-      # A plain install of a cask Homebrew lists does nothing; reinstall puts the app back.
-      if core_cask_listed docker-desktop; then
-        docker_cask_run "Reinstalling Docker Desktop" reinstall --cask docker-desktop || return
-      else
-        docker_cask_run "Installing Docker Desktop" install --cask docker-desktop || return
-      fi
-      DOCKER_NOTES+=("Open Docker Desktop once to finish its setup.")
-      ;;
-    hand) ui_info "Docker Desktop is already installed, not through Homebrew. omamac won't update it." ;;
-  esac
+  if [ "$state" = hand ]; then
+    ui_info "Docker Desktop is already installed, not through Homebrew. omamac won't update it."
+  fi
   ui_ok "Docker Desktop is installed"
 }
 
 # docker_install: what the Docker answer needs. For colima: the missing
 # formulas in one brew call, the plugin links, and the login service, started
-# only once (see OMAMAC_COLIMA_MARKER). For Docker Desktop: see above.
+# only once (see OMAMAC_COLIMA_MARKER). For Docker Desktop: see above. Adds
+# to DOCKER_NOTES, which apply_all empties.
 docker_install() {
   local formulas=() list missing=() plugin rc why
-  DOCKER_NOTES=()
   case ${CHOICES[docker]:-none} in
     colima) ;;
     docker-desktop) docker_install_desktop; return ;;

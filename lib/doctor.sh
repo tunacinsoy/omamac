@@ -367,7 +367,14 @@ doctor_offer() {
         [ "$logged" -eq 1 ] || { log_start; logged=1; }
         case $key in
           languages) languages_install "$id" || ui_fail "omamac couldn't reinstall $label." ;;
-          docker) docker_install || ui_fail "omamac couldn't reinstall $label." ;;
+          # Docker Desktop's cask is the password step's.
+          docker)
+            if [ "$id" = docker-desktop ]; then
+              apps_install_password docker-desktop && docker_install
+            else
+              docker_install
+            fi || ui_fail "omamac couldn't reinstall $label."
+            ;;
           *) clis_install "$id" || ui_fail "omamac couldn't reinstall $label." ;;
         esac
         ;;

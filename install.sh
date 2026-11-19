@@ -71,6 +71,7 @@ install_questions() {
   unanswered=$(choices_missing)
   ask_missing
   ask_summary
+  apps_password_ahead
   if ! ask_yes "Install?"; then
     # Saved answers stay: changing one later is uninstalling one thing and
     # installing another, not answering again.
@@ -101,16 +102,27 @@ install_lines() {
 install_summary() {
   OMAMAC_STEP='printing the summary'
   # Short lines, so the box fits an 80-column terminal.
-  local chosen="the languages and cloud CLIs"
-  [ "${CHOICES[docker]:-none}" = none ] || chosen="the languages, cloud CLIs and Docker"
+  local apps=() allow=() chosen=("the languages" "cloud CLIs") list
+  mapfile -t apps < <(apps_chosen)
+  [ "${#apps[@]}" -eq 0 ] || chosen+=(apps)
+  [ "${CHOICES[docker]:-none}" = none ] || chosen+=(Docker)
+  # "a, b and c": all but the last joined, then the last.
+  list=$(clis_join "${chosen[@]:0:${#chosen[@]}-1}")
   local lines=(
     "Installed: Homebrew, bash, gum, omamac, Ghostty and the core tools,"
-    "and $chosen you chose."
+    "and $list and ${chosen[-1]} you chose."
     ""
     "omamac sets three Ghostty settings: its colours, command"
     "(starts herdr) and macos-option-as-alt."
-    "The first time you open Ghostty, macOS asks you to confirm;"
-    "click Open."
+  )
+  if [ "${#apps[@]}" -eq 0 ]; then
+    lines+=("The first time you open Ghostty, macOS asks you to confirm;" "click Open.")
+  else
+    lines+=("The first time you open Ghostty and each app, macOS asks you" "to confirm; click Open.")
+    mapfile -t allow < <(apps_allow "${apps[@]}")
+    [ "${#allow[@]}" -eq 0 ] || lines+=("${allow[@]}")
+  fi
+  lines+=(
     "To let omamac update Ghostty: System Settings → Privacy & Security"
     "→ App Management → Ghostty."
     ""
