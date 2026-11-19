@@ -423,3 +423,15 @@ brew uninstall colima docker docker-compose docker-buildx lazydocker" ]
   [ "$status" -eq 0 ]
   [[ "$(prompts)" == *"Nothing:none colima:colima"* ]]
 }
+
+@test "uninstall colima: a retry with the colima formula gone still finishes" {
+  MARKER=$HOME/$MARKER_REL; colonized
+  rm -rf "$OMAMAC_TEST_BREW_PREFIX/Cellar/colima"
+  gum_answers yes
+  run omamac_uninstall colima
+  [ "$status" -eq 0 ]
+  ! grep -qE '^(brew services|colima)' "$STUB_LOG"
+  grep -qx 'brew uninstall docker docker-compose docker-buildx lazydocker' "$STUB_LOG"
+  [ ! -e "$MARKER" ]
+  grep -qx 'docker=none' "$CHOICES_FILE"
+}

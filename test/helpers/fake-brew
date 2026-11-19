@@ -119,6 +119,8 @@ case "${1:-}" in
     case "${2:-}" in
       info)
         [ "${T_BREW_SERVICES_INFO_FAIL:-0}" != 1 ] || { echo "Error: brew services info failed" >&2; exit 1; }
+        # Like Homebrew: no formula, no service info.
+        [ -d "$prefix/Cellar/$f" ] || { echo "Error: No available formula with the name \"$f\"." >&2; exit 1; }
         if [ -e "$prefix/services/$f" ]; then r=true; else r=false; fi
         echo "[{\"name\":\"$f\",\"registered\":$r}]"
         ;;
