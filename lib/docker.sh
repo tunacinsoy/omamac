@@ -176,6 +176,21 @@ docker_uninstall_colima() {
   rm -f "$OMAMAC_COLIMA_MARKER"
 }
 
+# docker_uninstall_desktop: the Docker Desktop cask when Homebrew lists it
+# (a hand-installed app has no cask, so it stays), then lazydocker. Never
+# --zap and never the user's Docker data. Safe to run again: each step looks first.
+docker_uninstall_desktop() {
+  local list
+  OMAMAC_STEP="removing Docker Desktop"
+  if core_cask_listed docker-desktop; then
+    docker_sudo || { ui_fail "Docker Desktop needs your password, so it wasn't removed."; return 1; }
+    ui_run "Removing Docker Desktop" "$OMAMAC_BREW_PREFIX/bin/brew" uninstall --cask docker-desktop || return
+  fi
+  OMAMAC_STEP="removing lazydocker"
+  list=$(core_where installed lazydocker) || return
+  [ -z "$list" ] || ui_run "Removing lazydocker" "$OMAMAC_BREW_PREFIX/bin/brew" uninstall lazydocker
+}
+
 # docker_check: doctor's lines for colima's plugin links and its service
 # (doctor_check_chosen reports its formulas). Returns 1 only for a ✗.
 docker_check() {

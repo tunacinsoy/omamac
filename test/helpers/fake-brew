@@ -104,6 +104,11 @@ case "${1:-}" in
     for f in "$@"; do
       [ "${T_BREW_UNINSTALL_FAIL:-0}" != 1 ] || { echo "Error: $f is required by other" >&2; exit 1; }
       rm -rf "${prefix:?}/$root/${f##*/}"
+      # Like Homebrew: a cask uninstall takes its app too.
+      case "$root/$f" in
+        Caskroom/ghostty) rm -rf "${OMAMAC_TEST_APPLICATIONS:?}/Ghostty.app" ;;
+        Caskroom/docker-desktop) rm -rf "${OMAMAC_TEST_APPLICATIONS:?}/Docker.app" ;;
+      esac
     done
     ;;
   reinstall)
