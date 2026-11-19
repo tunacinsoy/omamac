@@ -64,7 +64,8 @@ add_run() {
     if [ "${QUESTION_KIND[$key]}" = single ]; then
       CHOICES[$key]=${picks[$key]}
       v=$(question_label "$key" "${picks[$key]}")
-      names+=("$v")
+      # Docker Desktop installs nothing until Phase 5b, so it isn't "Installed".
+      [ "${picks[$key]}" = docker-desktop ] || names+=("$v")
       lines+=("${QUESTION_TITLE[$key]}: $v")
       continue
     fi
@@ -90,8 +91,11 @@ add_run() {
   log_start
   apply_all
   OMAMAC_STEP='printing the summary'
-  printf -v joined '%s, ' "${names[@]}"
-  lines=("Installed: ${joined%, }")
+  lines=()
+  if [ "${#names[@]}" -gt 0 ]; then
+    printf -v joined '%s, ' "${names[@]}"
+    lines=("Installed: ${joined%, }")
+  fi
   [ "${#DOCKER_NOTES[@]}" -eq 0 ] || lines+=("${DOCKER_NOTES[@]}")
   ui_box "${lines[@]}" "Log: $OMAMAC_LOG" "Open a new terminal window to use them."
 }

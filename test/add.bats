@@ -203,6 +203,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   choose docker colima
   gum_answers "" ""
   run omamac_install
+  [ "$status" -eq 0 ]
   [[ "$(prompts)" != *"How should Docker run?"* ]]
   [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
 }
@@ -230,4 +231,16 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   [[ "$output" == *"The first start downloads Linux and takes a few minutes."* ]]
   grep -qx 'docker=colima' "$CHOICES_FILE"
   grep -q '^brew install colima ' "$STUB_LOG"
+}
+
+@test "install: Docker Desktop isn't named as installed yet" {
+  # It installs nothing until Phase 5b.
+  choose docker none
+  gum_answers go "" docker-desktop yes
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Docker: Docker Desktop"* ]]
+  [[ "$output" == *"Installed: Go"* ]]
+  [[ "$output" != *"Installed: Go, Docker Desktop"* ]]
+  grep -qx 'docker=docker-desktop' "$CHOICES_FILE"
 }

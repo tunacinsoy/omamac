@@ -759,6 +759,16 @@ healthy_colima() {
   [ "$(printf '%s\n' "$output" | grep -c '^✗ colima')" -eq 1 ]
 }
 
+@test "doctor: without the colima formula, no line for its service" {
+  healthy_mac
+  healthy_colima
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" uninstall colima
+  gum_answers leave
+  expect_fail "colima — you chose it, but Homebrew no longer has colima" \
+    "omamac update puts it back; omamac uninstall colima drops it"
+  [[ "$output" != *"colima's service"* ]]
+}
+
 @test "doctor: Homebrew can't list: colima skipped, said once" {
   healthy_mac
   healthy_colima

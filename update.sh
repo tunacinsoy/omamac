@@ -25,8 +25,6 @@ source "$OMAMAC_CHECKOUT/lib/questions.sh"
 source "$OMAMAC_CHECKOUT/lib/choices.sh"
 # shellcheck source=lib/core.sh
 source "$OMAMAC_CHECKOUT/lib/core.sh"
-# shellcheck source=lib/docker.sh
-source "$OMAMAC_CHECKOUT/lib/docker.sh"
 # shellcheck source=lib/neovim.sh
 source "$OMAMAC_CHECKOUT/lib/neovim.sh"
 # shellcheck source=lib/herdr.sh
@@ -183,11 +181,14 @@ update_main() {
   update_upgrade_ghostty
   update_upgrade_languages
   OMAMAC_STEP='printing the summary'
+  # This run may be the one that started colima's service, as install would have.
+  local notes=()
+  [ "${#DOCKER_NOTES[@]}" -eq 0 ] || notes=("" "${DOCKER_NOTES[@]}" "")
   if [ "$UPDATE_FAILED" -eq 1 ]; then
-    ui_box "✗ Everything else is up to date. Ghostty is not." "Log: $OMAMAC_LOG" >&2
+    ui_box "✗ Everything else is up to date. Ghostty is not." "${notes[@]}" "Log: $OMAMAC_LOG" >&2
     exit 1
   fi
-  ui_box "omamac and your tools are up to date." "Log: $OMAMAC_LOG"
+  ui_box "omamac and your tools are up to date." "${notes[@]}" "Log: $OMAMAC_LOG"
 }
 
 update_main

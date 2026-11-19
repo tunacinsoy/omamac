@@ -157,6 +157,17 @@ broken" ]
   [ ! -e "$MARKER" ]
 }
 
+@test "colima: a failed link stops the step, without the marker or ✓" {
+  # Doctor's Reinstall calls docker_install after ||, where errexit is off.
+  : > "$HOME/.docker"
+  in_lib colima 'docker_install || echo "returned $?"'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"returned "[1-9]* ]]
+  [[ "$output" != *"✓"* ]]
+  [ ! -e "$MARKER" ]
+  [ "$(starts)" -eq 0 ]
+}
+
 @test "none: installs nothing" {
   in_lib none 'docker_install'
   [ "$status" -eq 0 ]
@@ -190,4 +201,17 @@ broken" ]
   [[ "$output" == *"The first start downloads Linux and takes a few minutes."* ]]
   # The notes come before the log line.
   [[ "$output" == *"takes a few minutes."*"Log: "* ]]
+}
+
+@test "install summary doesn't name Docker for Docker Desktop yet" {
+  # It installs nothing until Phase 5b.
+  "$P/bin/brew" install gum
+  choices="$HOME/.local/state/omamac/choices.env"
+  mkdir -p "$(dirname "$choices")"
+  sed 's/^docker=none$/docker=docker-desktop/' "$REPO_ROOT/test/fixtures/bare.env" > "$choices"
+  gum_answers yes
+  run "$BASH5" "$REPO_ROOT/install.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"and the languages and cloud CLIs you chose."* ]]
+  [[ "$output" != *"Docker you chose"* ]]
 }

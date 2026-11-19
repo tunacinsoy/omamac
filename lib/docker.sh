@@ -72,8 +72,9 @@ docker_install() {
   for plugin in "${DOCKER_PLUGINS[@]}"; do
     case $(docker_link_state "$plugin") in
       missing)
-        mkdir -p "$HOME/.docker/cli-plugins"
-        ln -s "$(docker_link_target "$plugin")" "$(docker_link_path "$plugin")"
+        # || return: doctor's Reinstall runs this with errexit off.
+        mkdir -p "$HOME/.docker/cli-plugins" || return
+        ln -s "$(docker_link_target "$plugin")" "$(docker_link_path "$plugin")" || return
         ;;
       theirs) ui_info "Your own $plugin in ~/.docker/cli-plugins stays, and docker uses it." ;;
       # The user's, so it stays; docker can't use it.
@@ -137,7 +138,7 @@ docker_uninstall_colima() {
 # docker_check: doctor's lines for colima's plugin links and its service
 # (doctor_check_chosen reports its formulas). Returns 1 only for a ✗.
 docker_check() {
-  local plugin state rc status=0
+  local plugin state rc list status=0
   [ "${CHOICES[docker]:-none}" = colima ] || return 0
   for plugin in "${DOCKER_PLUGINS[@]}"; do
     state=$(docker_link_state "$plugin")
@@ -152,6 +153,11 @@ docker_check() {
       doctor_report fail "$plugin" "docker can't find ${plugin#docker-}" "omamac update" || status=1
     fi
   done
+  # Without the colima formula there is no service to ask about, and the ✗
+  # under Your tools already names colima.
+  if list=$(core_where installed colima 2> /dev/null) && [ -z "$list" ]; then
+    return "$status"
+  fi
   # The service is colima's state, not omamac's, so it is never a ✗.
   rc=0
   docker_service_registered > /dev/null 2>&1 || rc=$?
