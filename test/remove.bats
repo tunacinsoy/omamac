@@ -71,7 +71,7 @@ snapshot() {
   gum_answers
   run --separate-stderr omamac_uninstall php
   [ "$status" -eq 2 ]
-  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, desktops, window-margins, colima, docker-desktop."* ]]
+  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, brave, chrome, firefox, whatsapp, telegram, signal, discord, slack, zoom, spotify, vlc, cap, dropbox, google-drive, vscode, raycast, obsidian, wispr-flow, desktops, window-margins, colima, docker-desktop."* ]]
   [ -z "$(prompts)" ]
 }
 
@@ -226,7 +226,7 @@ snapshot() {
   gum_answers
   run omamac_uninstall
   [ "$status" -eq 0 ]
-  [[ "$output" == *"omamac installed no languages, cloud CLIs or Docker, so there's nothing to remove."* ]]
+  [[ "$output" == *"omamac installed no languages, cloud CLIs, Docker or apps, so there's nothing to remove."* ]]
   [ -z "$(prompts)" ]
 }
 
@@ -472,7 +472,7 @@ no_brew_changes() { run ! grep -qE '^brew (uninstall|install|reinstall)' "$STUB_
 
 @test "uninstall docker-desktop: shows what goes, no changes nothing" {
   dockered
-  gum_answers no
+  gum_answers no no
   run omamac_uninstall docker-desktop
   [ "$status" -eq 0 ]
   [[ "$output" == *"Docker Desktop: the app and lazydocker. Your images, containers and volumes stay."* ]]
@@ -482,11 +482,12 @@ no_brew_changes() { run ! grep -qE '^brew (uninstall|install|reinstall)' "$STUB_
 
 @test "uninstall docker-desktop: removes in order, answer last" {
   dockered
-  gum_answers yes
+  gum_answers no yes
   run omamac_uninstall docker-desktop
   [ "$status" -eq 0 ]
   [ "$(grep '^brew uninstall' "$STUB_LOG")" = "brew uninstall --cask docker-desktop
 brew uninstall lazydocker" ]
+  [[ "$output" == *"Docker Desktop: the app and lazydocker. Your images, containers and volumes stay."*"ℹ Homebrew may ask for your password."*"Removing Docker Desktop"* ]]
   [ ! -e "$OMAMAC_TEST_APPLICATIONS/Docker.app" ]
   grep -qx 'docker=none' "$CHOICES_FILE"
   run ! grep -q -- '--zap' "$STUB_LOG"
@@ -533,7 +534,7 @@ brew uninstall lazydocker" ]
   dockered
   rm -rf "$OMAMAC_TEST_APPLICATIONS/Docker.app"
   deny_app_management
-  gum_answers yes
+  gum_answers no yes
   run omamac_uninstall docker-desktop
   [ "$status" -eq 0 ]
   grep -qx 'brew uninstall --cask docker-desktop' "$STUB_LOG"
@@ -543,7 +544,7 @@ brew uninstall lazydocker" ]
 @test "uninstall docker-desktop: a failed cask removal keeps the answer" {
   dockered
   export T_BREW_UNINSTALL_FAIL=1
-  gum_answers yes
+  gum_answers no yes
   run omamac_uninstall docker-desktop
   [ "$status" -ne 0 ]
   run ! grep -qx 'brew uninstall lazydocker' "$STUB_LOG"
@@ -552,7 +553,7 @@ brew uninstall lazydocker" ]
 
 @test "uninstall docker-desktop: a second run changes nothing" {
   dockered
-  gum_answers yes
+  gum_answers no yes
   run omamac_uninstall docker-desktop
   [ "$status" -eq 0 ]
   : > "$STUB_LOG"
@@ -564,7 +565,7 @@ brew uninstall lazydocker" ]
 @test "uninstall docker-desktop: the user's own docker formula stays" {
   dockered
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install docker
-  gum_answers yes
+  gum_answers no yes
   run omamac_uninstall docker-desktop
   [ "$status" -eq 0 ]
   run ! grep -qE '^brew uninstall docker( |$)' "$STUB_LOG"
@@ -577,4 +578,221 @@ brew uninstall lazydocker" ]
   run omamac_uninstall
   [ "$status" -eq 0 ]
   [[ "$(prompts)" == *"Nothing:none Docker Desktop:docker-desktop"* ]]
+}
+
+@test "uninstall docker-desktop: yes to the data question zaps it" {
+  dockered
+  gum_answers yes yes
+  run omamac_uninstall docker-desktop
+  [ "$status" -eq 0 ]
+  [ "$(grep -E '^(gum confirm|brew uninstall)' "$STUB_LOG")" = "gum confirm --default=false Also remove Docker Desktop's settings and data?
+gum confirm --default=false Remove Docker Desktop?
+brew uninstall --cask --zap docker-desktop
+brew uninstall lazydocker" ]
+  [[ "$output" == *"ℹ On yes, Homebrew also deletes Docker Desktop's images, containers and volumes, and ~/.docker (Docker's settings and saved logins)."* ]]
+  [[ "$output" == *"Docker Desktop: the app and lazydocker, with Docker Desktop's images, containers, volumes and ~/.docker."* ]]
+  [[ "$output" != *"Your images, containers and volumes stay."* ]]
+  grep -qx 'docker=none' "$CHOICES_FILE"
+}
+
+@test "uninstall docker-desktop: the help line comes before the data question" {
+  dockered
+  gum_answers "exit 130"
+  run omamac_uninstall docker-desktop
+  [ "$status" -eq 130 ]
+  [[ "$output" == *"On yes, Homebrew also deletes Docker Desktop's images"* ]]
+  [[ "$output" != *"Docker Desktop: the app"* ]]
+  no_brew_changes
+}
+
+@test "uninstall docker-desktop: a hand-installed app gets no data question" {
+  dockered
+  rm -rf "$OMAMAC_TEST_BREW_PREFIX/Caskroom/docker-desktop"
+  gum_answers yes
+  run omamac_uninstall docker-desktop
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "gum confirm --default=false Remove Docker Desktop?" ]
+  [[ "$output" != *"On yes"* ]]
+}
+
+# app_run <key> <id> <cask>: what a run with that app picked left: the pick, the cask and its app.
+app_run() {
+  if [ "$1" = wispr_flow ]; then choose wispr_flow yes; else choose "$1" "$2"; fi
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask "$3"
+  : > "$STUB_LOG"
+}
+
+@test "uninstall vlc: the order, and the data with it on yes" {
+  app_run apps_media vlc vlc
+  gum_answers yes yes
+  run omamac_uninstall vlc
+  [ "$status" -eq 0 ]
+  [ "$(grep -E '^(gum confirm|brew uninstall)' "$STUB_LOG")" = "gum confirm --default=false Also remove VLC's settings and data?
+gum confirm --default=false Remove VLC?
+brew uninstall --cask --zap vlc" ]
+  [[ "$output" == *"ℹ On yes, Homebrew also deletes what VLC keeps in ~/Library."*"VLC: the app, with its settings and data."*"ℹ Homebrew may ask for your password."*"Removing VLC"*"✓ VLC is removed"* ]]
+  # In the open, so Homebrew's password prompt shows.
+  run ! grep -q '^gum spin.*vlc' "$STUB_LOG"
+  [ ! -e "$OMAMAC_TEST_APPLICATIONS/VLC.app" ]
+  [ ! -e "$OMAMAC_TEST_BREW_PREFIX/Caskroom/vlc" ]
+  grep -qx 'apps_media=' "$CHOICES_FILE"
+}
+
+@test "uninstall vlc: the help line comes before the data question" {
+  app_run apps_media vlc vlc
+  gum_answers "exit 130"
+  run omamac_uninstall vlc
+  [ "$status" -eq 130 ]
+  [[ "$output" == *"On yes, Homebrew also deletes what VLC keeps in ~/Library."* ]]
+  [[ "$output" != *"VLC: the app"* ]]
+  no_brew_changes
+  grep -qx 'apps_media=vlc' "$CHOICES_FILE"
+}
+
+@test "uninstall vlc: Enter alone at the data question removes only the app" {
+  app_run apps_media 'spotify vlc' vlc
+  # fake-gum answers no as Enter would: the question defaults to no.
+  gum_answers no yes
+  run omamac_uninstall vlc
+  [ "$status" -eq 0 ]
+  grep -qx "gum confirm --default=false Also remove VLC's settings and data?" "$STUB_LOG"
+  [[ "$output" == *"VLC: the app."* ]]
+  [[ "$output" != *"with its settings and data"* ]]
+  [ "$(grep '^brew uninstall' "$STUB_LOG")" = "brew uninstall --cask vlc" ]
+  [ ! -e "$OMAMAC_TEST_APPLICATIONS/VLC.app" ]
+  grep -qx 'apps_media=spotify' "$CHOICES_FILE"
+}
+
+@test "uninstall vlc: no at Remove VLC? changes nothing" {
+  app_run apps_media vlc vlc
+  gum_answers yes no
+  run omamac_uninstall vlc
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Nothing was removed."* ]]
+  no_brew_changes
+  [ -e "$OMAMAC_TEST_APPLICATIONS/VLC.app" ]
+  grep -qx 'apps_media=vlc' "$CHOICES_FILE"
+}
+
+@test "uninstall vlc: not picked exits 0 with no brew call" {
+  gum_answers
+  run omamac_uninstall vlc
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"VLC isn't installed by omamac."* ]]
+  [ -z "$(prompts)" ]
+  run ! grep -q '^brew ' "$STUB_LOG"
+}
+
+@test "uninstall vlc: installed by hand, only the pick goes" {
+  choose apps_media vlc
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/VLC.app"
+  gum_answers yes
+  run omamac_uninstall vlc
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"VLC: installed by hand, so the app stays. omamac only forgets your pick."* ]]
+  [ "$(prompts)" = "gum confirm --default=false Remove VLC?" ]
+  no_brew_changes
+  [ -e "$OMAMAC_TEST_APPLICATIONS/VLC.app" ]
+  grep -qx 'apps_media=' "$CHOICES_FILE"
+}
+
+@test "uninstall vlc: removed with brew by hand, no brew call, pick dropped" {
+  choose apps_media vlc
+  gum_answers yes
+  run omamac_uninstall vlc
+  [ "$status" -eq 0 ]
+  # Homebrew doesn't list it, so there is no data for it to delete.
+  [ "$(prompts)" = "gum confirm --default=false Remove VLC?" ]
+  [[ "$output" == *"VLC: the app."* ]]
+  [[ "$output" == *"✓ VLC is removed"* ]]
+  no_brew_changes
+  grep -qx 'apps_media=' "$CHOICES_FILE"
+}
+
+@test "uninstall vlc: app trashed, cask listed" {
+  app_run apps_media vlc vlc
+  rm -rf "$OMAMAC_TEST_APPLICATIONS/VLC.app"
+  deny_app_management
+  gum_answers no yes
+  run omamac_uninstall vlc
+  [ "$status" -eq 0 ]
+  grep -qx 'brew uninstall --cask vlc' "$STUB_LOG"
+  grep -qx 'apps_media=' "$CHOICES_FILE"
+}
+
+@test "uninstall vlc: App Management off asks nothing and keeps the pick" {
+  app_run apps_media vlc vlc
+  deny_app_management
+  stub open
+  gum_answers yes yes
+  run omamac_uninstall vlc
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"✗ macOS won't let your terminal change apps, so nothing was removed."* ]]
+  [[ "$output" == *"App Management, turn on your terminal, then run omamac uninstall vlc again."* ]]
+  grep -q '^open x-apple.systempreferences:' "$STUB_LOG"
+  [ -z "$(prompts)" ]
+  no_brew_changes
+  grep -qx 'apps_media=vlc' "$CHOICES_FILE"
+}
+
+@test "uninstall vlc: a failed brew uninstall keeps the pick" {
+  app_run apps_media vlc vlc
+  gum_answers no yes
+  T_BREW_UNINSTALL_FAIL=1 run omamac_uninstall vlc
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"omamac stopped while removing VLC."* ]]
+  grep -qx 'apps_media=vlc' "$CHOICES_FILE"
+}
+
+@test "uninstall vlc: a second run calls no brew" {
+  app_run apps_media vlc vlc
+  gum_answers yes yes
+  run omamac_uninstall vlc
+  [ "$status" -eq 0 ]
+  : > "$STUB_LOG"
+  run omamac_uninstall vlc
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"VLC isn't installed by omamac."* ]]
+  run ! grep -q '^brew ' "$STUB_LOG"
+}
+
+@test "uninstall wispr-flow saves wispr_flow=no" {
+  app_run wispr_flow wispr-flow wispr-flow
+  gum_answers no yes
+  run omamac_uninstall wispr-flow
+  [ "$status" -eq 0 ]
+  grep -qx 'gum confirm --default=false Remove Wispr Flow?' "$STUB_LOG"
+  grep -qx 'brew uninstall --cask wispr-flow' "$STUB_LOG"
+  [ ! -e "$OMAMAC_TEST_APPLICATIONS/Wispr Flow.app" ]
+  grep -qx 'wispr_flow=no' "$CHOICES_FILE"
+}
+
+@test "uninstall: a wrong app name lists the app ids" {
+  gum_answers
+  for name in "VS Code" apps_media wispr_flow; do
+    run --separate-stderr omamac_uninstall "$name"
+    [ "$status" -eq 2 ]
+    [[ "$stderr" == *"omamac can't remove '$name'. It can remove: "*", vscode, "*", wispr-flow, "* ]]
+  done
+  [ -z "$(prompts)" ]
+}
+
+@test "no name: the chosen apps come after the settings" {
+  choose window_margins yes
+  choose apps_media vlc
+  choose wispr_flow yes
+  choose docker docker-desktop
+  gum_answers none
+  run omamac_uninstall
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "gum choose --header What should omamac remove? --label-delimiter=: Nothing:none Window margins:window-margins VLC:vlc Wispr Flow:wispr-flow Docker Desktop:docker-desktop" ]
+}
+
+@test "no name: a picked app is removed" {
+  app_run apps_developer vscode visual-studio-code
+  gum_answers vscode no yes
+  run omamac_uninstall
+  [ "$status" -eq 0 ]
+  grep -qx 'brew uninstall --cask visual-studio-code' "$STUB_LOG"
+  grep -qx 'apps_developer=' "$CHOICES_FILE"
 }

@@ -59,9 +59,11 @@ setup() { setup_sandbox; }
   [ "$status" -eq 1 ]
 }
 
-@test "omamac never zaps Docker Desktop or removes quarantine" {
-  # --zap deletes the user's Docker data; xattr would clear a security check.
+@test "--zap only in the uninstall path, and never xattr" {
+  # --zap deletes the user's data, so only uninstall passes it, after a yes;
+  # xattr would clear a security check.
   cd "$REPO_ROOT"
   run grep -rnE -e '--zap|xattr' bin lib install.sh update.sh
-  [ "$status" -eq 1 ]
+  [ "$status" -eq 0 ]
+  [ -z "$(grep -v '^lib/remove.sh:' <<< "$output")" ]
 }

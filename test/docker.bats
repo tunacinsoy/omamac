@@ -258,14 +258,6 @@ DESKTOP='DOCKER_NOTES=(); apps_install_password; docker_install'
   [[ "$output" == *$'\n'"$DESKTOP_NOTE" ]]
 }
 
-@test "desktop: the ℹ line comes before the cask call" {
-  # ui_run_open stands in for the brew call: the line must already be printed.
-  in_lib docker-desktop 'ui_run_open() { echo "RUN $*"; }; docker_cask_run "Installing Docker Desktop" install --cask docker-desktop'
-  [ "$status" -eq 0 ]
-  [ "${lines[0]}" = "ℹ Homebrew asks for your password once Docker Desktop is downloaded, for its links in /usr/local." ]
-  [[ "${lines[1]}" == "RUN Installing Docker Desktop "*"brew install --cask docker-desktop" ]]
-}
-
 @test "desktop: cask steps don't run under gum spin" {
   "$P/bin/brew" install gum
   in_lib docker-desktop "$DESKTOP"

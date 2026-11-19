@@ -56,17 +56,6 @@ docker_service_registered() {
   return 2
 }
 
-# docker_cask_run <title> <brew args…>: a Docker Desktop cask step. Homebrew
-# resets sudo before a cask that needs it (its links in /usr/local) and asks
-# for the password itself, so no spinner hides the prompt. For update and
-# uninstall; install's cask is the password step's (apps_install_password).
-docker_cask_run() {
-  local title=$1
-  shift
-  ui_info "Homebrew asks for your password once Docker Desktop is downloaded, for its links in /usr/local."
-  ui_run_open "$title" "$OMAMAC_BREW_PREFIX/bin/brew" "$@"
-}
-
 # docker_install_desktop: lazydocker, and a word when the app is there by
 # hand. The cask is the password step's (apps_install_password), which runs first.
 docker_install_desktop() {
@@ -168,14 +157,17 @@ docker_uninstall_colima() {
   rm -f "$OMAMAC_COLIMA_MARKER"
 }
 
-# docker_uninstall_desktop: the Docker Desktop cask when Homebrew lists it
-# (a hand-installed app has no cask, so it stays), then lazydocker. Never
-# the zap option and never the user's Docker data. Safe to run again: each step looks first.
+# docker_uninstall_desktop [<option>]: the Docker Desktop cask when Homebrew
+# lists it (a hand-installed app has no cask, so it stays), then lazydocker.
+# The option is the zap one, which lib/remove.sh passes only after a yes; the
+# user's Docker data stays otherwise. Safe to run again: each step looks first.
 docker_uninstall_desktop() {
   local list
   OMAMAC_STEP="removing Docker Desktop"
   if core_cask_listed docker-desktop; then
-    docker_cask_run "Removing Docker Desktop" uninstall --cask docker-desktop || return
+    # Homebrew resets sudo for its links in /usr/local and asks itself; no spinner hides that.
+    ui_info "Homebrew may ask for your password."
+    ui_run_open "Removing Docker Desktop" "$OMAMAC_BREW_PREFIX/bin/brew" uninstall --cask "$@" docker-desktop || return
   fi
   OMAMAC_STEP="removing lazydocker"
   list=$(core_where installed lazydocker) || return
