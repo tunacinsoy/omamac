@@ -71,7 +71,7 @@ snapshot() {
   gum_answers
   run --separate-stderr omamac_uninstall php
   [ "$status" -eq 2 ]
-  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, desktops, window-margins."* ]]
+  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, desktops, window-margins, colima."* ]]
   [ -z "$(prompts)" ]
 }
 
@@ -226,7 +226,7 @@ snapshot() {
   gum_answers
   run omamac_uninstall
   [ "$status" -eq 0 ]
-  [[ "$output" == *"omamac installed no languages or cloud CLIs, so there's nothing to remove."* ]]
+  [[ "$output" == *"omamac installed no languages, cloud CLIs or Docker, so there's nothing to remove."* ]]
   [ -z "$(prompts)" ]
 }
 
@@ -316,4 +316,110 @@ REC() { echo "$HOME/.local/state/omamac/macos-settings.tsv"; }
   [ "$status" -eq 0 ]
   grep -qx 'desktops=no' "$CHOICES_FILE"
   [ ! -e "$(REC)" ]
+}
+
+# colonized: what a colima run leaves: five formulas, both links, the service,
+# a running colima, the marker, and the user's data.
+colonized() {
+  choose docker colima
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install colima docker docker-compose docker-buildx lazydocker
+  mkdir -p "$HOME/.docker/cli-plugins" "$HOME/.colima/default" "$OMAMAC_TEST_BREW_PREFIX/services" "$(dirname "$MARKER")"
+  for p in docker-compose docker-buildx; do
+    ln -s "$OMAMAC_TEST_BREW_PREFIX/opt/$p/bin/$p" "$HOME/.docker/cli-plugins/$p"
+  done
+  : > "$OMAMAC_TEST_BREW_PREFIX/services/colima"
+  : > "$OMAMAC_TEST_BREW_PREFIX/colima-running"
+  : > "$HOME/.colima/default/x"
+  : > "$MARKER"
+  : > "$STUB_LOG"
+}
+MARKER_REL=.local/state/omamac/colima-service
+
+@test "uninstall colima: not the answer exits 0" {
+  gum_answers
+  run omamac_uninstall colima
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"colima isn't installed by omamac."* ]]
+  [ -z "$(prompts)" ]
+  ! grep -q '^brew ' "$STUB_LOG"
+}
+
+@test "uninstall colima: shows what goes and where data stays" {
+  MARKER=$HOME/$MARKER_REL; colonized
+  gum_answers no
+  run omamac_uninstall colima
+  [[ "$output" == *"colima: colima, docker, docker-compose, docker-buildx and lazydocker. Your images, containers and volumes stay in ~/.colima."* ]]
+  grep -qx 'gum confirm --default=false Remove colima?' "$STUB_LOG"
+}
+
+@test "uninstall colima: no changes nothing" {
+  MARKER=$HOME/$MARKER_REL; colonized
+  gum_answers no
+  run omamac_uninstall colima
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Nothing was removed."* ]]
+  ! grep -q '^brew ' "$STUB_LOG"
+  grep -qx 'docker=colima' "$CHOICES_FILE"
+}
+
+@test "uninstall colima: removes in order, answer last" {
+  MARKER=$HOME/$MARKER_REL; colonized
+  gum_answers yes
+  run omamac_uninstall colima
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ colima is removed"* ]]
+  [ "$(grep -E '^(brew (services stop|uninstall)|colima stop)' "$STUB_LOG")" = "brew services stop colima
+colima stop
+brew uninstall colima docker docker-compose docker-buildx lazydocker" ]
+  [ ! -e "$HOME/.docker/cli-plugins" ]
+  [ ! -e "$MARKER" ]
+  grep -qx 'docker=none' "$CHOICES_FILE"
+}
+
+@test "uninstall colima: keeps a user's plugin and ~/.colima" {
+  MARKER=$HOME/$MARKER_REL; colonized
+  rm "$HOME/.docker/cli-plugins/docker-buildx"
+  echo mine > "$HOME/.docker/cli-plugins/docker-buildx"
+  gum_answers yes
+  run omamac_uninstall colima
+  [ "$status" -eq 0 ]
+  [ "$(cat "$HOME/.docker/cli-plugins/docker-buildx")" = mine ]
+  [ ! -e "$HOME/.docker/cli-plugins/docker-compose" ]
+  [ -e "$HOME/.colima/default/x" ]
+}
+
+@test "uninstall colima: a second run changes nothing" {
+  MARKER=$HOME/$MARKER_REL; colonized
+  gum_answers yes
+  run omamac_uninstall colima
+  [ "$status" -eq 0 ]
+  : > "$STUB_LOG"
+  run omamac_uninstall colima
+  [ "$status" -eq 0 ]
+  ! grep -q '^brew ' "$STUB_LOG"
+}
+
+@test "uninstall colima: a failed brew uninstall keeps the answer" {
+  MARKER=$HOME/$MARKER_REL; colonized
+  gum_answers yes
+  T_BREW_UNINSTALL_FAIL=1 run omamac_uninstall colima
+  [ "$status" -ne 0 ]
+  grep -qx 'docker=colima' "$CHOICES_FILE"
+}
+
+@test "uninstall none and docker are refused" {
+  gum_answers
+  for name in none docker; do
+    run --separate-stderr omamac_uninstall "$name"
+    [ "$status" -eq 2 ]
+    [[ "$stderr" == *"can't remove"* ]]
+  done
+}
+
+@test "uninstall with no name offers colima" {
+  MARKER=$HOME/$MARKER_REL; colonized
+  gum_answers none
+  run omamac_uninstall
+  [ "$status" -eq 0 ]
+  [[ "$(prompts)" == *"Nothing:none colima:colima"* ]]
 }

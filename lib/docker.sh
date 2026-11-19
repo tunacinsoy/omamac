@@ -87,3 +87,36 @@ docker_install() {
   fi
   ui_ok "colima is installed"
 }
+
+# docker_uninstall_colima: take colima's pieces away, never ~/.colima (the
+# user's images and volumes) and never a plugin that isn't omamac's link.
+# Safe to run again after a failure: each step looks first.
+docker_uninstall_colima() {
+  local formulas=() installed=() list plugin rc why colima="$OMAMAC_BREW_PREFIX/bin/colima"
+  OMAMAC_STEP="stopping colima"
+  rc=0
+  why=$(docker_service_registered) || rc=$?
+  case $rc in
+    0) ui_run "Stopping colima's service" "$OMAMAC_BREW_PREFIX/bin/brew" services stop colima || return ;;
+    1) ;;
+    *) ui_fail "$why"; return 1 ;;
+  esac
+  # A VM started by hand outlives the service, and its files go with colima.
+  if [ -x "$colima" ] && "$colima" status > /dev/null 2>&1; then
+    ui_run "Stopping colima" "$colima" stop || return
+  fi
+  OMAMAC_STEP="removing docker's plugin links"
+  for plugin in "${DOCKER_PLUGINS[@]}"; do
+    [ "$(docker_link_state "$plugin")" != ours ] || rm "$(docker_link_path "$plugin")"
+  done
+  # rmdir only removes an empty folder.
+  rmdir "$HOME/.docker/cli-plugins" 2> /dev/null || true
+  OMAMAC_STEP="removing colima"
+  mapfile -t formulas < <(docker_formulas colima)
+  list=$(core_where installed "${formulas[@]}") || return
+  [ -z "$list" ] || mapfile -t installed <<< "$list"
+  if [ "${#installed[@]}" -gt 0 ]; then
+    ui_run "Removing $(clis_join "${installed[@]}")" "$OMAMAC_BREW_PREFIX/bin/brew" uninstall "${installed[@]}" || return
+  fi
+  rm -f "$OMAMAC_COLIMA_MARKER"
+}
