@@ -53,6 +53,7 @@ It is done when apps install, update and uninstall cleanly in the VM, including 
   - **The password:** Homebrew resets sudo the first time a command needs it and asks itself (`Library/Homebrew/utils/sudo.sh`, "Reset sudo timestamp to avoid running unauthorised sudo commands"). The reset happens once per `brew` command.
   - **The Dock:** in the VM the Dock runs (the GUI session is logged in). A fresh `persistent-apps` holds 18 Apple apps, every one under `file:///System/` (Safari under `/System/Volumes/Preboot/Cryptexes/`). `persistent-others` holds `file:///Users/admin/Downloads/`. `show-recents` and `autohide` are absent. `defaults export com.apple.dock`, `plutil -remove` and `-insert … -append` on the copy, `defaults import` and `killall Dock` left exactly Ghostty and VLC, no Downloads, `show-recents` 0; the Dock filled in each new tile's bundle id and bookmark itself. `plutil -convert json` fails on this plist (it holds data and dates), so the code reads it with `plutil -extract … raw`.
   - **Outdated:** right after installing, `brew outdated --cask` and `brew outdated --cask --greedy` list nothing.
+  - **Second probe (6a's plan):** `brew install --cask google-drive docker-desktop` asked for the password once for both. `brew uninstall --cask google-drive` also took Google Docs, Sheets and Slides out of Applications, asked once, and warned that it couldn't remove its login item (System Events needs Automation access), exit 0. `brew uninstall --zap --cask docker-desktop` over SSH asked once, moved `~/.docker` and Docker's `~/Library` folders to the Trash, removed its links in `/usr/local`, exit 0.
 
 ## Approaches
 
@@ -240,7 +241,7 @@ A new check, "Your apps", after "Your tools":
 
 - Gate B: the permission prompts each app shows on first launch, for the `allow` lines (only Cap, Wispr Flow and Zoom have one today); whether Google Drive's and Dropbox's system extensions need a click; the Dock on real hardware.
 - Carried from 5b, now closed by Non-goals: adopting Ghostty and Docker Desktop isn't offered; doctor prints the command for Ghostty.
-- For Tuna: Google Drive brings Google Docs, Sheets and Slides into Applications. Whether its uninstall removes them is unchecked; 6a's plan checks it in a probe VM.
+- For Tuna: Google Drive brings Google Docs, Sheets and Slides into Applications; its uninstall removes them too. Its login item stays after uninstall unless the terminal has Automation access to System Events (Homebrew warns).
 - 6c: `omamac install` asks Dock cleanup and Dock auto-hide again when answered no (`ADD_KEYS`).
 
 ## Left to the builder
