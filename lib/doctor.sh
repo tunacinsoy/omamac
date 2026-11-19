@@ -173,7 +173,7 @@ doctor_check_ghostty() {
   else
     case $state in
       brew) doctor_report ok "$what" ;;
-      hand) doctor_report info "$what" "installed by hand, so omamac won't update it" ;;
+      hand) doctor_report info "$what" "installed by hand, so omamac won't update it. To let Homebrew take it over: brew install --cask --adopt ghostty" ;;
       missing)
         # Homebrew's install does nothing for a cask it already lists.
         if core_cask_listed ghostty; then fix="brew reinstall --cask ghostty"; else fix="brew install --cask ghostty"; fi
@@ -381,7 +381,14 @@ doctor_check_apps() {
         doctor_report fail "$label" "you chose it, but it's gone from Applications" \
           "omamac update puts it back; omamac uninstall $id drops it" || result=1
         ;;
-      hand) doctor_report info "$label" "installed by hand, so omamac won't update it" ;;
+      hand)
+        # Password apps can't be adopted, so they get no command.
+        if [ "${APP_PASSWORD[$id]}" = yes ]; then
+          doctor_report info "$label" "installed by hand, so omamac won't update it"
+        else
+          doctor_report info "$label" "installed by hand, so omamac won't update it. To let Homebrew take it over: brew install --cask --adopt ${APP_CASK[$id]}"
+        fi
+        ;;
     esac
   done
   if [ "$result" -eq 0 ]; then doctor_report ok "$what"; fi
