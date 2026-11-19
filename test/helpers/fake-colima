@@ -1,0 +1,12 @@
+#!/bin/bash
+# Test double for colima. Bash 3.2 safe. A running colima is the file
+# $OMAMAC_TEST_BREW_PREFIX/colima-running.
+running="${OMAMAC_TEST_BREW_PREFIX:?fake-colima needs OMAMAC_TEST_BREW_PREFIX}/colima-running"
+[ -z "${STUB_LOG:-}" ] || echo "colima $*" >> "$STUB_LOG"
+
+case "${1:-}" in
+  status) [ -e "$running" ] || { echo "colima is not running" >&2; exit 1; } ;;
+  stop) rm -f "$running" ;;
+  *) echo "fake-colima: unknown command $*" >&2; exit 1 ;;
+esac
+exit 0

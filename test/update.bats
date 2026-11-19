@@ -341,3 +341,38 @@ ghostty_outdated() { echo ghostty > "$OMAMAC_TEST_BREW_PREFIX/outdated"; }
   grep -qx 'brew upgrade --cask --greedy gcloud-cli' "$STUB_LOG"
   grep -qx 'mise upgrade go' "$STUB_LOG"
 }
+
+# update's apply_all installs a missing lazydocker first, so all five are upgraded.
+@test "update upgrades colima's installed formulas by name, and nothing restarts colima" {
+  choose docker colima
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install colima docker docker-compose docker-buildx
+  # colima as install left it: its service registered and the marker written.
+  mkdir -p "$OMAMAC_TEST_BREW_PREFIX/services"
+  : > "$OMAMAC_TEST_BREW_PREFIX/services/colima"
+  : > "$HOME/.local/state/omamac/colima-service"
+  : > "$STUB_LOG"
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(grep '^brew upgrade' "$STUB_LOG")" = "brew upgrade $OMAMAC_FORMULAS colima docker docker-compose docker-buildx lazydocker" ]
+  [ -z "$(grep -E '^(brew services|colima )' "$STUB_LOG")" ]
+  [[ "$output" != *"first start"* ]]
+}
+
+@test "update that starts colima's service says so before the log line" {
+  # The one-liner failed before the start, so this update is the first.
+  choose docker colima
+  : > "$STUB_LOG"
+  run update
+  [ "$status" -eq 0 ]
+  grep -qx 'brew services start colima' "$STUB_LOG"
+  [[ "$output" == *"colima starts Docker in the background now and at each login."*"The first start downloads Linux and takes a few minutes."*"Log: "* ]]
+}
+
+@test "update leaves the user's own docker alone with none" {
+  choose docker none
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install docker
+  : > "$STUB_LOG"
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(grep '^brew upgrade' "$STUB_LOG")" = "brew upgrade $OMAMAC_FORMULAS" ]
+}

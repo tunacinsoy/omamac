@@ -2,7 +2,7 @@
 # Everything after the restart. First the questions and "Install?", so nothing
 # is written before the user says yes; then omamac's zsh file, herdr's config,
 # mise's drop-in, the core tools (Ghostty too), LazyVim, the languages, the
-# cloud CLIs, the guarded lines (zprofile, zshrc, and Ghostty's include line)
+# cloud CLIs, Docker, the guarded lines (zprofile, zshrc, and Ghostty's include line)
 # and a summary.
 # shellcheck source-path=SCRIPTDIR
 set -Eeuo pipefail
@@ -40,6 +40,8 @@ source "$OMAMAC_CHECKOUT/lib/theme.sh"
 source "$OMAMAC_CHECKOUT/lib/languages.sh"
 # shellcheck source=lib/clis.sh
 source "$OMAMAC_CHECKOUT/lib/clis.sh"
+# shellcheck source=lib/docker.sh
+source "$OMAMAC_CHECKOUT/lib/docker.sh"
 # shellcheck source=lib/settings.sh
 source "$OMAMAC_CHECKOUT/lib/settings.sh"
 # shellcheck source=lib/apply.sh
@@ -97,9 +99,12 @@ install_lines() {
 install_summary() {
   OMAMAC_STEP='printing the summary'
   # Short lines, so the box fits an 80-column terminal.
+  local chosen="the languages and cloud CLIs"
+  # Only colima: Docker Desktop installs nothing until Phase 5b.
+  [ "${CHOICES[docker]:-none}" != colima ] || chosen="the languages, cloud CLIs and Docker"
   local lines=(
     "Installed: Homebrew, bash, gum, omamac, Ghostty and the core tools,"
-    "and the languages and cloud CLIs you chose."
+    "and $chosen you chose."
     ""
     "omamac sets three Ghostty settings: its colours, command"
     "(starts herdr) and macos-option-as-alt."
@@ -111,6 +116,9 @@ install_summary() {
   )
   if [ "$SETTINGS_REFUSED" -eq 1 ]; then
     lines+=("Turn on Reduce motion: search for Reduce motion in System Settings." "")
+  fi
+  if [ "${#DOCKER_NOTES[@]}" -gt 0 ]; then
+    lines+=("${DOCKER_NOTES[@]}" "")
   fi
   lines+=("Log: $OMAMAC_LOG" "Open Ghostty (it starts herdr), then run omamac.")
   ui_box "${lines[@]}"

@@ -105,6 +105,19 @@ snapshot() {
   [ -z "$(grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' <<< "$output" | grep -vF '$HOME/Library/Application Support/com.mitchellh.ghostty')" ]
 }
 
+@test "never-touch: colima leaves ~/.docker/config.json alone" {
+  # colima writes this file, and docker login keeps credentials in it: it's never omamac's.
+  sed -i '' 's/^docker=.*/docker=colima/' "$CHOICES_FILE"
+  mkdir -p "$HOME/.docker"
+  echo '{"auths":{}}' > "$HOME/.docker/config.json"
+  touch -t 202001010000 "$HOME/.docker/config.json"
+  before="$(shasum < "$HOME/.docker/config.json") $(stat -f %m "$HOME/.docker/config.json")"
+  run install
+  [ "$status" -eq 0 ]
+  [ -L "$HOME/.docker/cli-plugins/docker-compose" ]
+  [ "$(shasum < "$HOME/.docker/config.json") $(stat -f %m "$HOME/.docker/config.json")" = "$before" ]
+}
+
 @test "a failing step names itself, not a log that lacks it" {
   echo 'alias x=y' > "$HOME/.zshrc"
   chmod 444 "$HOME/.zshrc"
@@ -208,11 +221,11 @@ snapshot() {
 
 @test "partial file: only the new question is asked, saved answers kept" {
   sed -i '' -e '/^docker=/d' -e 's/^apps_media=$/apps_media=vlc/' "$CHOICES_FILE"
-  gum_answers orbstack yes
+  gum_answers docker-desktop yes
   run install
   [ "$status" -eq 0 ]
   [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
-  grep -qx 'docker=orbstack' "$CHOICES_FILE"
+  grep -qx 'docker=docker-desktop' "$CHOICES_FILE"
   grep -qx 'apps_media=vlc' "$CHOICES_FILE"
   [ "$(grep -c '=' "$CHOICES_FILE")" = 16 ]
 }

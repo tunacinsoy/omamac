@@ -5,7 +5,7 @@
 # apply. Sourced after lib/ask.sh, lib/log.sh and lib/apply.sh.
 
 # The questions omamac install asks again, with only their unpicked options.
-ADD_KEYS=(languages cloud_clis desktops window_margins)
+ADD_KEYS=(languages cloud_clis desktops window_margins docker)
 
 # add_run: CHOICES is loaded (bin/omamac did that). Ask, show the additions,
 # and save and apply them only after "Install?" is yes, so a no changes nothing.
@@ -22,6 +22,18 @@ add_run() {
       # A yes is applied only after "Install?"; put the saved answer back.
       [ "${CHOICES[$key]}" != yes ] || picks[$key]=yes
       CHOICES[$key]=no
+      continue
+    fi
+    if [ "${QUESTION_KIND[$key]}" = single ]; then
+      # Asked only while the answer is none, with every option; "none" is first
+      # in the list, so Enter alone adds nothing.
+      [ "${CHOICES[$key]:-none}" = none ] || continue
+      [ -n "$asked" ] || ask_need_tty
+      asked=1
+      ask_one "$key"
+      # A pick is applied only after "Install?"; put the saved answer back.
+      [ "${CHOICES[$key]}" = none ] || picks[$key]=${CHOICES[$key]}
+      CHOICES[$key]=none
       continue
     fi
     read -ra had <<< "${CHOICES[$key]:-}"
@@ -49,6 +61,14 @@ add_run() {
       lines+=("${QUESTION_TITLE[$key]}")
       continue
     fi
+    if [ "${QUESTION_KIND[$key]}" = single ]; then
+      CHOICES[$key]=${picks[$key]}
+      v=$(question_label "$key" "${picks[$key]}")
+      # Docker Desktop installs nothing until Phase 5b, so it isn't "Installed".
+      [ "${picks[$key]}" = docker-desktop ] || names+=("$v")
+      lines+=("${QUESTION_TITLE[$key]}: $v")
+      continue
+    fi
     read -ra had <<< "${picks[$key]}"
     choices_add "$key" "${had[@]}"
     labels=()
@@ -71,6 +91,11 @@ add_run() {
   log_start
   apply_all
   OMAMAC_STEP='printing the summary'
-  printf -v joined '%s, ' "${names[@]}"
-  ui_box "Installed: ${joined%, }" "Log: $OMAMAC_LOG" "Open a new terminal window to use them."
+  lines=()
+  if [ "${#names[@]}" -gt 0 ]; then
+    printf -v joined '%s, ' "${names[@]}"
+    lines=("Installed: ${joined%, }")
+  fi
+  [ "${#DOCKER_NOTES[@]}" -eq 0 ] || lines+=("${DOCKER_NOTES[@]}")
+  ui_box "${lines[@]}" "Log: $OMAMAC_LOG" "Open a new terminal window to use them."
 }

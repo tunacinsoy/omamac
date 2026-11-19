@@ -37,3 +37,6 @@ OMAMAC_TERMINAL=$OMAMAC_HOME/bin/omamac-terminal
 OMAMAC_GHOSTTY_LINE='config-file = ?~/.config/omamac/ghostty.conf'
 # One line per macOS setting omamac changed, with its earlier value (lib/settings.sh).
 OMAMAC_SETTINGS_RECORD=$OMAMAC_STATE_DIR/macos-settings.tsv
+# Written once omamac has started colima's login service (lib/docker.sh). With
+# it, omamac never starts the service again, so a user's stop stays.
+OMAMAC_COLIMA_MARKER=$OMAMAC_STATE_DIR/colima-service

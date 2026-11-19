@@ -1,7 +1,7 @@
 # shellcheck shell=bash disable=SC2034 # OMAMAC_STEP is read by the caller's ERR trap
 # The steps the one-liner, omamac update and omamac install share. Sourced
-# after lib/core.sh, lib/neovim.sh, lib/herdr.sh, lib/ghostty.sh, lib/theme.sh, lib/languages.sh and
-# lib/clis.sh and lib/settings.sh. Each step sets OMAMAC_STEP, which the caller's ERR trap
+# after lib/core.sh, lib/neovim.sh, lib/herdr.sh, lib/ghostty.sh, lib/theme.sh, lib/languages.sh,
+# lib/clis.sh, lib/docker.sh and lib/settings.sh. Each step sets OMAMAC_STEP, which the caller's ERR trap
 # (install.sh, update.sh or bin/omamac) reads to name the step that failed.
 
 # apply_put <tmp> <dest>: move tmp into place only if different, so a second
@@ -41,5 +41,7 @@ apply_all() {
   languages_install
   OMAMAC_STEP='installing your cloud CLIs'
   clis_install
+  OMAMAC_STEP='installing Docker'
+  docker_install
   settings_apply
 }

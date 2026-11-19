@@ -30,6 +30,26 @@ remove_setting() {
   ui_ok "$title is removed"
 }
 
+# remove_docker: take colima away, keeping the user's Docker data. The answer
+# is saved none last, so a failure leaves it colima for doctor to report.
+remove_docker() {
+  if [ "${CHOICES[docker]:-none}" != colima ]; then
+    ui_info "colima isn't installed by omamac."
+    exit 0
+  fi
+  ui_box "colima: colima, docker, docker-compose, docker-buildx and lazydocker. Your images, containers and volumes stay in ~/.colima."
+  if ! ask_yes "Remove colima?"; then
+    ui_info "Nothing was removed."
+    exit 0
+  fi
+  log_start
+  docker_uninstall_colima || return
+  CHOICES[docker]=none
+  OMAMAC_STEP='saving your answers'
+  choices_save "$OMAMAC_CHOICES_FILE"
+  ui_ok "colima is removed"
+}
+
 # remove_run [<name>]: CHOICES is loaded (bin/omamac did that). Nothing is
 # changed before "Remove?" is yes, and the choice is saved last, so a failure
 # leaves it saved for doctor to report.
@@ -43,15 +63,19 @@ remove_run() {
     done
     [ "${CHOICES[desktops]:-}" != yes ] || options+=("${QUESTION_TITLE[desktops]}:desktops")
     [ "${CHOICES[window_margins]:-}" != yes ] || options+=("${QUESTION_TITLE[window_margins]}:window-margins")
+    [ "${CHOICES[docker]:-none}" != colima ] || options+=("colima:colima")
     if [ "${#options[@]}" -eq 0 ]; then
-      ui_info "omamac installed no languages or cloud CLIs, so there's nothing to remove."
+      ui_info "omamac installed no languages, cloud CLIs or Docker, so there's nothing to remove."
       exit 0
     fi
     ask_choose "What should omamac remove?" "Nothing:none" "${options[@]}"
     [ "$ASK_PICKED" != none ] || exit 0
     name=$ASK_PICKED
   fi
-  case $name in desktops | window-margins) remove_setting "$name"; return ;; esac
+  case $name in
+    desktops | window-margins) remove_setting "$name"; return ;;
+    colima) remove_docker; return ;;
+  esac
   # bash and gum are omamac's own, so they count as core.
   for v in "${CORE_FORMULAS[@]}" "${CORE_CASKS[@]}" bash gum zsh; do
     if [ "$name" = "$v" ]; then
@@ -65,7 +89,7 @@ remove_run() {
     all+=("${ids[@]}")
   done
   if [ -z "$key" ]; then
-    ui_fail "omamac can't remove '$name'. It can remove: $(clis_join "${all[@]}" desktops window-margins)."
+    ui_fail "omamac can't remove '$name'. It can remove: $(clis_join "${all[@]}" desktops window-margins colima)."
     exit 2
   fi
   label=$(question_label "$key" "$name")

@@ -51,3 +51,10 @@ setup() { setup_sandbox; }
   run grep -rn 'MacOS/ghostty' bin lib install.sh update.sh
   [ "$status" -eq 1 ]
 }
+
+@test "omamac never deletes colima's VM" {
+  # colima delete removes the user's images, containers and volumes.
+  cd "$REPO_ROOT"
+  run grep -rn 'colima delete' bin lib
+  [ "$status" -eq 1 ]
+}

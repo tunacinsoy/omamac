@@ -37,6 +37,8 @@ source "$OMAMAC_CHECKOUT/lib/theme.sh"
 source "$OMAMAC_CHECKOUT/lib/languages.sh"
 # shellcheck source=lib/clis.sh
 source "$OMAMAC_CHECKOUT/lib/clis.sh"
+# shellcheck source=lib/docker.sh
+source "$OMAMAC_CHECKOUT/lib/docker.sh"
 # shellcheck source=lib/appmanagement.sh
 source "$OMAMAC_CHECKOUT/lib/appmanagement.sh"
 # shellcheck source=lib/settings.sh
@@ -83,6 +85,13 @@ update_upgrade() {
     for name in "${chosen[@]}"; do
       [ -z "${CLI_FORMULA[$name]:-}" ] || installed+=("${CLI_FORMULA[$name]}")
     done
+  fi
+  # Only the answer's own Docker formulas: with none, a user's own docker is theirs.
+  list=$(docker_formulas "${CHOICES[docker]:-none}")
+  if [ -n "$list" ]; then
+    mapfile -t chosen <<< "$list"
+    list=$(core_where installed "${chosen[@]}")
+    [ -z "$list" ] || { mapfile -t chosen <<< "$list"; installed+=("${chosen[@]}"); }
   fi
   # brew upgrade fails when a named formula is pinned, so leave those out.
   # brew list --pinned prints short names, so compare the last / part.
@@ -172,11 +181,14 @@ update_main() {
   update_upgrade_ghostty
   update_upgrade_languages
   OMAMAC_STEP='printing the summary'
+  # This run may be the one that started colima's service, as install would have.
+  local notes=()
+  [ "${#DOCKER_NOTES[@]}" -eq 0 ] || notes=("" "${DOCKER_NOTES[@]}" "")
   if [ "$UPDATE_FAILED" -eq 1 ]; then
-    ui_box "✗ Everything else is up to date. Ghostty is not." "Log: $OMAMAC_LOG" >&2
+    ui_box "✗ Everything else is up to date. Ghostty is not." "${notes[@]}" "Log: $OMAMAC_LOG" >&2
     exit 1
   fi
-  ui_box "omamac and your tools are up to date." "Log: $OMAMAC_LOG"
+  ui_box "omamac and your tools are up to date." "${notes[@]}" "Log: $OMAMAC_LOG"
 }
 
 update_main

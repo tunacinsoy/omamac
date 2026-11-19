@@ -52,7 +52,8 @@ question cloud_clis multi "Cloud CLIs" "Cloud command-line tools" \
 # "No Docker" comes first: Enter picks the option under the cursor, and Enter
 # alone must never opt in to anything.
 question docker single Docker "How should Docker run?" \
-  "No Docker:none" colima:colima OrbStack:orbstack "Docker Desktop:docker-desktop"
+  "No Docker:none" colima:colima "Docker Desktop:docker-desktop"
+question_help docker "colima runs Docker in the background from the command line. Docker Desktop is an app; larger companies need a paid plan for it."
 
 # question_values <key>: the allowed answers, one per line.
 question_values() {
