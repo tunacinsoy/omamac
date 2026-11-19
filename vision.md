@@ -294,7 +294,7 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - A tool with one config file and no include (herdr, starship, btop) uses omamac's file only when the user has none; a user's own is left alone and doctor explains. The user's own mise pins win.
 - The v1 app catalog is the 17 apps in the table plus Wispr Flow; an app that isn't a clean cask is dropped.
 - Gatekeeper and permission prompts stay with the user, one line each in the summary, built from each app's catalog file.
-- First-run question order: theme, desktop apps, Wispr Flow, desktops, window margins, Dock, Dock auto-hide, languages, cloud CLIs, Docker; adoption questions come as apps are picked; one summary and "Install?" at the end.
+- First-run question order: theme, desktop apps, Wispr Flow, desktops, window margins, Dock, Dock auto-hide, languages, cloud CLIs, Docker; adoption questions come after the questions at the first run, right after each app question in `omamac install`, before the summary; one summary and "Install?" at the end.
 - An existing `~/.config/nvim` is left alone with no extra files; doctor explains (ℹ) why themes don't reach neovim and what to do.
 - Homebrew in `/usr/local` on Apple Silicon stops the run with a pointer to Homebrew's instructions.
 - One clean Tart image (from `macos-*-vanilla`) stays on disk; test VMs are deleted after each run; the image is replaced, never doubled.

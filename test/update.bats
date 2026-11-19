@@ -555,6 +555,16 @@ app_installed() {
   run ! grep '^gum spin.*\(zoom\|Zoom\)' "$STUB_LOG"
 }
 
+@test "update asks nothing for a hand-installed app" {
+  choose apps_media vlc
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/VLC.app"
+  run update
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ VLC is already installed, not through Homebrew. omamac won't update it. To let Homebrew take it over: brew install --cask --adopt vlc"* ]]
+  run ! grep -q -- '--adopt' "$STUB_LOG"
+  run ! grep -q '^gum confirm' "$STUB_LOG"
+}
+
 @test "apps: an app installed by hand gets no outdated query" {
   choose apps_media vlc
   mkdir -p "$OMAMAC_TEST_APPLICATIONS/VLC.app"

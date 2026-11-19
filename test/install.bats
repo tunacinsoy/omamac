@@ -373,3 +373,77 @@ answer() { sed -i '' "s/^$1=.*/$1=$2/" "$CHOICES_FILE"; }
   [[ "$output" == *"The first time you open Ghostty, macOS asks you to confirm;"$'\n'"click Open."$'\n'* ]]
   [[ "$output" != *"each app"* ]]
 }
+
+# Adoption: VLC is picked and in Applications, not from Homebrew.
+vlc_by_hand() {
+  answer apps_media vlc
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/VLC.app"
+  echo mine > "$OMAMAC_TEST_APPLICATIONS/VLC.app/marker"
+}
+
+ADOPT_Q="gum confirm --default=false Let Homebrew take over VLC?"
+INSTALL_Q="gum confirm --default=false Install?"
+
+@test "adopt: asked before the summary box; yes keeps VLC and adopts it" {
+  vlc_by_hand
+  gum_answers yes yes
+  run install
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "$ADOPT_Q"$'\n'"$INSTALL_Q" ]
+  [[ "$output" == *"Homebrew can take it over"*"Media: VLC"* ]]
+  grep -qx 'apps_media=vlc' "$CHOICES_FILE"
+  grep -qx 'brew install --cask --adopt vlc' "$STUB_LOG"
+  [ "$(cat "$OMAMAC_TEST_APPLICATIONS/VLC.app/marker")" = mine ]
+}
+
+@test "adopt: no drops VLC from the summary and the saved answers; no brew call names it" {
+  vlc_by_hand
+  gum_answers no yes
+  run install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Media: none"* ]]
+  grep -qx 'apps_media=' "$CHOICES_FILE"
+  run ! grep -qE '^brew .*vlc' "$STUB_LOG"
+}
+
+@test "adopt: no, then Install? no: nothing saved, and the next run asks again" {
+  vlc_by_hand
+  before=$(shasum < "$CHOICES_FILE")
+  gum_answers no no
+  run install
+  [ "$status" -eq 0 ]
+  [ "$(shasum < "$CHOICES_FILE")" = "$before" ]
+  : > "$STUB_LOG"
+  gum_answers no no
+  run install
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "$ADOPT_Q"$'\n'"$INSTALL_Q" ]
+}
+
+@test "adopt: a second run after adopting asks nothing new" {
+  vlc_by_hand
+  gum_answers yes yes
+  run install
+  [ "$status" -eq 0 ]
+  : > "$STUB_LOG"
+  gum_answers yes
+  run install
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "$INSTALL_Q" ]
+  run ! grep -q -- '--adopt' "$STUB_LOG"
+}
+
+@test "adopt: a failed adopt stops the run naming VLC; the next run asks again and adopts" {
+  vlc_by_hand
+  gum_answers yes yes
+  T_BREW_FAIL_CASK=vlc run install
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"omamac stopped while handing VLC to Homebrew."* ]]
+  [ "$(cat "$OMAMAC_TEST_APPLICATIONS/VLC.app/marker")" = mine ]
+  : > "$STUB_LOG"
+  gum_answers yes yes
+  run install
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "$ADOPT_Q"$'\n'"$INSTALL_Q" ]
+  grep -qx 'brew install --cask --adopt vlc' "$STUB_LOG"
+}

@@ -687,7 +687,7 @@ healthy_ghostty() {
   rm -r "$OMAMAC_TEST_BREW_PREFIX/Caskroom/ghostty"
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ Ghostty — installed by hand"* ]]
+  printf '%s\n' "$output" | grep -qxF "ℹ Ghostty — installed by hand, so omamac won't update it. To let Homebrew take it over: brew install --cask --adopt ghostty"
   [[ "$output" != *"App Management"* ]]
 }
 
@@ -914,7 +914,8 @@ healthy_desktop() {
   rm -r "$OMAMAC_TEST_BREW_PREFIX/Caskroom/docker-desktop"
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ Docker Desktop — installed by hand, so omamac won't update it"* ]]
+  printf '%s\n' "$output" | grep -qxF "ℹ Docker Desktop — installed by hand, so omamac won't update it"
+  [[ "$output" != *"--adopt"* ]]
 }
 
 @test "doctor: offers to reinstall Docker Desktop" {
@@ -975,7 +976,27 @@ healthy_apps() {
   rm -r "$OMAMAC_TEST_BREW_PREFIX/Caskroom/vlc"
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ VLC — installed by hand, so omamac won't update it"* ]]
+  printf '%s\n' "$output" | grep -qxF "ℹ VLC — installed by hand, so omamac won't update it. To let Homebrew take it over: brew install --cask --adopt vlc"
+}
+
+@test "doctor: a hand-installed VS Code names its cask in the adopt command" {
+  healthy_mac
+  choose apps_developer vscode
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask visual-studio-code
+  rm -r "$OMAMAC_TEST_BREW_PREFIX/Caskroom/visual-studio-code"
+  run doctor
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -qxF "ℹ VS Code — installed by hand, so omamac won't update it. To let Homebrew take it over: brew install --cask --adopt visual-studio-code"
+}
+
+@test "doctor: a hand-installed Zoom keeps today's line, no adopt command" {
+  healthy_mac
+  healthy_apps zoom
+  rm -r "$OMAMAC_TEST_BREW_PREFIX/Caskroom/zoom"
+  run doctor
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -qxF "ℹ Zoom — installed by hand, so omamac won't update it"
+  [[ "$output" != *"--adopt"* ]]
 }
 
 @test "doctor: Homebrew can't list: Your apps skipped" {

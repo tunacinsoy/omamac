@@ -75,6 +75,15 @@ setup() { setup_sandbox; }
   [ -z "$(grep -v '^lib/remove\.sh:' <<< "$output")" ]
 }
 
+@test "--adopt only in lib/apps.sh and doctor's fix text" {
+  # It hands a hand-installed app to Homebrew, so only the adopt step passes
+  # it, after a yes; doctor only prints the command.
+  cd "$REPO_ROOT"
+  run grep -rn -e '--adopt' bin lib install.sh update.sh
+  [ "$status" -eq 0 ]
+  [ -z "$(grep -vE -e '^lib/apps\.sh:' -e '^lib/doctor\.sh:[0-9]+:.*doctor_report info .*To let Homebrew take it over: brew install --cask --adopt ' <<< "$output")" ]
+}
+
 @test "omamac never answers Homebrew's password prompt itself" {
   # Homebrew asks for the password itself; skipping or feeding that prompt
   # would hide from the user what runs as root.
