@@ -105,6 +105,19 @@ snapshot() {
   [ -z "$(grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' <<< "$output" | grep -vF '$HOME/Library/Application Support/com.mitchellh.ghostty')" ]
 }
 
+@test "never-touch: colima leaves ~/.docker/config.json alone" {
+  # colima writes this file, and docker login keeps credentials in it: it's never omamac's.
+  sed -i '' 's/^docker=.*/docker=colima/' "$CHOICES_FILE"
+  mkdir -p "$HOME/.docker"
+  echo '{"auths":{}}' > "$HOME/.docker/config.json"
+  touch -t 202001010000 "$HOME/.docker/config.json"
+  before="$(shasum < "$HOME/.docker/config.json") $(stat -f %m "$HOME/.docker/config.json")"
+  run install
+  [ "$status" -eq 0 ]
+  [ -L "$HOME/.docker/cli-plugins/docker-compose" ]
+  [ "$(shasum < "$HOME/.docker/config.json") $(stat -f %m "$HOME/.docker/config.json")" = "$before" ]
+}
+
 @test "a failing step names itself, not a log that lacks it" {
   echo 'alias x=y' > "$HOME/.zshrc"
   chmod 444 "$HOME/.zshrc"
