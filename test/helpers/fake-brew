@@ -121,8 +121,10 @@ case "${1:-}" in
         [ "${T_BREW_SERVICES_INFO_FAIL:-0}" != 1 ] || { echo "Error: brew services info failed" >&2; exit 1; }
         # Like Homebrew: no formula, no service info.
         [ -d "$prefix/Cellar/$f" ] || { echo "Error: No available formula with the name \"$f\"." >&2; exit 1; }
-        if [ -e "$prefix/services/$f" ]; then r=true; else r=false; fi
-        echo "[{\"name\":\"$f\",\"registered\":$r}]"
+        # The file may hold a status (error); a registered service is started otherwise.
+        r=false st=none
+        if [ -e "$prefix/services/$f" ]; then r=true st=$(cat "$prefix/services/$f"); [ -n "$st" ] || st=started; fi
+        echo "[{\"name\":\"$f\",\"status\":\"$st\",\"registered\":$r}]"
         ;;
       start)
         [ "${T_BREW_SERVICES_FAIL:-0}" != 1 ] || { echo "Error: Failure while executing launchctl" >&2; exit 1; }

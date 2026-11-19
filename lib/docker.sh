@@ -124,3 +124,43 @@ docker_uninstall_colima() {
   fi
   rm -f "$OMAMAC_COLIMA_MARKER"
 }
+
+# docker_check: doctor's lines for colima's plugin links and its service
+# (doctor_check_chosen reports its formulas). Returns 1 only for a ✗.
+docker_check() {
+  local plugin state rc status=0
+  [ "${CHOICES[docker]:-none}" = colima ] || return 0
+  for plugin in "${DOCKER_PLUGINS[@]}"; do
+    state=$(docker_link_state "$plugin")
+    if [ "$state" = theirs ]; then
+      doctor_report info "$plugin" "your own file in ~/.docker/cli-plugins is kept, and docker uses it"
+    elif [ "$state" = ours ] && [ -e "$(docker_link_path "$plugin")" ]; then
+      doctor_report ok "$plugin"
+    else
+      doctor_report fail "$plugin" "docker can't find ${plugin#docker-}" "omamac update" || status=1
+    fi
+  done
+  # The service is colima's state, not omamac's, so it is never a ✗.
+  rc=0
+  docker_service_registered > /dev/null 2>&1 || rc=$?
+  case $rc in
+    0)
+      if [ "$(docker_service_status)" = error ]; then
+        doctor_report info "colima's service" "colima didn't start; see $OMAMAC_BREW_PREFIX/var/log/colima.log"
+      else
+        doctor_report ok "colima's service"
+      fi
+      ;;
+    1) doctor_report info "colima's service" "colima doesn't start at login. To start it: brew services start colima" ;;
+    *) doctor_report info "colima's service" "skipped, Homebrew can't say whether it's registered" ;;
+  esac
+  return "$status"
+}
+
+# docker_service_status: Homebrew's status for colima's service (started,
+# error, none, ...); empty when Homebrew can't say.
+docker_service_status() {
+  local out
+  out=$("$OMAMAC_BREW_PREFIX/bin/brew" services info colima --json 2> /dev/null) &&
+    jq -r '.[0].status' <<< "$out" 2> /dev/null
+}

@@ -412,7 +412,7 @@ own_nvim() {
   rm "$CHOICES_FILE"
   run doctor
   [[ "$output" == *"ℹ mise drop-in — skipped, your saved answers can't be read"* ]]
-  [[ "$output" == *"ℹ Languages and cloud CLIs — skipped, your saved answers can't be read"* ]]
+  [[ "$output" == *"ℹ Your tools — skipped, your saved answers can't be read"* ]]
 }
 
 # Both settings answers yes, and the macOS values omamac wants.
@@ -516,7 +516,7 @@ settings_set() {
   gum_answers
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"✓ Languages and cloud CLIs"* ]]
+  [[ "$output" == *"✓ Your tools"* ]]
   [ -z "$(grep '^gum' "$STUB_LOG")" ]
 }
 
@@ -525,7 +525,7 @@ settings_set() {
   choose languages go
   rm "$OMAMAC_TEST_BREW_PREFIX/bin/mise"
   run doctor
-  [[ "$output" == *"ℹ Languages and cloud CLIs — skipped, mise can't list what's installed"* ]]
+  [[ "$output" == *"ℹ Your tools — skipped, mise can't list what's installed"* ]]
   [[ "$output" != *"✗ Go"* ]]
 }
 
@@ -536,7 +536,7 @@ settings_set() {
   printf '#!/bin/bash\nexit 1\n' > "$OMAMAC_TEST_BREW_PREFIX/bin/mise"
   chmod +x "$OMAMAC_TEST_BREW_PREFIX/bin/mise"
   run doctor
-  [[ "$output" == *"ℹ Languages and cloud CLIs — skipped, mise can't list what's installed"* ]]
+  [[ "$output" == *"ℹ Your tools — skipped, mise can't list what's installed"* ]]
   [[ "$output" != *"✗ Go"* ]]
 }
 
@@ -544,7 +544,7 @@ settings_set() {
   healthy_mac
   choose cloud_clis gh
   T_BREW_LIST_FAIL=1 run doctor
-  [[ "$output" == *"ℹ Languages and cloud CLIs — skipped, Homebrew can't list what's installed"* ]]
+  [[ "$output" == *"ℹ Your tools — skipped, Homebrew can't list what's installed"* ]]
   [[ "$output" != *"✗ GitHub CLI"* ]]
 }
 
@@ -722,4 +722,132 @@ healthy_ghostty() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"ℹ App Management"* ]]
   [[ "$output" == *"System Settings → Privacy & Security → App Management"* ]]
+}
+
+# colima the way install leaves it: the five formulas, the two links, the service and its marker.
+healthy_colima() {
+  choose docker colima
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install colima docker docker-compose docker-buildx lazydocker
+  mkdir -p "$HOME/.docker/cli-plugins"
+  for p in docker-compose docker-buildx; do
+    ln -s "$OMAMAC_TEST_BREW_PREFIX/opt/$p/bin/$p" "$HOME/.docker/cli-plugins/$p"
+  done
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" services start colima
+  : > "$HOME/.local/state/omamac/colima-service"
+  : > "$STUB_LOG" # the tests look only at doctor's own calls
+}
+
+@test "doctor: colima with everything in place is ✓" {
+  healthy_mac
+  healthy_colima
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ Your tools"* ]]
+  [[ "$output" == *"✓ docker-compose"* ]]
+  [[ "$output" == *"✓ docker-buildx"* ]]
+  [[ "$output" == *"✓ colima's service"* ]]
+  [ -z "$(printf '%s\n' "$output" | grep -E '^(✗|ℹ)')" ]
+}
+
+@test "doctor: a missing colima formula is ✗ under Your tools" {
+  healthy_mac
+  healthy_colima
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" uninstall docker lazydocker
+  gum_answers leave
+  expect_fail "colima — you chose it, but Homebrew no longer has docker, lazydocker" \
+    "omamac update puts it back; omamac uninstall colima drops it"
+  [ "$(printf '%s\n' "$output" | grep -c '^✗ colima')" -eq 1 ]
+}
+
+@test "doctor: Homebrew can't list: colima skipped, said once" {
+  healthy_mac
+  healthy_colima
+  choose cloud_clis gh
+  T_BREW_LIST_FAIL=1 run doctor
+  [ "$(printf '%s\n' "$output" | grep -c "ℹ Your tools — skipped, Homebrew can't list")" -eq 1 ]
+  [[ "$output" != *"✗ colima"* ]]
+}
+
+@test "doctor: a missing plugin link is ✗" {
+  healthy_mac
+  healthy_colima
+  rm "$HOME/.docker/cli-plugins/docker-buildx"
+  expect_fail "docker-buildx — docker can't find buildx" "omamac update"
+}
+
+@test "doctor: a dangling plugin link is ✗" {
+  healthy_mac
+  healthy_colima
+  rm -r "$OMAMAC_TEST_BREW_PREFIX/opt/docker-compose"
+  expect_fail "docker-compose — docker can't find compose" "omamac update"
+}
+
+@test "doctor: a user's own plugin is ℹ, not ✗" {
+  healthy_mac
+  healthy_colima
+  rm "$HOME/.docker/cli-plugins/docker-compose"
+  : > "$HOME/.docker/cli-plugins/docker-compose"
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ docker-compose — your own file in ~/.docker/cli-plugins is kept, and docker uses it"* ]]
+}
+
+@test "doctor: an unregistered service is ℹ with the command" {
+  healthy_mac
+  healthy_colima
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" services stop colima
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ colima's service — colima doesn't start at login. To start it: brew services start colima"* ]]
+  [ -z "$(grep 'services start' "$STUB_LOG")" ]
+}
+
+@test "doctor: a service in error is ℹ naming its log" {
+  healthy_mac
+  healthy_colima
+  echo error > "$OMAMAC_TEST_BREW_PREFIX/services/colima"
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ colima's service — colima didn't start; see $OMAMAC_TEST_BREW_PREFIX/var/log/colima.log"* ]]
+}
+
+@test "doctor: Homebrew can't say how the service is: ℹ skipped" {
+  healthy_mac
+  healthy_colima
+  T_BREW_SERVICES_INFO_FAIL=1 run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ colima's service — skipped, Homebrew can't say whether it's registered"* ]]
+}
+
+@test "doctor: offers to reinstall colima" {
+  healthy_mac
+  healthy_colima
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" uninstall lazydocker
+  gum_answers reinstall
+  run doctor
+  [ "$status" -eq 1 ]
+  grep -qx 'gum choose --header colima is gone. What should omamac do? --label-delimiter=: Leave it:leave Reinstall it:reinstall' "$STUB_LOG"
+  grep -qx 'brew install lazydocker' "$STUB_LOG"
+  [ -e "$OMAMAC_TEST_BREW_PREFIX/Cellar/lazydocker" ]
+  grep -qx 'docker=colima' "$CHOICES_FILE"
+}
+
+@test "doctor: Leave it keeps colima as it is" {
+  healthy_mac
+  healthy_colima
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" uninstall lazydocker
+  gum_answers leave
+  run doctor
+  [ "$status" -eq 1 ]
+  [ -z "$(grep '^brew install' "$STUB_LOG")" ]
+  grep -qx 'docker=colima' "$CHOICES_FILE"
+}
+
+@test "doctor: with none, a user's own docker isn't reported" {
+  healthy_mac
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install docker docker-compose
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" != *docker* ]]
+  [[ "$output" != *colima* ]]
 }

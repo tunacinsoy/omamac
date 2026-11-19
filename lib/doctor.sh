@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2088 # the ~ in messages is shown to the user, not expanded
 # omamac doctor. Sourced after the libraries it checks. It reports, then offers
-# fixes as questions: only for a chosen language or cloud CLI that is gone.
+# fixes as questions: only for a chosen language, cloud CLI or colima that is gone.
 
 # doctor_report <ok|fail|info> <what> [<why>] [<fix>]. Returns 1 for fail so callers can count it.
 doctor_report() {
@@ -257,12 +257,21 @@ doctor_check_settings() {
   return "$status"
 }
 
-# doctor_key <id>: the question a language or cloud CLI id answers.
-doctor_key() { if [ -n "${LANGUAGE_TOOLS[$1]:-}" ]; then echo languages; else echo cloud_clis; fi; }
+# doctor_key <id>: the question a gone id answers.
+doctor_key() {
+  if [ "$1" = colima ]; then
+    echo docker
+  elif [ -n "${LANGUAGE_TOOLS[$1]:-}" ]; then
+    echo languages
+  else
+    echo cloud_clis
+  fi
+}
 
-# Sets DOCTOR_GONE to the chosen language and CLI ids that are gone, for doctor_offer.
+# Sets DOCTOR_GONE to the chosen language and CLI ids that are gone, and
+# colima when any of its formulas is, for doctor_offer.
 doctor_check_chosen() {
-  local what="Languages and cloud CLIs" id tool status=0 out key result=0 tools=() langs=() clis=() skipped=()
+  local what="Your tools" id tool status=0 out key why result=0 tools=() langs=() clis=() skipped=() colima_gone=
   DOCTOR_GONE=()
   if [ "$DOCTOR_HAS_CHOICES" -ne 1 ]; then
     doctor_report info "$what" "skipped, your saved answers can't be read"
@@ -295,13 +304,27 @@ doctor_check_chosen() {
       skipped+=(Homebrew)
     fi
   fi
+  # colima is one entry, however many of its formulas are gone.
+  if [ "${CHOICES[docker]:-none}" = colima ]; then
+    mapfile -t tools < <(docker_formulas colima)
+    if out=$(core_where missing "${tools[@]}" 2>/dev/null); then
+      if [ -n "$out" ]; then
+        mapfile -t tools <<< "$out"
+        colima_gone=$(clis_join "${tools[@]}")
+        DOCTOR_GONE+=(colima)
+      fi
+    elif [[ " ${skipped[*]} " != *" Homebrew "* ]]; then
+      skipped+=(Homebrew)
+    fi
+  fi
   for tool in "${skipped[@]}"; do
     doctor_report info "$what" "skipped, $tool can't list what's installed"
   done
   for id in "${DOCTOR_GONE[@]}"; do
-    key=$(doctor_key "$id") tool=Homebrew
+    key=$(doctor_key "$id") tool=Homebrew why=it
     [ "$key" != languages ] || tool=mise
-    doctor_report fail "$(question_label "$key" "$id")" "you chose it, but $tool no longer has it" \
+    [ "$key" != docker ] || why=$colima_gone
+    doctor_report fail "$(question_label "$key" "$id")" "you chose it, but $tool no longer has $why" \
       "omamac update puts it back; omamac uninstall $id drops it" || result=1
   done
   if [ "${#skipped[@]}" -eq 0 ] && [ "$result" -eq 0 ]; then doctor_report ok "$what"; fi
@@ -316,16 +339,21 @@ doctor_offer() {
   for id in "${DOCTOR_GONE[@]}"; do
     key=$(doctor_key "$id")
     label=$(question_label "$key" "$id")
-    ask_choose "$label is gone. What should omamac do?" \
-      "Leave it:leave" "Reinstall it:reinstall" "Remove it from my answers:drop"
+    if [ "$key" = docker ]; then
+      # No drop here: dropping colima also removes it, which is omamac uninstall colima.
+      ask_choose "$label is gone. What should omamac do?" "Leave it:leave" "Reinstall it:reinstall"
+    else
+      ask_choose "$label is gone. What should omamac do?" \
+        "Leave it:leave" "Reinstall it:reinstall" "Remove it from my answers:drop"
+    fi
     case $ASK_PICKED in
       reinstall)
         [ "$logged" -eq 1 ] || { log_start; logged=1; }
-        if [ "$key" = languages ]; then
-          languages_install "$id" || ui_fail "omamac couldn't reinstall $label."
-        else
-          clis_install "$id" || ui_fail "omamac couldn't reinstall $label."
-        fi
+        case $key in
+          languages) languages_install "$id" || ui_fail "omamac couldn't reinstall $label." ;;
+          docker) docker_install || ui_fail "omamac couldn't reinstall $label." ;;
+          *) clis_install "$id" || ui_fail "omamac couldn't reinstall $label." ;;
+        esac
         ;;
       drop)
         choices_drop "$key" "$id"
@@ -383,6 +411,7 @@ doctor_run() {
   doctor_check_choices || status=1
   doctor_check_mise_dropin || status=1
   doctor_check_chosen || status=1
+  if [ "$DOCTOR_HAS_CHOICES" -eq 1 ]; then docker_check || status=1; fi
   doctor_check_settings || status=1
   doctor_offer
   doctor_offer_neovim || status=1
