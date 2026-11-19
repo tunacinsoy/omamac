@@ -21,7 +21,8 @@ if [[ $before != "$after" ]]; then
 fi
 # Uninstalling an app takes its tile out.
 omamac uninstall vlc
-[[ $(dock_urls persistent-apps) != *VLC.app* ]]
+[[ $(dock_urls persistent-apps) == "file:///Applications/Ghostty.app/" ]]
+[[ $(< ~/.local/state/omamac/dock-added) == Ghostty.app ]]
 # Uninstalling the cleanup puts the Dock from before back.
 omamac uninstall dock
 [[ $(dock_urls persistent-apps) == "$(< ~/dock-before-apps)" ]]
