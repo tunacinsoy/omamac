@@ -6,6 +6,9 @@ fp() { curl -fsSL "https://raw.githubusercontent.com/tunacinsoy/omamac/$(git -C 
 brew list --cask docker-desktop
 [[ $(readlink /usr/local/bin/docker) == /Applications/Docker.app/* ]]
 lazydocker --version
+# Zoom shared Docker Desktop's one password prompt; it is there and listed.
+[[ -d /Applications/zoom.us.app ]]
+brew list --cask zoom
 # Updating again changes nothing.
 omamac update
 before=$(fp)
@@ -15,12 +18,14 @@ if [[ $before != "$after" ]]; then
   diff <(print -r -- "$before") <(print -r -- "$after")
   exit 1
 fi
-# Uninstall takes the app, the cask's links and lazydocker away.
+# Uninstall takes the app, the cask's links and lazydocker away; the yes to
+# the data question takes ~/.docker too.
 omamac uninstall docker-desktop
 [[ ! -e /Applications/Docker.app ]]
 if brew list --cask docker-desktop; then exit 1; fi
 if brew list --formula lazydocker; then exit 1; fi
 [[ ! -e /usr/local/bin/docker && ! -L /usr/local/bin/docker ]]
+[[ ! -e ~/.docker ]]
 choices=$(< ~/.local/state/omamac/choices.env)
 [[ $'\n'$choices$'\n' == *$'\n'docker=none$'\n'* ]]
 # Uninstalling again changes nothing and asks nothing.

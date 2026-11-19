@@ -46,7 +46,7 @@ telegram|telegram|Telegram.app||
 signal|signal|Signal.app||
 discord|discord|Discord.app||
 slack|slack|Slack.app||
-zoom|zoom|zoom.us.app|yes|Zoom: allow Camera and Microphone, and Screen Recording to share your screen.
+zoom|zoom|zoom.us.app|yes|Zoom: allow Camera and Microphone, and Screen Recording to share.
 spotify|spotify|Spotify.app||
 vlc|vlc|VLC.app||
 cap|cap|Cap.app||Cap: allow Screen Recording, and Camera and Microphone if you use them.

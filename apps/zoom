@@ -1,4 +1,4 @@
 cask=zoom
 app=zoom.us.app
 password=yes
-allow=Zoom: allow Camera and Microphone, and Screen Recording to share your screen.
+allow=Zoom: allow Camera and Microphone, and Screen Recording to share.

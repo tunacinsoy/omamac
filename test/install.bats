@@ -321,12 +321,13 @@ snapshot() {
 }
 
 @test "Docker Desktop installs first, so Homebrew asks for the password while the user is there" {
+  # The fixture also picks Zoom, so one call covers both.
   cp "$REPO_ROOT/test/fixtures/docker-desktop.env" "$CHOICES_FILE"
   : > "$STUB_LOG"
   run install
   [ "$status" -eq 0 ]
-  [ "$(grep -nE '^brew install' "$STUB_LOG" | head -1 | cut -d: -f2-)" = "brew install --cask docker-desktop" ]
-  [ "$(grep -n 'brew install --cask docker-desktop' "$STUB_LOG" | cut -d: -f1)" -lt "$(grep -n '^brew install .*jq' "$STUB_LOG" | head -1 | cut -d: -f1)" ]
+  [ "$(grep -nE '^brew install' "$STUB_LOG" | head -1 | cut -d: -f2-)" = "brew install --cask zoom docker-desktop" ]
+  [ "$(grep -nx 'brew install --cask zoom docker-desktop' "$STUB_LOG" | cut -d: -f1)" -lt "$(grep -n '^brew install .*jq' "$STUB_LOG" | head -1 | cut -d: -f1)" ]
 }
 
 # answer <key> <value>: change one saved answer.
