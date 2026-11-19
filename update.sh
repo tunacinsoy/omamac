@@ -143,13 +143,11 @@ update_upgrade_app() {
   app_management_ok "$app" || status=$?
   case $status in
     0)
-      # Docker Desktop's cask writes links in /usr/local; docker_sudo is silent, so say why.
-      if [ "$cask" = docker-desktop ] && ! docker_sudo; then
-        ui_fail "Docker Desktop has an update, but it needs your password, so it wasn't upgraded."
-        UPDATE_NOT_UPGRADED+=("$label")
-        return 0
+      if [ "$cask" = docker-desktop ]; then
+        docker_cask_run "Upgrading $label" upgrade --cask "$cask"
+      else
+        ui_run "Upgrading $label" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask "$cask"
       fi
-      ui_run "Upgrading $label" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask "$cask"
       ;;
     1)
       ui_fail "$label has an update, but macOS won't let your terminal change apps."

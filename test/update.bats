@@ -392,21 +392,22 @@ desktop_installed() {
   [ "$(grep '^brew upgrade' "$STUB_LOG")" = "brew upgrade $OMAMAC_FORMULAS lazydocker" ]
 }
 
-@test "Docker Desktop outdated and allowed: upgraded after sudo" {
+@test "Docker Desktop outdated and allowed: upgraded in the open" {
   desktop_installed
   echo docker-desktop > "$OMAMAC_TEST_BREW_PREFIX/outdated"
   run update
   [ "$status" -eq 0 ]
   grep -qx 'brew outdated --cask --quiet docker-desktop' "$STUB_LOG"
-  [ "$(grep -E '^(sudo|brew upgrade --cask)' "$STUB_LOG" | tr '\n' ',')" = "sudo -n true,brew upgrade --cask docker-desktop," ]
+  grep -qx 'brew upgrade --cask docker-desktop' "$STUB_LOG"
+  [[ "$output" == *"ℹ Homebrew asks for your password for Docker Desktop's links in /usr/local."* ]]
+  run ! grep '^gum spin.*docker-desktop' "$STUB_LOG"
   run ! grep -q 'greedy.*docker-desktop' "$STUB_LOG"
 }
 
-@test "Docker Desktop current: no sudo, no cask upgrade" {
+@test "Docker Desktop current: no cask upgrade" {
   desktop_installed
   run update
   [ "$status" -eq 0 ]
-  run ! grep -q '^sudo' "$STUB_LOG"
   run ! grep -q '^brew upgrade --cask' "$STUB_LOG"
 }
 
@@ -431,16 +432,13 @@ desktop_installed() {
   run ! grep -q 'docker-desktop' "$STUB_LOG"
 }
 
-@test "Docker Desktop outdated, no password: not upgraded, update finishes, exit 1" {
+@test "Docker Desktop upgrade fails: update stops with the log" {
   desktop_installed
   echo docker-desktop > "$OMAMAC_TEST_BREW_PREFIX/outdated"
-  stub sudo 'exit 1'
+  export T_BREW_UPGRADE_FAIL=1
   run update
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"Docker Desktop has an update, but it needs your password, so it wasn't upgraded."* ]]
-  [[ "$output" == *"✗ Everything else is up to date. Docker Desktop is not."* ]]
-  grep -q '^brew upgrade ' "$STUB_LOG"
-  run ! grep -q '^brew upgrade --cask' "$STUB_LOG"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"Log: $OMAMAC_LOG"* ]]
 }
 
 @test "Ghostty and Docker Desktop not allowed: both named, exit 1" {

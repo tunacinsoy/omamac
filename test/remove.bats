@@ -485,8 +485,7 @@ no_brew_changes() { run ! grep -qE '^brew (uninstall|install|reinstall)' "$STUB_
   gum_answers yes
   run omamac_uninstall docker-desktop
   [ "$status" -eq 0 ]
-  [ "$(grep -E '^(sudo|brew uninstall)' "$STUB_LOG")" = "sudo -n true
-brew uninstall --cask docker-desktop
+  [ "$(grep '^brew uninstall' "$STUB_LOG")" = "brew uninstall --cask docker-desktop
 brew uninstall lazydocker" ]
   [ ! -e "$OMAMAC_TEST_APPLICATIONS/Docker.app" ]
   grep -qx 'docker=none' "$CHOICES_FILE"
@@ -541,13 +540,12 @@ brew uninstall lazydocker" ]
   grep -qx 'docker=none' "$CHOICES_FILE"
 }
 
-@test "uninstall docker-desktop: a failed sudo keeps the answer" {
+@test "uninstall docker-desktop: a failed cask removal keeps the answer" {
   dockered
-  stub sudo 'exit 1'
+  export T_BREW_UNINSTALL_FAIL=1
   gum_answers yes
   run omamac_uninstall docker-desktop
   [ "$status" -ne 0 ]
-  no_brew_changes
   grep -qx 'docker=docker-desktop' "$CHOICES_FILE"
 }
 

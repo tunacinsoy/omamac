@@ -65,7 +65,7 @@ A fixture may have a `<name>.brew-passwords`, one digit: how many more times per
 
 A fixture may have a `<name>.steps.sh`. Its commands run in the VM after the two runs, in `zsh -eux` with stdin closed. A "Remove …?" prompt is answered y; any other prompt fails the run. Put every command that prompts before any `zsh -ic`: an interactive zsh takes the terminal and doesn't give it back, so a later prompt can't read the keyboard. Remove an app's quarantine (`xattr -dr com.apple.quarantine <app>`) before opening it: a quarantined app waits on macOS's "Open?" dialog, which nobody can click over SSH, and hangs.
 
-A steps file may use test-only stand-ins for what the VM can't do, each with a comment saying what real hardware or the user does instead: removing the quarantine stands in for the user's Open click, colima runs under emulation because the VM has no nested virtualization, and typing the password for Docker Desktop's uninstall is a piped `sudo -S -v`.
+A steps file may use test-only stand-ins for what the VM can't do, each with a comment saying what real hardware or the user does instead: removing the quarantine stands in for the user's Open click, colima runs under emulation because the VM has no nested virtualization.
 
 ## Themes
 

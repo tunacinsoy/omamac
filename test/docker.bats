@@ -231,32 +231,40 @@ DESKTOP_NOTE="Open Docker Desktop once to finish its setup."
   [ "$output" = lazydocker ]
 }
 
-@test "desktop: installs lazydocker and the cask, asking for sudo first" {
-  # shellcheck disable=SC2016 # the stub expands $1 itself
-  stub sudo '[ "$1" != -n ] || exit 1'
+@test "desktop: installs lazydocker and the cask, saying why Homebrew asks first" {
   in_lib docker-desktop 'docker_install; printf "%s\n" "${DOCKER_NOTES[@]}"'
   [ "$status" -eq 0 ]
   [ -d "$OMAMAC_TEST_APPLICATIONS/Docker.app" ]
-  [[ "$output" == *"needs your password"* ]]
+  [[ "$output" == *"ℹ Homebrew asks for your password for Docker Desktop's links in /usr/local."* ]]
   [[ "$output" == *"✓ Docker Desktop is installed"* ]]
   [[ "$output" == *"$DESKTOP_NOTE"* ]]
   [ "$(stub_calls | grep -c '^brew install lazydocker$')" -eq 1 ]
-  [ "$(stub_calls | grep -E '^(sudo|brew install --cask)' | tr '\n' ',')" = "sudo -n true,sudo -v,brew install --cask docker-desktop," ]
-}
-
-@test "desktop: valid sudo asks nothing" {
-  in_lib docker-desktop 'docker_install'
-  [ "$status" -eq 0 ]
-  [[ "$output" != *"needs your password"* ]]
-  ! stub_calls | grep -q '^sudo -v'
   stub_calls | grep -qx 'brew install --cask docker-desktop'
 }
 
-@test "desktop: a failed sudo -v stops before the cask" {
-  stub sudo 'exit 1'
-  in_lib docker-desktop 'docker_install || echo "rc=$?"'
-  [[ "$output" == *"rc="* ]]
-  ! stub_calls | grep -q 'brew install --cask'
+@test "desktop: the ℹ line comes before the cask call" {
+  # ui_run_open stands in for the brew call: the line must already be printed.
+  in_lib docker-desktop 'ui_run_open() { echo "RUN $*"; }; docker_cask_run "Installing Docker Desktop" install --cask docker-desktop'
+  [ "$status" -eq 0 ]
+  [ "${lines[0]}" = "ℹ Homebrew asks for your password for Docker Desktop's links in /usr/local." ]
+  [[ "${lines[1]}" == "RUN Installing Docker Desktop "*"brew install --cask docker-desktop" ]]
+}
+
+@test "desktop: cask steps don't run under gum spin" {
+  "$P/bin/brew" install gum
+  in_lib docker-desktop 'docker_install'
+  [ "$status" -eq 0 ]
+  stub_calls | grep -qx 'brew install --cask docker-desktop'
+  grep -q '^gum spin.*lazydocker' "$STUB_LOG"
+  ! grep '^gum spin' "$STUB_LOG" | grep -q 'docker-desktop'
+}
+
+@test "desktop: a failed cask install returns non-zero with errexit off" {
+  "$P/bin/brew" install lazydocker
+  export T_BREW_FAIL=1
+  in_lib docker-desktop 'set +e; docker_install || echo "rc=$?"'
+  [[ "$output" == *"rc=1"* ]]
+  [[ "$output" == *"Log: $OMAMAC_LOG"* ]]
   [[ "$output" != *"✓ Docker Desktop is installed"* ]]
 }
 
@@ -267,7 +275,6 @@ DESKTOP_NOTE="Open Docker Desktop once to finish its setup."
   in_lib docker-desktop 'docker_install; echo "notes=${#DOCKER_NOTES[@]}"'
   [ "$status" -eq 0 ]
   ! stub_calls | grep -Eq '^brew (install|reinstall)'
-  ! stub_calls | grep -q '^sudo'
   [[ "$output" == *"notes=0"* ]]
   [[ "$output" == *"✓ Docker Desktop is installed"* ]]
 }
@@ -293,8 +300,7 @@ DESKTOP_NOTE="Open Docker Desktop once to finish its setup."
   [[ "$output" == *"ℹ Docker Desktop is already installed, not through Homebrew. omamac won't update it."* ]]
   [[ "$output" == *"✓ Docker Desktop is installed"* ]]
   [[ "$output" == *"notes=0"* ]]
-  ! stub_calls | grep -q -- '--cask'
-  ! stub_calls | grep -q '^sudo'
+  run ! grep -E '^brew (install|reinstall) --cask' "$STUB_LOG"
 }
 
 @test "desktop: the user's own docker formula stays, the cask installs" {

@@ -15,9 +15,6 @@ if [[ $before != "$after" ]]; then
   diff <(print -r -- "$before") <(print -r -- "$after")
   exit 1
 fi
-# Test-only stand-in for the user typing the password: the steps have no keyboard.
-# -p '' because vm.exp answers any "Password:" prompt and counts it.
-print -r -- admin | sudo -S -p '' -v
 # Uninstall takes the app, the cask's links and lazydocker away.
 omamac uninstall docker-desktop
 [[ ! -e /Applications/Docker.app ]]

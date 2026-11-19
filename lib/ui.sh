@@ -14,21 +14,31 @@ ui_fail() { if ui_has_gum; then "$UI_GUM" style "✗ $*" >&2; else printf '✗ %
 ui_info() { if ui_has_gum; then "$UI_GUM" style "ℹ $*"; else printf 'ℹ %s\n' "$*"; fi; }
 ui_box() { if ui_has_gum; then "$UI_GUM" style --border=rounded --padding="0 2" "$@"; else printf '%s\n' "$@"; fi; }
 
+# ui_show_failure: the log's tail and where the log is.
+ui_show_failure() {
+  tail -n 20 "$OMAMAC_LOG" >&2 || true
+  ui_fail "Log: $OMAMAC_LOG"
+}
+
+# ui_run_open <title> <cmd…>: no spinner, output in the log. For a command that
+# may ask for the password: sudo prompts on the terminal itself, so it shows.
+ui_run_open() {
+  local title=$1 status=0
+  shift
+  ui_step "$title"
+  "$@" >>"$OMAMAC_LOG" 2>&1 || status=$?
+  [ "$status" -eq 0 ] || ui_show_failure
+  return "$status"
+}
+
 # ui_run <title> <cmd…>: run under a spinner, keep all output in the log.
 ui_run() {
   local title=$1 status=0
+  ui_has_gum || { ui_run_open "$@"; return; }
   shift
-  if ui_has_gum; then
-    # The inner bash writes the log itself: gum spin captures output on its own.
-    # shellcheck disable=SC2016 # the inner bash expands these
-    "$UI_GUM" spin --title "$title" -- bash -c '"$@" >>"$0" 2>&1' "$OMAMAC_LOG" "$@" || status=$?
-  else
-    printf '%s\n' "$title"
-    "$@" >>"$OMAMAC_LOG" 2>&1 || status=$?
-  fi
-  if [ "$status" -ne 0 ]; then
-    tail -n 20 "$OMAMAC_LOG" >&2 || true
-    ui_fail "Log: $OMAMAC_LOG"
-  fi
+  # The inner bash writes the log itself: gum spin captures output on its own.
+  # shellcheck disable=SC2016 # the inner bash expands these
+  "$UI_GUM" spin --title "$title" -- bash -c '"$@" >>"$0" 2>&1' "$OMAMAC_LOG" "$@" || status=$?
+  [ "$status" -eq 0 ] || ui_show_failure
   return "$status"
 }

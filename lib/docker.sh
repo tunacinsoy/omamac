@@ -56,13 +56,14 @@ docker_service_registered() {
   return 2
 }
 
-# docker_sudo: 0 when sudo is valid, asking for the password only if it isn't.
-# Docker Desktop's cask writes links in /usr/local, so it needs it. sudo comes
-# from PATH, so bats can stub it.
-docker_sudo() {
-  sudo -n true 2> /dev/null && return 0
-  ui_info "Docker Desktop needs your password for its links in /usr/local."
-  sudo -v
+# docker_cask_run <title> <brew args…>: a Docker Desktop cask step. Homebrew
+# resets sudo before a cask that needs it (its links in /usr/local) and asks
+# for the password itself, so no spinner hides the prompt.
+docker_cask_run() {
+  local title=$1
+  shift
+  ui_info "Homebrew asks for your password for Docker Desktop's links in /usr/local."
+  ui_run_open "$title" "$OMAMAC_BREW_PREFIX/bin/brew" "$@"
 }
 
 # docker_install_desktop: lazydocker, then the Docker Desktop cask in the
@@ -77,12 +78,11 @@ docker_install_desktop() {
   state=$(core_cask_state docker-desktop) || return
   case $state in
     missing)
-      docker_sudo || { ui_fail "Docker Desktop needs your password, so it wasn't installed."; return 1; }
       # A plain install of a cask Homebrew lists does nothing; reinstall puts the app back.
       if core_cask_listed docker-desktop; then
-        ui_run "Reinstalling Docker Desktop" "$OMAMAC_BREW_PREFIX/bin/brew" reinstall --cask docker-desktop || return
+        docker_cask_run "Reinstalling Docker Desktop" reinstall --cask docker-desktop || return
       else
-        ui_run "Installing Docker Desktop" "$OMAMAC_BREW_PREFIX/bin/brew" install --cask docker-desktop || return
+        docker_cask_run "Installing Docker Desktop" install --cask docker-desktop || return
       fi
       DOCKER_NOTES+=("Open Docker Desktop once to finish its setup.")
       ;;
@@ -183,8 +183,7 @@ docker_uninstall_desktop() {
   local list
   OMAMAC_STEP="removing Docker Desktop"
   if core_cask_listed docker-desktop; then
-    docker_sudo || { ui_fail "Docker Desktop needs your password, so it wasn't removed."; return 1; }
-    ui_run "Removing Docker Desktop" "$OMAMAC_BREW_PREFIX/bin/brew" uninstall --cask docker-desktop || return
+    docker_cask_run "Removing Docker Desktop" uninstall --cask docker-desktop || return
   fi
   OMAMAC_STEP="removing lazydocker"
   list=$(core_where installed lazydocker) || return

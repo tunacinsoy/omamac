@@ -49,6 +49,26 @@ omamac() { "$BASH5" "$REPO_ROOT/bin/omamac" "$@"; }
   grep -q err "$OMAMAC_LOG"
 }
 
+@test "ui_run_open names the step, logs both streams and returns the status" {
+  export OMAMAC_LOG="$BATS_TEST_TMPDIR/l"
+  run "$BASH5" -c 'source "$REPO_ROOT/lib/paths.sh"; source "$REPO_ROOT/lib/ui.sh"; ui_run_open "Doing it" bash -c "echo out; echo err >&2; exit 3"'
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"Doing it"* ]]
+  [[ "$output" == *"✗ Log: $OMAMAC_LOG"* ]]
+  grep -q out "$OMAMAC_LOG"
+  grep -q err "$OMAMAC_LOG"
+}
+
+@test "ui_run_open never uses gum spin" {
+  export OMAMAC_LOG="$BATS_TEST_TMPDIR/l"
+  install_fake_brew
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gum
+  : > "$STUB_LOG"
+  run "$BASH5" -c 'source "$REPO_ROOT/lib/paths.sh"; source "$REPO_ROOT/lib/ui.sh"; ui_run_open t true'
+  [ "$status" -eq 0 ]
+  run ! grep -q '^gum spin' "$STUB_LOG"
+}
+
 @test "ui_run without gum still logs and returns the status" {
   export OMAMAC_LOG="$BATS_TEST_TMPDIR/l"
   rm "$STUB_DIR/gum"

@@ -9,6 +9,8 @@ case "${1:-}" in
     done
     ;;
   spin)
+    # Log the call, so tests can tell what ran under a spinner.
+    [ -z "${STUB_LOG:-}" ] || echo "gum $*" >> "$STUB_LOG"
     shift
     while [ $# -gt 0 ] && [ "$1" != "--" ]; do shift; done
     [ $# -eq 0 ] || shift

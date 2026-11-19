@@ -120,6 +120,7 @@ case "${1:-}" in
     done
     ;;
   upgrade)
+    [ "${T_BREW_UPGRADE_FAIL:-0}" != 1 ] || [ "${2:-}" != --cask ] || { echo "Error: brew upgrade failed" >&2; exit 1; }
     ;;
   services)
     # A registered service is the file $prefix/services/<formula>.
