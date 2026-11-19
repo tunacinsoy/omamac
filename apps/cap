@@ -1,0 +1,3 @@
+cask=cap
+app=Cap.app
+allow=Cap: allow Screen Recording, and Camera and Microphone if you use them.

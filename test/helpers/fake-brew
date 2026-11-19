@@ -3,13 +3,21 @@
 prefix="${OMAMAC_TEST_BREW_PREFIX:?fake-brew needs OMAMAC_TEST_BREW_PREFIX}"
 [ -z "${STUB_LOG:-}" ] || echo "brew $*" >> "$STUB_LOG"
 
-# fake_cask <cask>: the Caskroom entry; Ghostty and Docker Desktop also put their app in Applications.
+# fake_cask <cask>: the Caskroom entry; Ghostty, Docker Desktop and every cask in apps/ also put their app in Applications.
 fake_cask() {
+  local app f
   mkdir -p "$prefix/Caskroom/$1"
+  app=''
   case "$1" in
-    ghostty) mkdir -p "${OMAMAC_TEST_APPLICATIONS:?fake-brew needs OMAMAC_TEST_APPLICATIONS}/Ghostty.app" ;;
-    docker-desktop) mkdir -p "${OMAMAC_TEST_APPLICATIONS:?fake-brew needs OMAMAC_TEST_APPLICATIONS}/Docker.app" ;;
+    ghostty) app=Ghostty.app ;;
+    docker-desktop) app=Docker.app ;;
+    *)
+      for f in "${REPO_ROOT:?fake-brew needs REPO_ROOT}"/apps/*; do
+        if [ "$(sed -n 's/^cask=//p' "$f")" = "$1" ]; then app=$(sed -n 's/^app=//p' "$f"); fi
+      done
+      ;;
   esac
+  [ -z "$app" ] || mkdir -p "${OMAMAC_TEST_APPLICATIONS:?fake-brew needs OMAMAC_TEST_APPLICATIONS}/$app"
 }
 
 case "${1:-}" in

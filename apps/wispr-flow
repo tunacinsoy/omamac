@@ -1,0 +1,3 @@
+cask=wispr-flow
+app=Wispr Flow.app
+allow=Wispr Flow: allow Microphone and Accessibility.

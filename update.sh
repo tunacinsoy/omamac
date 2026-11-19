@@ -25,6 +25,8 @@ source "$OMAMAC_CHECKOUT/lib/questions.sh"
 source "$OMAMAC_CHECKOUT/lib/choices.sh"
 # shellcheck source=lib/core.sh
 source "$OMAMAC_CHECKOUT/lib/core.sh"
+# shellcheck source=lib/apps.sh
+source "$OMAMAC_CHECKOUT/lib/apps.sh"
 # shellcheck source=lib/neovim.sh
 source "$OMAMAC_CHECKOUT/lib/neovim.sh"
 # shellcheck source=lib/herdr.sh
