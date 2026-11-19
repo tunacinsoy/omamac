@@ -147,7 +147,7 @@ allow=Cap: allow Screen Recording, and Camera and Microphone if you use them.
 1. Not picked: "VLC isn't installed by omamac." and exit 0.
 2. Installed by hand (`hand`): "VLC wasn't installed through Homebrew, so the app stays." `Remove VLC?` drops the pick only.
 3. Homebrew manages it: App Management is checked before any question, as for Docker Desktop. Without it, stop, change nothing, show the click.
-4. "Also remove VLC's settings and data?" after a help line: "On yes, Homebrew also deletes what VLC keeps in ~/Library." For Docker Desktop: "On yes, Homebrew also deletes Docker Desktop's images, containers and volumes, and ~/.docker (Docker's settings and saved logins)." The cask's zap list holds `~/.docker`, `~/Library/Containers/com.docker.docker` and `~/Library/Group Containers/group.com.docker`; 6a's plan probes the zap in the VM.
+4. Only when Homebrew lists the cask (with no cask, a yes would delete nothing): "Also remove VLC's settings and data?" after a help line: "On yes, Homebrew also deletes what VLC keeps in ~/Library." For Docker Desktop: "On yes, Homebrew also deletes Docker Desktop's images, containers and volumes, and ~/.docker (Docker's settings and saved logins)." The cask's zap list holds `~/.docker`, `~/Library/Containers/com.docker.docker` and `~/Library/Group Containers/group.com.docker`; 6a's plan probes the zap in the VM.
 5. One box: "VLC: the app." or "VLC: the app, with its settings and data." Then `Remove VLC?`.
 6. "Homebrew may ask for your password.", then `brew uninstall --cask [--zap] <cask>` through `ui_run_open`, only when Homebrew lists the cask. Then the pick is dropped and saved, last (`wispr_flow=no` for Wispr Flow).
 
