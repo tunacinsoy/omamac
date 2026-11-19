@@ -70,6 +70,9 @@ install_questions() {
   local unanswered
   unanswered=$(choices_missing)
   ask_missing
+  local ids=()
+  mapfile -t ids < <(apps_chosen)
+  if [ "${#ids[@]}" -gt 0 ]; then apps_ask_adopt "${ids[@]}"; fi
   ask_summary
   apps_password_ahead
   if ! ask_yes "Install?"; then

@@ -76,6 +76,9 @@ case "${1:-}" in
     shift
     root=Cellar
     if [ "${1:-}" = "--cask" ]; then root=Caskroom; shift; fi
+    # --adopt: like Homebrew, the app already in Applications stays as it is;
+    # fake_cask only makes the folder when it's missing. The call log records the flag.
+    [ "${1:-}" != --adopt ] || shift
     for f in "$@"; do
       if [ "$root" = Caskroom ]; then
         # A dropped download: the cask fails before Homebrew records it.

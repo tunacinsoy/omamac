@@ -269,3 +269,114 @@ changes() { grep -E '^brew (install|reinstall|uninstall|upgrade|tap|services)' "
   [ -z "$(changes)" ]
   [[ "$output" != *"Homebrew asks for your password"* ]]
 }
+
+# Adoption: a hand-installed app offered to Homebrew at the first run.
+
+# in_ask <code>: like in_steps, with lib/ask.sh, so the code can ask.
+in_ask() {
+  : > "$STUB_LOG"
+  run "$BASH5" -c "set -Eeuo pipefail
+    export OMAMAC_CHECKOUT='$REPO_ROOT'
+    for f in paths ui questions choices ask core apps; do source '$REPO_ROOT/lib/'\$f.sh; done
+    $1"
+}
+
+prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
+
+@test "apps_ask_adopt: VLC by hand, yes: the help line, the question, adopted, picks kept" {
+  apps_brew
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/VLC.app"
+  gum_answers yes
+  in_ask 'CHOICES[apps_media]="spotify vlc"; apps_ask_adopt spotify vlc
+    echo "adopt=${APPS_ADOPT[*]}|${CHOICES[apps_media]}"'
+  [ "$status" -eq 0 ]
+  [ "$output" = "ℹ VLC is already installed, but not through Homebrew. Homebrew can take it over, so it's updated and managed like your other apps.
+adopt=vlc|spotify vlc" ]
+  [ "$(prompts)" = "gum confirm --default=false Let Homebrew take over VLC?" ]
+}
+
+@test "apps_ask_adopt: VLC by hand, no: the no line, VLC leaves its picks, the rest stay" {
+  apps_brew
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/VLC.app"
+  gum_answers no
+  in_ask 'CHOICES[apps_media]="spotify vlc"; CHOICES[apps_developer]=vscode
+    apps_ask_adopt spotify vlc vscode
+    echo "adopt=[${APPS_ADOPT[*]}]|${CHOICES[apps_media]}|${CHOICES[apps_developer]}"'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *$'\n'"ℹ omamac leaves VLC as it is and drops it from your picks."$'\n'"adopt=[]|spotify|vscode" ]]
+}
+
+@test "apps_ask_adopt: Zoom by hand is told why, not asked, and leaves its picks" {
+  apps_brew
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/zoom.us.app"
+  gum_answers
+  in_ask 'CHOICES[apps_communication]="slack zoom"; apps_ask_adopt slack zoom
+    echo "adopt=[${APPS_ADOPT[*]}]|${CHOICES[apps_communication]}"'
+  [ "$status" -eq 0 ]
+  [ "$output" = "ℹ Zoom is already installed, not through Homebrew. Homebrew can only take it over by installing it again, so omamac leaves it.
+adopt=[]|slack" ]
+  [ -z "$(prompts)" ]
+}
+
+@test "apps_ask_adopt: Wispr Flow by hand, no: wispr_flow=no" {
+  apps_brew
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/Wispr Flow.app"
+  gum_answers no
+  in_ask 'CHOICES[wispr_flow]=yes; apps_ask_adopt wispr-flow; echo "wispr_flow=${CHOICES[wispr_flow]}"'
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "gum confirm --default=false Let Homebrew take over Wispr Flow?" ]
+  [[ "$output" == *$'\n'"wispr_flow=no" ]]
+}
+
+@test "apps_ask_adopt: an app from Homebrew or not there: nothing printed, nothing asked" {
+  apps_brew
+  "$P/bin/brew" install --cask vlc
+  gum_answers
+  in_ask 'CHOICES[apps_media]="spotify vlc"; apps_ask_adopt spotify vlc; echo "adopt=[${APPS_ADOPT[*]}]|${CHOICES[apps_media]}"'
+  [ "$status" -eq 0 ]
+  [ "$output" = "adopt=[]|spotify vlc" ]
+  [ -z "$(prompts)" ]
+}
+
+@test "apps_ask_adopt: returns non-zero when Homebrew can't list" {
+  apps_brew
+  export T_BREW_LIST_FAIL=1
+  in_ask 'set +e; apps_ask_adopt vlc; echo "rc=$?"'
+  [[ "$output" == *"rc=1" ]]
+}
+
+# vlc_by_hand: VLC in Applications, not from Homebrew, with a file of the user's inside.
+vlc_by_hand() {
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/VLC.app"
+  echo mine > "$OMAMAC_TEST_APPLICATIONS/VLC.app/marker"
+}
+
+@test "apps_install: VLC by hand and adopted: one --adopt call, the app untouched, then from Homebrew" {
+  apps_brew
+  vlc_by_hand
+  in_steps 'CHOICES[apps_media]=vlc; APPS_ADOPT=(vlc); apps_install; core_cask_state vlc'
+  [ "$status" -eq 0 ]
+  [ "$(changes)" = "brew install --cask --adopt vlc" ]
+  grep -q '^gum spin --title Handing VLC to Homebrew ' "$STUB_LOG"
+  [ "$(cat "$OMAMAC_TEST_APPLICATIONS/VLC.app/marker")" = mine ]
+  [[ "$output" == *$'\n'brew ]]
+}
+
+@test "apps_install: VLC by hand, not adopted: the hand line, no brew call" {
+  apps_brew
+  vlc_by_hand
+  in_steps 'CHOICES[apps_media]=vlc; apps_install'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ VLC is already installed, not through Homebrew. omamac won't update it."* ]]
+  [ -z "$(changes)" ]
+}
+
+@test "apps_install: a failed adopt returns non-zero, names the step, leaves the app" {
+  apps_brew
+  vlc_by_hand
+  export T_BREW_FAIL_CASK=vlc
+  in_steps 'set +e; CHOICES[apps_media]=vlc; APPS_ADOPT=(vlc); apps_install; echo "rc=$? step=$OMAMAC_STEP"'
+  [[ "$output" == *"rc=1 step=handing VLC to Homebrew" ]]
+  [ "$(cat "$OMAMAC_TEST_APPLICATIONS/VLC.app/marker")" = mine ]
+  [ ! -e "$P/Caskroom/vlc" ]
+}
