@@ -870,3 +870,70 @@ healthy_colima() {
   [[ "$output" != *docker* ]]
   [[ "$output" != *colima* ]]
 }
+
+# Docker Desktop the way install leaves it: lazydocker and the cask with its app.
+healthy_desktop() {
+  choose docker docker-desktop
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install lazydocker
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask docker-desktop
+  : > "$STUB_LOG" # the tests look only at doctor's own calls
+}
+
+@test "doctor: Docker Desktop with everything in place is ✓" {
+  healthy_mac
+  healthy_desktop
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ Your tools"* ]]
+  [ -z "$(printf '%s\n' "$output" | grep -E '^(✗|ℹ)')" ]
+}
+
+@test "doctor: a gone Docker Desktop app is ✗ under Your tools" {
+  healthy_mac
+  healthy_desktop
+  rm -r "$OMAMAC_TEST_APPLICATIONS/Docker.app"
+  gum_answers leave
+  expect_fail "Docker Desktop — you chose it, but Homebrew no longer has Docker Desktop" \
+    "omamac update puts it back; omamac uninstall docker-desktop drops it"
+  [ "$(printf '%s\n' "$output" | grep -c '^✗ Docker Desktop')" -eq 1 ]
+}
+
+@test "doctor: a gone lazydocker is ✗, one Docker Desktop entry" {
+  healthy_mac
+  healthy_desktop
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" uninstall lazydocker
+  gum_answers leave
+  expect_fail "Docker Desktop — you chose it, but Homebrew no longer has lazydocker" \
+    "omamac uninstall docker-desktop drops it"
+  [ "$(printf '%s\n' "$output" | grep -c '^✗ Docker Desktop')" -eq 1 ]
+}
+
+@test "doctor: a hand-installed Docker Desktop is ℹ" {
+  healthy_mac
+  healthy_desktop
+  rm -r "$OMAMAC_TEST_BREW_PREFIX/Caskroom/docker-desktop"
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ Docker Desktop — installed by hand, so omamac won't update it"* ]]
+}
+
+@test "doctor: offers to reinstall Docker Desktop" {
+  healthy_mac
+  healthy_desktop
+  rm -r "$OMAMAC_TEST_APPLICATIONS/Docker.app"
+  gum_answers reinstall
+  run doctor
+  [ "$status" -eq 1 ]
+  grep -qx 'gum choose --header Docker Desktop is gone. What should omamac do? --label-delimiter=: Leave it:leave Reinstall it:reinstall' "$STUB_LOG"
+  grep -qx 'brew reinstall --cask docker-desktop' "$STUB_LOG"
+  grep -qx 'docker=docker-desktop' "$CHOICES_FILE"
+}
+
+@test "doctor: with colima, a Docker Desktop app isn't reported" {
+  healthy_mac
+  healthy_colima
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask docker-desktop
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"Docker Desktop"* ]]
+}

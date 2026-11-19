@@ -60,7 +60,7 @@ What that means in practice:
 **On a fresh Mac,** after the normal Apple Setup Assistant:
 
 1. The user opens Terminal.app and pastes one line from the README.
-2. omamac explains in a few lines what it is about to do and asks for the admin password once. It keeps sudo valid until the run ends (the password is never stored), so it is not asked again partway through.
+2. omamac explains in a few lines what it is about to do and asks for the admin password once. It keeps sudo valid until the run ends (the password is never stored), so it is not asked again partway through. One exception: Homebrew resets sudo before a cask step that needs it, so Docker Desktop's cask asks once more; omamac runs that step right after "Install?", in the open. Nothing after it needs sudo.
 3. It installs its own prerequisites without asking: Apple's Command Line Tools and git (via Homebrew's installer), Homebrew itself (put on the PATH for them), a modern bash, and `gum`, which draws omamac's questions, progress and summaries.
 4. It asks all its first-run questions before installing anything, so the rest of the run needs nobody at the keyboard. Questions are short, grouped, nothing pre-selected, from the most visible to the most technical: theme, desktop apps (one multi-select per group), Wispr Flow, desktops, window margins, Dock, Dock auto-hide, languages, cloud CLIs, Docker. If a chosen app is already installed by hand, the "let Homebrew take it over?" question comes right then, too. It ends with one summary of every answer and "Install? (y/n)" before anything changes. There is no multiplexer question: Ghostty and herdr are the terminal pair every omamac user gets.
 5. It installs and configures everything chosen, with clear progress output, and ends with a short summary: what was installed, anything that needs one manual click (for example a macOS permission prompt, such as allowing the microphone for Wispr Flow or screen recording for Cap, or App Management for Ghostty), and how to open Ghostty. Each click is one line, never a block of text, plus one line: "The first time you open each app, macOS asks you to confirm; click Open." The README's "After install" lists the same clicks.
@@ -272,7 +272,7 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - Docker is one choice with nothing pre-selected: colima, Docker Desktop or none. OrbStack is not offered: its install stops at macOS's "Open?" dialog, so it can't run unattended.
 - omamac's checkout is read-only code; generated configs live in `~/.config/omamac/`, choices and migration state in `~/.local/state/omamac/`.
 - Ghostty runs `herdr`, which attaches or starts a session; if herdr fails, Ghostty falls back to zsh with a one-line message. Ghostty tabs and splits are not promoted.
-- One admin password prompt per run, kept valid until the run ends and never stored; all questions come before any install.
+- One admin password prompt per run, kept valid until the run ends and never stored; all questions come before any install. Exception: Docker Desktop's cask. Homebrew resets sudo and asks again, so omamac runs that step right after "Install?", in the open, and never bypasses the reset.
 - The v1 scope stays as described in this document.
 - Xcode is not offered in v1.
 - No "edit answers" command: change an answer by uninstalling one thing and installing another.
@@ -436,3 +436,4 @@ One line per decision: date, question, answer, who decided. Move the item out of
 - 2026-11-17 — PHP — dropped from the languages for now (mise compiles it on macOS); in the Backlog — Tuna
 - 2026-11-17 — herdr's settings screen writes into omamac's herdr file — omamac rewrites its file anyway, so herdr always follows omamac's theme; the README warns; own settings go in `~/.config/herdr/config.toml` — Tuna
 - 2026-11-19 — Docker — OrbStack dropped; the choice is colima, Docker Desktop or none (OrbStack's install waits on macOS's "Open?" dialog, so it can't run unattended or be tested in the VM) — Tuna
+- 2026-11-19 — Password — Docker Desktop's cask: Homebrew resets sudo and asks once more; omamac runs that step right after "Install?", in the open, and never bypasses the reset — Tuna

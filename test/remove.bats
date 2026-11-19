@@ -71,7 +71,7 @@ snapshot() {
   gum_answers
   run --separate-stderr omamac_uninstall php
   [ "$status" -eq 2 ]
-  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, desktops, window-margins, colima."* ]]
+  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, desktops, window-margins, colima, docker-desktop."* ]]
   [ -z "$(prompts)" ]
 }
 
@@ -358,7 +358,7 @@ MARKER_REL=.local/state/omamac/colima-service
   run omamac_uninstall colima
   [ "$status" -eq 0 ]
   [[ "$output" == *"Nothing was removed."* ]]
-  ! grep -q '^brew ' "$STUB_LOG"
+  run ! grep -q '^brew ' "$STUB_LOG"
   grep -qx 'docker=colima' "$CHOICES_FILE"
 }
 
@@ -440,8 +440,141 @@ brew uninstall colima docker docker-compose docker-buildx lazydocker" ]
   gum_answers yes
   run omamac_uninstall colima
   [ "$status" -eq 0 ]
-  ! grep -qE '^(brew services|colima)' "$STUB_LOG"
+  run ! grep -qE '^(brew services|colima)' "$STUB_LOG"
   grep -qx 'brew uninstall docker docker-compose docker-buildx lazydocker' "$STUB_LOG"
   [ ! -e "$MARKER" ]
   grep -qx 'docker=none' "$CHOICES_FILE"
+}
+
+# dockered: what a Docker Desktop run leaves: the cask, its app and lazydocker.
+dockered() {
+  choose docker docker-desktop
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install lazydocker
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask docker-desktop
+  : > "$STUB_LOG"
+}
+# deny_app_management: touch fails inside the app folder only; bats and git need the real touch.
+deny_app_management() {
+  stub touch 'case "$1" in *.omamac-write-test) echo "touch: $1: Operation not permitted" >&2; exit 1 ;; esac; exec /usr/bin/touch "$@"'
+}
+# no_brew_changes: the run made no brew change (reads are fine).
+no_brew_changes() { run ! grep -qE '^brew (uninstall|install|reinstall)' "$STUB_LOG"; }
+
+@test "uninstall docker-desktop: not the answer exits 0" {
+  choose docker colima
+  gum_answers
+  run omamac_uninstall docker-desktop
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Docker Desktop isn't installed by omamac."* ]]
+  [ -z "$(prompts)" ]
+  no_brew_changes
+}
+
+@test "uninstall docker-desktop: shows what goes, no changes nothing" {
+  dockered
+  gum_answers no
+  run omamac_uninstall docker-desktop
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Docker Desktop: the app and lazydocker. Your images, containers and volumes stay."* ]]
+  no_brew_changes
+  grep -qx 'docker=docker-desktop' "$CHOICES_FILE"
+}
+
+@test "uninstall docker-desktop: removes in order, answer last" {
+  dockered
+  gum_answers yes
+  run omamac_uninstall docker-desktop
+  [ "$status" -eq 0 ]
+  [ "$(grep '^brew uninstall' "$STUB_LOG")" = "brew uninstall --cask docker-desktop
+brew uninstall lazydocker" ]
+  [ ! -e "$OMAMAC_TEST_APPLICATIONS/Docker.app" ]
+  grep -qx 'docker=none' "$CHOICES_FILE"
+  run ! grep -q -- '--zap' "$STUB_LOG"
+}
+
+@test "uninstall docker-desktop: App Management off changes nothing" {
+  dockered
+  deny_app_management
+  stub open
+  gum_answers yes
+  run omamac_uninstall docker-desktop
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"App Management"* ]]
+  [[ "$output" == *"then run omamac uninstall docker-desktop again."* ]]
+  no_brew_changes
+  grep -qx 'docker=docker-desktop' "$CHOICES_FILE"
+}
+
+@test "uninstall docker-desktop: a hand-installed app says it stays before the question" {
+  dockered
+  rm -rf "$OMAMAC_TEST_BREW_PREFIX/Caskroom/docker-desktop"
+  gum_answers no
+  run omamac_uninstall docker-desktop
+  [ "$status" -eq 0 ]
+  # Answering no still shows the line, so it is printed before the answer is read.
+  [[ "$output" == *"Docker Desktop wasn't installed by omamac, so it stays."* ]]
+  [[ "$output" == *"Nothing was removed."* ]]
+}
+
+@test "uninstall docker-desktop: a hand-installed app stays" {
+  dockered
+  rm -rf "$OMAMAC_TEST_BREW_PREFIX/Caskroom/docker-desktop"
+  gum_answers yes
+  run omamac_uninstall docker-desktop
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Docker Desktop wasn't installed by omamac, so it stays."* ]]
+  run ! grep -q '^brew uninstall --cask' "$STUB_LOG"
+  grep -qx 'brew uninstall lazydocker' "$STUB_LOG"
+  [ -e "$OMAMAC_TEST_APPLICATIONS/Docker.app" ]
+  grep -qx 'docker=none' "$CHOICES_FILE"
+}
+
+@test "uninstall docker-desktop: app trashed, cask listed" {
+  dockered
+  rm -rf "$OMAMAC_TEST_APPLICATIONS/Docker.app"
+  deny_app_management
+  gum_answers yes
+  run omamac_uninstall docker-desktop
+  [ "$status" -eq 0 ]
+  grep -qx 'brew uninstall --cask docker-desktop' "$STUB_LOG"
+  grep -qx 'docker=none' "$CHOICES_FILE"
+}
+
+@test "uninstall docker-desktop: a failed cask removal keeps the answer" {
+  dockered
+  export T_BREW_UNINSTALL_FAIL=1
+  gum_answers yes
+  run omamac_uninstall docker-desktop
+  [ "$status" -ne 0 ]
+  run ! grep -qx 'brew uninstall lazydocker' "$STUB_LOG"
+  grep -qx 'docker=docker-desktop' "$CHOICES_FILE"
+}
+
+@test "uninstall docker-desktop: a second run changes nothing" {
+  dockered
+  gum_answers yes
+  run omamac_uninstall docker-desktop
+  [ "$status" -eq 0 ]
+  : > "$STUB_LOG"
+  run omamac_uninstall docker-desktop
+  [ "$status" -eq 0 ]
+  no_brew_changes
+}
+
+@test "uninstall docker-desktop: the user's own docker formula stays" {
+  dockered
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install docker
+  gum_answers yes
+  run omamac_uninstall docker-desktop
+  [ "$status" -eq 0 ]
+  run ! grep -qE '^brew uninstall docker( |$)' "$STUB_LOG"
+  [ -e "$OMAMAC_TEST_BREW_PREFIX/Cellar/docker" ]
+}
+
+@test "uninstall with no name offers Docker Desktop" {
+  dockered
+  gum_answers none
+  run omamac_uninstall
+  [ "$status" -eq 0 ]
+  [[ "$(prompts)" == *"Nothing:none Docker Desktop:docker-desktop"* ]]
 }

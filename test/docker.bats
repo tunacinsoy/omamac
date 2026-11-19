@@ -179,7 +179,7 @@ broken" ]
 @test "docker_formulas: colima's five; nothing for the others" {
   in_lib none 'docker_formulas colima | tr "\n" " "; echo "|$(docker_formulas docker-desktop)|$(docker_formulas none)|"'
   [ "$status" -eq 0 ]
-  [ "$output" = "colima docker docker-compose docker-buildx lazydocker |||" ]
+  [ "$output" = "colima docker docker-compose docker-buildx lazydocker |lazydocker||" ]
 }
 
 @test "the Docker question has no OrbStack" {
@@ -203,8 +203,7 @@ broken" ]
   [[ "$output" == *"takes a few minutes."*"Log: "* ]]
 }
 
-@test "install summary doesn't name Docker for Docker Desktop yet" {
-  # It installs nothing until Phase 5b.
+@test "install summary names Docker for Docker Desktop" {
   "$P/bin/brew" install gum
   choices="$HOME/.local/state/omamac/choices.env"
   mkdir -p "$(dirname "$choices")"
@@ -212,6 +211,103 @@ broken" ]
   gum_answers yes
   run "$BASH5" "$REPO_ROOT/install.sh"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"and the languages and cloud CLIs you chose."* ]]
-  [[ "$output" != *"Docker you chose"* ]]
+  [[ "$output" == *"and the languages, cloud CLIs and Docker you chose."* ]]
+  [[ "$output" == *"Open Docker Desktop once to finish its setup."* ]]
+}
+
+@test "colima: a failed marker write stops the run" {
+  mkdir -p "$(dirname "$MARKER")"
+  chmod a-w "$(dirname "$MARKER")"
+  in_lib colima 'docker_install || echo "rc=$?"'
+  chmod u+w "$(dirname "$MARKER")"
+  [[ "$output" == *"rc="* ]]
+  [[ "$output" != *"✓ colima is installed"* ]]
+}
+
+DESKTOP_NOTE="Open Docker Desktop once to finish its setup."
+
+@test "docker_formulas: Docker Desktop's is lazydocker" {
+  in_lib docker-desktop 'docker_formulas docker-desktop'
+  [ "$output" = lazydocker ]
+}
+
+@test "desktop: installs lazydocker and the cask, saying why Homebrew asks first" {
+  in_lib docker-desktop 'docker_install; printf "%s\n" "${DOCKER_NOTES[@]}"'
+  [ "$status" -eq 0 ]
+  [ -d "$OMAMAC_TEST_APPLICATIONS/Docker.app" ]
+  [[ "$output" == *"ℹ Homebrew asks for your password once Docker Desktop is downloaded, for its links in /usr/local."* ]]
+  [[ "$output" == *"✓ Docker Desktop is installed"* ]]
+  [[ "$output" == *"$DESKTOP_NOTE"* ]]
+  [ "$(stub_calls | grep -c '^brew install lazydocker$')" -eq 1 ]
+  stub_calls | grep -qx 'brew install --cask docker-desktop'
+}
+
+@test "desktop: the ℹ line comes before the cask call" {
+  # ui_run_open stands in for the brew call: the line must already be printed.
+  in_lib docker-desktop 'ui_run_open() { echo "RUN $*"; }; docker_cask_run "Installing Docker Desktop" install --cask docker-desktop'
+  [ "$status" -eq 0 ]
+  [ "${lines[0]}" = "ℹ Homebrew asks for your password once Docker Desktop is downloaded, for its links in /usr/local." ]
+  [[ "${lines[1]}" == "RUN Installing Docker Desktop "*"brew install --cask docker-desktop" ]]
+}
+
+@test "desktop: cask steps don't run under gum spin" {
+  "$P/bin/brew" install gum
+  in_lib docker-desktop 'docker_install'
+  [ "$status" -eq 0 ]
+  stub_calls | grep -qx 'brew install --cask docker-desktop'
+  grep -q '^gum spin.*lazydocker' "$STUB_LOG"
+  ! grep '^gum spin' "$STUB_LOG" | grep -q 'docker-desktop'
+}
+
+@test "desktop: a failed cask install returns non-zero with errexit off" {
+  "$P/bin/brew" install lazydocker
+  export T_BREW_FAIL=1
+  in_lib docker-desktop 'set +e; docker_install || echo "rc=$?"'
+  [[ "$output" == *"rc=1"* ]]
+  [[ "$output" == *"Log: $OMAMAC_LOG"* ]]
+  [[ "$output" != *"✓ Docker Desktop is installed"* ]]
+}
+
+@test "desktop: already from Homebrew, a second run changes nothing" {
+  "$P/bin/brew" install lazydocker
+  "$P/bin/brew" install --cask docker-desktop
+  : > "$STUB_LOG"
+  in_lib docker-desktop 'docker_install; echo "notes=${#DOCKER_NOTES[@]}"'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"notes=0"* ]]
+  [[ "$output" == *"✓ Docker Desktop is installed"* ]]
+  run ! grep -Eq '^brew (install|reinstall)' "$STUB_LOG"
+}
+
+@test "desktop: listed by Homebrew but the app is gone, reinstalls it" {
+  "$P/bin/brew" install lazydocker
+  "$P/bin/brew" install --cask docker-desktop
+  rm -rf "$OMAMAC_TEST_APPLICATIONS/Docker.app"
+  : > "$STUB_LOG"
+  in_lib docker-desktop 'docker_install; printf "%s\n" "${DOCKER_NOTES[@]}"'
+  [ "$status" -eq 0 ]
+  stub_calls | grep -qx 'brew reinstall --cask docker-desktop'
+  [ -d "$OMAMAC_TEST_APPLICATIONS/Docker.app" ]
+  [[ "$output" == *"$DESKTOP_NOTE"* ]]
+}
+
+@test "desktop: a hand-installed app is used as it is" {
+  "$P/bin/brew" install lazydocker
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/Docker.app"
+  : > "$STUB_LOG"
+  in_lib docker-desktop 'docker_install; echo "notes=${#DOCKER_NOTES[@]}"'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ Docker Desktop is already installed, not through Homebrew. omamac won't update it."* ]]
+  [[ "$output" == *"✓ Docker Desktop is installed"* ]]
+  [[ "$output" == *"notes=0"* ]]
+  run ! grep -E '^brew (install|reinstall) --cask' "$STUB_LOG"
+}
+
+@test "desktop: the user's own docker formula stays, the cask installs" {
+  "$P/bin/brew" install docker
+  : > "$STUB_LOG"
+  in_lib docker-desktop 'docker_install'
+  [ "$status" -eq 0 ]
+  stub_calls | grep -qx 'brew install --cask docker-desktop'
+  ! stub_calls | grep -Eq '^brew (uninstall|install) docker$'
 }

@@ -24,6 +24,8 @@ setup_sandbox() {
   mkdir -p "$T_DEFAULTS_DIR"
   ln -sf "$HELPERS_DIR/fake-defaults" "$STUB_DIR/defaults"
   stub killall
+  # No test reaches the real sudo; a test that needs it to fail restubs it.
+  stub sudo
   # The terminal prompts read. fake-gum checks for this first line.
   echo fake-tty > "$BATS_TEST_TMPDIR/tty"
   export OMAMAC_TEST_TTY="$BATS_TEST_TMPDIR/tty"

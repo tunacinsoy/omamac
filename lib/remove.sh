@@ -30,24 +30,52 @@ remove_setting() {
   ui_ok "$title is removed"
 }
 
-# remove_docker: take colima away, keeping the user's Docker data. The answer
-# is saved none last, so a failure leaves it colima for doctor to report.
+# remove_docker <colima|docker-desktop>: take that away, keeping the user's
+# Docker data. The answer is saved none last, so a failure leaves it as it was
+# for doctor to report.
 remove_docker() {
-  if [ "${CHOICES[docker]:-none}" != colima ]; then
-    ui_info "colima isn't installed by omamac."
+  local name=$1 state='' status=0 app="$OMAMAC_APPLICATIONS/${CASK_APP[docker-desktop]}"
+  if [ "${CHOICES[docker]:-none}" != "$name" ]; then
+    if [ "$name" = colima ]; then ui_info "colima isn't installed by omamac."
+    else ui_info "Docker Desktop isn't installed by omamac."; fi
     exit 0
   fi
-  ui_box "colima: colima, docker, docker-compose, docker-buildx and lazydocker. Your images, containers and volumes stay in ~/.colima."
-  if ! ask_yes "Remove colima?"; then
-    ui_info "Nothing was removed."
-    exit 0
+  if [ "$name" = colima ]; then
+    ui_box "colima: colima, docker, docker-compose, docker-buildx and lazydocker. Your images, containers and volumes stay in ~/.colima."
+    ask_yes "Remove colima?" || { ui_info "Nothing was removed."; exit 0; }
+    log_start
+    docker_uninstall_colima || return
+    CHOICES[docker]=none
+    OMAMAC_STEP='saving your answers'
+    choices_save "$OMAMAC_CHOICES_FILE"
+    ui_ok "colima is removed"
+    return
   fi
+  state=$(core_cask_state docker-desktop) || return
+  # Homebrew replaces the app folder, which needs App Management. Check before
+  # asking, so a refusal changes nothing. A trashed app has nothing to write to.
+  if [ "$state" = brew ]; then
+    app_management_ok "$app" || status=$?
+    case $status in
+      0) ;;
+      1)
+        ui_fail "macOS won't let your terminal change apps, so nothing was removed."
+        ui_fail "Fix: System Settings → Privacy & Security → App Management, turn on your terminal, then run omamac uninstall docker-desktop again."
+        open "$APP_MANAGEMENT_URL" || true
+        exit 1
+        ;;
+      *) ui_fail "omamac couldn't test write access to $app, so nothing was removed."; exit 1 ;;
+    esac
+  fi
+  ui_box "Docker Desktop: the app and lazydocker. Your images, containers and volumes stay."
+  [ "$state" != hand ] || ui_info "Docker Desktop wasn't installed by omamac, so it stays."
+  ask_yes "Remove Docker Desktop?" || { ui_info "Nothing was removed."; exit 0; }
   log_start
-  docker_uninstall_colima || return
+  docker_uninstall_desktop || return
   CHOICES[docker]=none
   OMAMAC_STEP='saving your answers'
   choices_save "$OMAMAC_CHOICES_FILE"
-  ui_ok "colima is removed"
+  ui_ok "Docker Desktop is removed"
 }
 
 # remove_run [<name>]: CHOICES is loaded (bin/omamac did that). Nothing is
@@ -63,7 +91,10 @@ remove_run() {
     done
     [ "${CHOICES[desktops]:-}" != yes ] || options+=("${QUESTION_TITLE[desktops]}:desktops")
     [ "${CHOICES[window_margins]:-}" != yes ] || options+=("${QUESTION_TITLE[window_margins]}:window-margins")
-    [ "${CHOICES[docker]:-none}" != colima ] || options+=("colima:colima")
+    case ${CHOICES[docker]:-none} in
+      colima) options+=("colima:colima") ;;
+      docker-desktop) options+=("$(question_label docker docker-desktop):docker-desktop") ;;
+    esac
     if [ "${#options[@]}" -eq 0 ]; then
       ui_info "omamac installed no languages, cloud CLIs or Docker, so there's nothing to remove."
       exit 0
@@ -74,7 +105,7 @@ remove_run() {
   fi
   case $name in
     desktops | window-margins) remove_setting "$name"; return ;;
-    colima) remove_docker; return ;;
+    colima | docker-desktop) remove_docker "$name"; return ;;
   esac
   # bash and gum are omamac's own, so they count as core.
   for v in "${CORE_FORMULAS[@]}" "${CORE_CASKS[@]}" bash gum zsh; do
@@ -89,7 +120,7 @@ remove_run() {
     all+=("${ids[@]}")
   done
   if [ -z "$key" ]; then
-    ui_fail "omamac can't remove '$name'. It can remove: $(clis_join "${all[@]}" desktops window-margins colima)."
+    ui_fail "omamac can't remove '$name'. It can remove: $(clis_join "${all[@]}" desktops window-margins colima docker-desktop)."
     exit 2
   fi
   label=$(question_label "$key" "$name")

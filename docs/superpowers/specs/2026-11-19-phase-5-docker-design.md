@@ -32,7 +32,7 @@ It is done when a container runs in the VM.
 - omamac writes `~/.docker/config.json`. (colima writes its own `currentContext` there when it starts; that's colima's.)
 - omamac restarts a colima or Docker Desktop that's running. A re-run, update or doctor must never stop the user's containers. Only uninstall stops colima.
 - omamac starts colima's service again after the user stopped it (`brew services stop colima`).
-- A sudo prompt hidden under a spinner. When a step needs the password outside the one-liner, omamac asks for it in the open first.
+- A sudo prompt hidden under a spinner. When a step needs the password outside the one-liner, Homebrew asks for it, in the open with no spinner over it.
 - omamac removes quarantine or weakens Gatekeeper. The VM steps file does what the user's hands would, never omamac.
 - A second run, update or uninstall changes anything.
 
@@ -62,7 +62,7 @@ It is done when a container runs in the VM.
 | A file already at a plugin path | Left alone; doctor says the user's own plugin is used (ℹ) | Never overwrite what the user made. |
 | Docker data on uninstall | Always kept; uninstall says where it stays | Deleting images and volumes is not reversible. Phase 6's zap question will offer it for Docker Desktop with the other apps. |
 | Upgrading Docker Desktop | The same path as Ghostty: no `--greedy`, only when `brew outdated --cask` lists it, App Management checked first | It updates itself. One function for both apps. |
-| The password outside the one-liner | Before a Docker Desktop cask step in `install`, `update`, `uninstall` or doctor's reinstall: one line saying why, then `sudo -v` in the open | Homebrew needs it for the `/usr/local` links. `ui_run` hides brew's output under a spinner, so brew's own prompt would be hidden. The one-liner already holds sudo for the whole run. |
+| The password for Docker Desktop's cask | One line saying why, then the brew command run in the open (`ui_run_open`, no spinner); in a run, Docker is the first step, right after "Install?" | Homebrew runs `sudo --reset-timestamp` (`Library/Homebrew/utils/sudo.sh`) the first time a command needs sudo, then asks itself, so a cached sudo, even the one-liner's, never spares the prompt. Bypassing the reset (`HOMEBREW_SUDO_CHECKED`, `SUDO_ASKPASS`) is not done. A spinner would hide the prompt, and asking first leaves the rest of the run unattended. |
 | colima's dependencies on uninstall | Left installed (`lima`) | The cloud CLIs do the same. `brew autoremove` would reach the user's own formulas. |
 | "A container runs in the VM" | colima, started from the shell under emulation in the steps file, runs `hello-world` | The only engine that runs in a macOS VM. The emulation flags are test-only, like Phase 4's quarantine stand-in. colima starting at login on Apple's Virtualization framework is checked at Gate B. Docker Desktop's first container too. |
 | OrbStack | Dropped from the question | Tuna, 2026-11-19: it can't install unattended or be tested in the VM. |
@@ -117,11 +117,11 @@ New `lib/docker.sh`, sourced where `lib/clis.sh` is, and called from `apply_all`
 
 ### Docker Desktop (5b)
 
-- **`docker_install`**, for `docker=docker-desktop`: `brew install lazydocker` if missing. If Homebrew's `docker` formula is installed and the cask isn't, stop with ✗: "Homebrew's docker is installed, and Docker Desktop brings its own. Fix: brew uninstall docker, then omamac update." (as for Terraform; if the conflict fact above turns out false, this check goes). Then the cask, with the same three states as Ghostty (`missing`: install, or reinstall when Homebrew lists it; `brew`: nothing; `hand`: "Docker Desktop is already installed, not through Homebrew. omamac won't update it."). Summary line: "Open Docker Desktop once to finish its setup." `install_summary` and `add_run` then name Docker for `docker-desktop` too.
+- **`docker_install`**, for `docker=docker-desktop`: `brew install lazydocker` if missing. Then the cask, with the same three states as Ghostty (`missing`: install, or reinstall when Homebrew lists it; `brew`: nothing; `hand`: "Docker Desktop is already installed, not through Homebrew. omamac won't update it."). Summary line: "Open Docker Desktop once to finish its setup." `install_summary` and `add_run` then name Docker for `docker-desktop` too.
 - **`omamac update`**: `update_upgrade_ghostty` becomes `update_upgrade_app <cask>`, called for `ghostty` and, when it is the answer, `docker-desktop`. The closing ✗ line names the apps that weren't upgraded.
 - **`omamac uninstall docker-desktop`**: shows "Docker Desktop: the app and lazydocker. Your images, containers and volumes stay." If Homebrew manages the app, it checks App Management first (the vision: uninstall changes an app), and without it stops, changes nothing and shows the click, as update does. On yes: `brew uninstall --cask docker-desktop` (Homebrew asks for the password for its privileged parts), `brew uninstall lazydocker` if installed, save `docker=none`. A hand-installed Docker Desktop is left as it is: "Docker Desktop wasn't installed by omamac, so it stays." and the answer is saved `none`.
 - **doctor:** ✗ when Homebrew no longer has the cask or lazydocker (one `docker-desktop` entry, offered as above); ℹ for a hand-installed app.
-- **The password:** each cask step outside the one-liner is preceded by "Docker Desktop needs your password for its links in /usr/local." and `sudo -v`.
+- **The password:** Homebrew asks for it on every cask step (install, reinstall, upgrade, uninstall), because it resets sudo first (see Approaches). Each step is preceded by "Homebrew asks for your password once Docker Desktop is downloaded, for its links in /usr/local." and runs with `ui_run_open`. `apply_all` runs Docker first, so the prompt comes right after "Install?". A failed step stops the run (update included) like any failed step.
 
 ### Fixtures and VM runs
 
@@ -134,27 +134,28 @@ New `lib/docker.sh`, sourced where `lib/clis.sh` is, and called from `apply_all`
 - **5b, `docker-desktop.env`:** `bare` with `docker=docker-desktop`. `docker-desktop.steps.sh`:
   1. `/Applications/Docker.app` exists, Homebrew lists the cask, `/usr/local/bin/docker` links into it, and `lazydocker --version` succeeds.
   2. `omamac update` twice, with fingerprints compared.
-  3. The stand-in for typing the password: pipe the image's public password into `sudo -S -v` (the steps run with stdin from `/dev/null`), before `omamac uninstall docker-desktop`. The app, the cask and the links are gone, and `docker=none` is saved. A second uninstall changes nothing.
+  3. `omamac uninstall docker-desktop`; `vm.exp` types the password at Homebrew's prompt, as the user would. The fixture's `docker-desktop.brew-passwords` holds `1`: one more prompt per command than the one-liner's (test/vm.sh reads it). The app, the cask and the links are gone, and `docker=none` is saved. A second uninstall changes nothing.
   The engine can't start in a macOS VM, so the first container on Docker Desktop is for Gate B.
 
 ### bats
 
+- Probe (2026-11-19): with Homebrew's `docker` formula installed, the cask installs (exit 0) and only skips linking its `_docker` completions, so there is no conflict check. `brew outdated --cask --quiet docker-desktop` prints nothing (the cask has `auto_updates`). An SSH session may write inside Docker.app, so App Management doesn't block the VM's uninstall. `brew uninstall --cask docker-desktop` removes its links in `/usr/local`; `~/.docker` is never created.
 - fake-brew learns `services info --json`, `services start` (exit 1 when already registered, as Homebrew does) and `services stop`; a fake `colima` answers `status` and `stop`.
 - Install: only missing formulas are installed; the service is started once (no marker, not registered), never when registered or when the marker exists; a run that failed before the start starts it next time; a second run calls no `brew services start`; links are created, a correct link is left, a foreign file is left with the ℹ line; `DOCKER_NOTES` reaches both summaries.
 - `omamac install`: the Docker question is asked only for `none`; "No Docker" adds nothing; a pick replaces `none`.
 - `omamac uninstall none` and `omamac uninstall docker` are refused like any unknown name.
 - Update: the installed Docker formulas are upgraded by name, only for the matching answer; with `none`, a user's own `docker` isn't upgraded; nothing restarts colima.
 - Uninstall: the order (service stop, colima stop, links, formulas, answer last); only omamac's links are removed; nothing under `~/.colima` is touched; not the answer exits 0; a second uninstall calls no brew.
-- Docker Desktop (5b): the three cask states; the `docker` formula conflict; `sudo -v` before each cask step outside the one-liner; uninstall stops without App Management; a hand-installed app isn't uninstalled; `update_upgrade_app` keeps Ghostty's tests passing.
-- doctor: each ✗ and ℹ above; exit code non-zero only for ✗.
-- hygiene: the never-touch list gains `~/.docker/config.json`. No script in `bin` or `lib` calls `colima delete`.
+- Docker Desktop (5b): the three cask states; a line saying why before each cask step, run without a spinner; uninstall stops without App Management; a hand-installed app isn't uninstalled; `update_upgrade_app` keeps Ghostty's tests passing.
+- doctor: each ✗ and ℹ above; exit code non-zero only for ✗. The colima summaries (healthy, a gone formula, reinstall offered); the broken-link state; no service line when colima is gone. 5b: a healthy Docker Desktop, a gone app, a gone lazydocker (one entry), a hand-installed app, reinstall offered, and no Docker Desktop line under colima.
+- hygiene: the never-touch list gains `~/.docker/config.json`. No script in `bin`, `lib`, `install.sh` or `update.sh` calls `colima delete`, `--zap` or `xattr`.
 
 ### Docs
 
 - **README:**
   - The top says Docker is installed.
   - "After install": for Docker Desktop, "Open Docker Desktop once to finish its setup."
-  - "What it changes": the Docker formulas or cask, the two plugin links, colima's login service.
+  - "What it changes": the Docker formulas or cask, the two plugin links, colima's login service, and that Homebrew asks for your password for the cask's links in `/usr/local`.
   - The uninstall names `colima` and `docker-desktop`, and that Docker's data stays (with where).
   - One line: to stop colima starting at login, `brew services stop colima`; omamac won't start it again.
 
@@ -173,4 +174,3 @@ New `lib/docker.sh`, sourced where `lib/clis.sh` is, and called from `apply_all`
 
 - Exact wording of messages and summary lines.
 - How fake-brew models `brew services`.
-- Confirming the `_docker` completion conflict before 5b's plan.

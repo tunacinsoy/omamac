@@ -100,8 +100,7 @@ install_summary() {
   OMAMAC_STEP='printing the summary'
   # Short lines, so the box fits an 80-column terminal.
   local chosen="the languages and cloud CLIs"
-  # Only colima: Docker Desktop installs nothing until Phase 5b.
-  [ "${CHOICES[docker]:-none}" != colima ] || chosen="the languages, cloud CLIs and Docker"
+  [ "${CHOICES[docker]:-none}" = none ] || chosen="the languages, cloud CLIs and Docker"
   local lines=(
     "Installed: Homebrew, bash, gum, omamac, Ghostty and the core tools,"
     "and $chosen you chose."

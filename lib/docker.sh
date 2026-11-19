@@ -13,6 +13,7 @@ DOCKER_NOTES=()
 docker_formulas() {
   case $1 in
     colima) printf '%s\n' colima docker docker-compose docker-buildx lazydocker ;;
+    docker-desktop) echo lazydocker ;;
   esac
 }
 
@@ -55,13 +56,52 @@ docker_service_registered() {
   return 2
 }
 
+# docker_cask_run <title> <brew args…>: a Docker Desktop cask step. Homebrew
+# resets sudo before a cask that needs it (its links in /usr/local) and asks
+# for the password itself, so no spinner hides the prompt.
+docker_cask_run() {
+  local title=$1
+  shift
+  ui_info "Homebrew asks for your password once Docker Desktop is downloaded, for its links in /usr/local."
+  ui_run_open "$title" "$OMAMAC_BREW_PREFIX/bin/brew" "$@"
+}
+
+# docker_install_desktop: lazydocker, then the Docker Desktop cask in the
+# state it is in (the same three as Ghostty's, see core_cask_state).
+docker_install_desktop() {
+  local list missing=() state
+  list=$(core_where missing lazydocker) || return
+  [ -z "$list" ] || mapfile -t missing <<< "$list"
+  if [ "${#missing[@]}" -gt 0 ]; then
+    ui_run "Installing lazydocker" "$OMAMAC_BREW_PREFIX/bin/brew" install "${missing[@]}" || return
+  fi
+  state=$(core_cask_state docker-desktop) || return
+  case $state in
+    missing)
+      # A plain install of a cask Homebrew lists does nothing; reinstall puts the app back.
+      if core_cask_listed docker-desktop; then
+        docker_cask_run "Reinstalling Docker Desktop" reinstall --cask docker-desktop || return
+      else
+        docker_cask_run "Installing Docker Desktop" install --cask docker-desktop || return
+      fi
+      DOCKER_NOTES+=("Open Docker Desktop once to finish its setup.")
+      ;;
+    hand) ui_info "Docker Desktop is already installed, not through Homebrew. omamac won't update it." ;;
+  esac
+  ui_ok "Docker Desktop is installed"
+}
+
 # docker_install: what the Docker answer needs. For colima: the missing
 # formulas in one brew call, the plugin links, and the login service, started
-# only once (see OMAMAC_COLIMA_MARKER).
+# only once (see OMAMAC_COLIMA_MARKER). For Docker Desktop: see above.
 docker_install() {
   local formulas=() list missing=() plugin rc why
   DOCKER_NOTES=()
-  [ "${CHOICES[docker]:-none}" = colima ] || return 0
+  case ${CHOICES[docker]:-none} in
+    colima) ;;
+    docker-desktop) docker_install_desktop; return ;;
+    *) return 0 ;;
+  esac
   mapfile -t formulas < <(docker_formulas colima)
   # Not mapfile < <(…): that would hide a failed brew list and install nothing.
   list=$(core_where missing "${formulas[@]}") || return
@@ -89,8 +129,9 @@ docker_install() {
       1) ui_run "Starting colima's service" "$OMAMAC_BREW_PREFIX/bin/brew" services start colima || return ;;
       *) ui_fail "$why"; return 1 ;;
     esac
-    mkdir -p "$OMAMAC_STATE_DIR"
-    : > "$OMAMAC_COLIMA_MARKER"
+    # || return: doctor's Reinstall runs this with errexit off.
+    mkdir -p "$OMAMAC_STATE_DIR" || return
+    : > "$OMAMAC_COLIMA_MARKER" || return
     # Two lines, so the summary box fits an 80-column terminal.
     DOCKER_NOTES+=("colima starts Docker in the background now and at each login."
       "The first start downloads Linux and takes a few minutes.")
@@ -135,10 +176,31 @@ docker_uninstall_colima() {
   rm -f "$OMAMAC_COLIMA_MARKER"
 }
 
+# docker_uninstall_desktop: the Docker Desktop cask when Homebrew lists it
+# (a hand-installed app has no cask, so it stays), then lazydocker. Never
+# the zap option and never the user's Docker data. Safe to run again: each step looks first.
+docker_uninstall_desktop() {
+  local list
+  OMAMAC_STEP="removing Docker Desktop"
+  if core_cask_listed docker-desktop; then
+    docker_cask_run "Removing Docker Desktop" uninstall --cask docker-desktop || return
+  fi
+  OMAMAC_STEP="removing lazydocker"
+  list=$(core_where installed lazydocker) || return
+  [ -z "$list" ] || ui_run "Removing lazydocker" "$OMAMAC_BREW_PREFIX/bin/brew" uninstall lazydocker
+}
+
 # docker_check: doctor's lines for colima's plugin links and its service
 # (doctor_check_chosen reports its formulas). Returns 1 only for a ✗.
 docker_check() {
   local plugin state rc list status=0
+  if [ "${CHOICES[docker]:-none}" = docker-desktop ]; then
+    # The ✓ comes from Your tools; only a hand-installed app needs a word.
+    if [ "$(core_cask_state docker-desktop 2>/dev/null)" = hand ]; then
+      doctor_report info "Docker Desktop" "installed by hand, so omamac won't update it"
+    fi
+    return 0
+  fi
   [ "${CHOICES[docker]:-none}" = colima ] || return 0
   for plugin in "${DOCKER_PLUGINS[@]}"; do
     state=$(docker_link_state "$plugin")

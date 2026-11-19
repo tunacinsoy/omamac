@@ -64,8 +64,7 @@ add_run() {
     if [ "${QUESTION_KIND[$key]}" = single ]; then
       CHOICES[$key]=${picks[$key]}
       v=$(question_label "$key" "${picks[$key]}")
-      # Docker Desktop installs nothing until Phase 5b, so it isn't "Installed".
-      [ "${picks[$key]}" = docker-desktop ] || names+=("$v")
+      names+=("$v")
       lines+=("${QUESTION_TITLE[$key]}: $v")
       continue
     fi

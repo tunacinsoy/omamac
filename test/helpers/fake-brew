@@ -3,10 +3,13 @@
 prefix="${OMAMAC_TEST_BREW_PREFIX:?fake-brew needs OMAMAC_TEST_BREW_PREFIX}"
 [ -z "${STUB_LOG:-}" ] || echo "brew $*" >> "$STUB_LOG"
 
-# fake_cask <cask>: the Caskroom entry; Ghostty also puts its app in Applications.
+# fake_cask <cask>: the Caskroom entry; Ghostty and Docker Desktop also put their app in Applications.
 fake_cask() {
   mkdir -p "$prefix/Caskroom/$1"
-  if [ "$1" = ghostty ]; then mkdir -p "${OMAMAC_TEST_APPLICATIONS:?fake-brew needs OMAMAC_TEST_APPLICATIONS}/Ghostty.app"; fi
+  case "$1" in
+    ghostty) mkdir -p "${OMAMAC_TEST_APPLICATIONS:?fake-brew needs OMAMAC_TEST_APPLICATIONS}/Ghostty.app" ;;
+    docker-desktop) mkdir -p "${OMAMAC_TEST_APPLICATIONS:?fake-brew needs OMAMAC_TEST_APPLICATIONS}/Docker.app" ;;
+  esac
 }
 
 case "${1:-}" in
@@ -101,6 +104,11 @@ case "${1:-}" in
     for f in "$@"; do
       [ "${T_BREW_UNINSTALL_FAIL:-0}" != 1 ] || { echo "Error: $f is required by other" >&2; exit 1; }
       rm -rf "${prefix:?}/$root/${f##*/}"
+      # Like Homebrew: a cask uninstall takes its app too.
+      case "$root/$f" in
+        Caskroom/ghostty) rm -rf "${OMAMAC_TEST_APPLICATIONS:?}/Ghostty.app" ;;
+        Caskroom/docker-desktop) rm -rf "${OMAMAC_TEST_APPLICATIONS:?}/Docker.app" ;;
+      esac
     done
     ;;
   reinstall)
@@ -112,6 +120,7 @@ case "${1:-}" in
     done
     ;;
   upgrade)
+    [ "${T_BREW_UPGRADE_FAIL:-0}" != 1 ] || [ "${2:-}" != --cask ] || { echo "Error: brew upgrade failed" >&2; exit 1; }
     ;;
   services)
     # A registered service is the file $prefix/services/<formula>.
