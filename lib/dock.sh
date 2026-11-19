@@ -130,3 +130,73 @@ dock_apply() {
   rm -f -- "$copy"
   return "$rc"
 }
+
+# dock_put_back <copy>: the Dock with the record's two arrays, imported. A key
+# the record lacks is removed.
+dock_put_back() {
+  local f=$1 key xml
+  # A damaged record reads as no arrays, which would empty the Dock.
+  plutil -lint -s "$OMAMAC_DOCK_RECORD" || return 1
+  defaults export com.apple.dock "$f" || return 1
+  for key in persistent-apps persistent-others; do
+    if dock_get "$f" "$key" > /dev/null; then plutil -remove "$key" "$f" || return 1; fi
+    dock_get "$OMAMAC_DOCK_RECORD" "$key" > /dev/null || continue
+    xml=$(plutil -extract "$key" xml1 -o - "$OMAMAC_DOCK_RECORD") || return 1
+    plutil -insert "$key" -xml "$xml" "$f" || return 1
+  done
+  defaults import com.apple.dock "$f"
+}
+
+# dock_restore: put the Dock back as the record has it and restart it, then
+# forget the record and dock-added. No record: nothing.
+dock_restore() {
+  [ -f "$OMAMAC_DOCK_RECORD" ] || return 0
+  local copy rc=0
+  OMAMAC_STEP='putting the Dock back'
+  copy=$(mktemp) || return 1
+  dock_put_back "$copy" || rc=$?
+  rm -f -- "$copy"
+  [ "$rc" -eq 0 ] || return "$rc"
+  SETTINGS_DOCK=1
+  # Here, not later: settings_uninstall starts with SETTINGS_DOCK=0.
+  settings_dock_restart
+  rm -f -- "$OMAMAC_DOCK_RECORD" "$OMAMAC_DOCK_ADDED"
+}
+
+# dock_take_out <copy> <app>: remove every tile of the app, import when one
+# went, then drop its dock-added line.
+dock_take_out() {
+  local f=$1 app=$2 url n i removed=0 line tmp
+  url=$(dock_url "$OMAMAC_APPLICATIONS/$app")
+  defaults export com.apple.dock "$f" || return 1
+  n=$(dock_get "$f" persistent-apps) || n=0
+  for ((i = n - 1; i >= 0; i--)); do
+    if [ "$(dock_get "$f" "persistent-apps.$i.tile-data.file-data._CFURLString")" = "$url" ]; then
+      plutil -remove "persistent-apps.$i" "$f" || return 1
+      removed=1
+    fi
+  done
+  if [ "$removed" -eq 1 ]; then
+    defaults import com.apple.dock "$f" || return 1
+    SETTINGS_DOCK=1
+    settings_dock_restart
+  fi
+  [ -f "$OMAMAC_DOCK_ADDED" ] || return 0
+  tmp=$(mktemp "$OMAMAC_DOCK_ADDED.XXXXXX") || return 1
+  while IFS= read -r line; do
+    [ "$line" = "$app" ] || echo "$line" >> "$tmp"
+  done < "$OMAMAC_DOCK_ADDED"
+  mv -- "$tmp" "$OMAMAC_DOCK_ADDED"
+}
+
+# dock_remove_app <file name> <label>: take an uninstalled app out of the Dock
+# when omamac cleans it.
+dock_remove_app() {
+  [ "${CHOICES[dock]:-}" = yes ] || return 0
+  local copy rc=0
+  OMAMAC_STEP="taking $2 out of the Dock"
+  copy=$(mktemp) || return 1
+  dock_take_out "$copy" "$1" || rc=$?
+  rm -f -- "$copy"
+  return "$rc"
+}

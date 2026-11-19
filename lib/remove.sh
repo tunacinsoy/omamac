@@ -3,16 +3,21 @@
 # shellcheck disable=SC2004 # CHOICES is associative (lib/choices.sh), so $key is needed
 # omamac uninstall: remove one language, cloud CLI, setting, Docker or app.
 # Sourced after lib/ask.sh, lib/log.sh, lib/core.sh, lib/apps.sh,
-# lib/languages.sh, lib/clis.sh, lib/docker.sh and lib/appmanagement.sh.
+# lib/languages.sh, lib/clis.sh, lib/docker.sh, lib/appmanagement.sh,
+# lib/settings.sh and lib/dock.sh.
 
 # The questions whose picks omamac uninstall can remove.
 REMOVE_KEYS=(languages cloud_clis)
 
-# remove_setting <name>: put a desktop or window-margin setting back. The
-# answer is saved no last, so a failure leaves it yes and the rest recorded.
+# remove_setting <name>: put a desktop, window-margin or Dock auto-hide
+# setting back. The answer is saved no last, so a failure leaves it yes and
+# the rest recorded.
 remove_setting() {
   local key=desktops title
-  [ "$1" != window-margins ] || key=window_margins
+  case $1 in
+    window-margins) key=window_margins ;;
+    dock-autohide) key=dock_autohide ;;
+  esac
   title=${QUESTION_TITLE[$key]}
   if [ "${CHOICES[$key]:-}" != yes ]; then
     ui_info "$title isn't set by omamac."
@@ -26,6 +31,25 @@ remove_setting() {
   log_start
   settings_uninstall "$key"
   CHOICES[$key]=no
+  OMAMAC_STEP='saving your answers'
+  choices_save "$OMAMAC_CHOICES_FILE"
+  ui_ok "$title is removed"
+}
+
+# remove_dock: put the Dock and show-recents back. The answer is saved no
+# last, so a failure leaves it yes for a rerun to finish.
+remove_dock() {
+  local title=${QUESTION_TITLE[dock]}
+  if [ "${CHOICES[dock]:-}" != yes ]; then
+    ui_info "$title isn't set by omamac."
+    exit 0
+  fi
+  ui_box "$title: your Dock goes back to how it was before omamac cleaned it. Changes you made to it since are undone."
+  ask_yes "Remove $title?" || { ui_info "Nothing was removed."; exit 0; }
+  log_start
+  dock_restore || return
+  settings_uninstall dock
+  CHOICES[dock]=no
   OMAMAC_STEP='saving your answers'
   choices_save "$OMAMAC_CHOICES_FILE"
   ui_ok "$title is removed"
@@ -88,6 +112,8 @@ remove_app() {
       # In the open: a cask may need sudo, and Homebrew asks for it itself.
       ui_run_open "Removing $label" "$OMAMAC_BREW_PREFIX/bin/brew" uninstall --cask "${zap[@]}" "$cask" || return
     fi
+    # A hand-installed app stays, and so does its tile.
+    dock_remove_app "${APP_BUNDLE[$id]}" "$label" || return
   fi
   apps_drop "$id"
   OMAMAC_STEP='saving your answers'
@@ -133,6 +159,7 @@ remove_docker() {
   ask_yes "Remove Docker Desktop?" || { ui_info "Nothing was removed."; exit 0; }
   log_start
   docker_uninstall_desktop "${zap[@]}" || return
+  if [ "$state" != hand ]; then dock_remove_app "${CASK_APP[docker-desktop]}" "Docker Desktop" || return; fi
   CHOICES[docker]=none
   OMAMAC_STEP='saving your answers'
   choices_save "$OMAMAC_CHOICES_FILE"
@@ -152,6 +179,8 @@ remove_run() {
     done
     [ "${CHOICES[desktops]:-}" != yes ] || options+=("${QUESTION_TITLE[desktops]}:desktops")
     [ "${CHOICES[window_margins]:-}" != yes ] || options+=("${QUESTION_TITLE[window_margins]}:window-margins")
+    [ "${CHOICES[dock]:-}" != yes ] || options+=("${QUESTION_TITLE[dock]}:dock")
+    [ "${CHOICES[dock_autohide]:-}" != yes ] || options+=("${QUESTION_TITLE[dock_autohide]}:dock-autohide")
     while IFS= read -r v; do options+=("$(apps_label "$v"):$v"); done < <(apps_chosen)
     case ${CHOICES[docker]:-none} in
       colima) options+=("colima:colima") ;;
@@ -166,7 +195,8 @@ remove_run() {
     name=$ASK_PICKED
   fi
   case $name in
-    desktops | window-margins) remove_setting "$name"; return ;;
+    desktops | window-margins | dock-autohide) remove_setting "$name"; return ;;
+    dock) remove_dock; return ;;
     colima | docker-desktop) remove_docker "$name"; return ;;
   esac
   mapfile -t apps < <(apps_ids)
@@ -186,7 +216,7 @@ remove_run() {
     all+=("${ids[@]}")
   done
   if [ -z "$key" ]; then
-    ui_fail "omamac can't remove '$name'. It can remove: $(clis_join "${all[@]}" "${apps[@]}" desktops window-margins colima docker-desktop)."
+    ui_fail "omamac can't remove '$name'. It can remove: $(clis_join "${all[@]}" "${apps[@]}" desktops window-margins colima docker-desktop dock dock-autohide)."
     exit 2
   fi
   label=$(question_label "$key" "$name")

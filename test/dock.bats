@@ -176,3 +176,92 @@ $(url VLC.app)" ]
   [ "$(count 'defaults export')" -eq 0 ]
   [ ! -e "$RECORD" ]
 }
+
+# user_tile <array> <url>: a tile the user adds after the cleanup.
+user_tile() {
+  plutil -extract "$1" raw "$PLIST" > /dev/null 2>&1 || plutil -insert "$1" -array "$PLIST"
+  plutil -insert "$1" -xml "$(dock_tile file-tile "$2")" -append "$PLIST"
+}
+
+@test "dock_restore puts both arrays back; a tile added since goes" {
+  dock_seed file:///System/Applications/Mail.app/ file:///Applications/Things.app/ \
+    -- "file://$HOME/Downloads/" file:///Users/x/Projects/
+  apps=$(dock_urls persistent-apps)
+  others=$(dock_urls persistent-others)
+  in_lib "$CHOOSE; settings_apply"
+  user_tile persistent-apps file:///Applications/New.app/
+  : > "$STUB_LOG"
+  in_lib "$CHOOSE; dock_restore"
+  [ "$status" -eq 0 ]
+  [ "$(dock_urls persistent-apps)" = "$apps" ]
+  [ "$(dock_urls persistent-others)" = "$others" ]
+  [ ! -e "$RECORD" ]
+  [ ! -e "$ADDED" ]
+  [ "$(count 'defaults import com.apple.dock')" -eq 1 ]
+  [ "$(count 'killall Dock')" -eq 1 ]
+}
+
+@test "dock_restore removes an array the record lacks" {
+  dock_seed file:///Applications/Things.app/
+  in_lib "$CHOOSE; settings_apply"
+  user_tile persistent-others file:///Users/x/Projects/
+  in_lib "$CHOOSE; dock_restore"
+  [ "$status" -eq 0 ]
+  [ "$(dock_urls persistent-apps)" = file:///Applications/Things.app/ ]
+  ! plutil -extract persistent-others raw "$PLIST"
+}
+
+@test "dock_restore with no record does nothing" {
+  in_lib "$CHOOSE; dock_restore"
+  [ "$status" -eq 0 ]
+  [ "$(count 'defaults export')" -eq 0 ]
+}
+
+@test "dock_restore: a failed import keeps the record" {
+  dock_seed file:///Applications/Things.app/
+  in_lib "$CHOOSE; settings_apply"
+  T_DEFAULTS_FAIL=com.apple.dock:import in_lib "$CHOOSE; dock_restore"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"FAILED: putting the Dock back"* ]]
+  [ -f "$RECORD" ]
+  [ -f "$ADDED" ]
+}
+
+@test "dock_restore: a damaged record leaves the Dock alone" {
+  in_lib "$CHOOSE; settings_apply"
+  # Cut off halfway.
+  printf '<?xml version="1.0"?>\n<plist version="1.0">\n<dict>\n<key>persistent-apps</key>\n<arr' > "$RECORD"
+  : > "$STUB_LOG"
+  in_lib "$CHOOSE; dock_restore"
+  [ "$status" -ne 0 ]
+  [ "$(count 'defaults import')" -eq 0 ]
+  [ -f "$RECORD" ]
+}
+
+@test "dock_remove_app takes the app's tile out and its line" {
+  in_lib "$CHOOSE; settings_apply"
+  : > "$STUB_LOG"
+  in_lib "$CHOOSE; dock_remove_app VLC.app VLC"
+  [ "$status" -eq 0 ]
+  [ "$(dock_urls persistent-apps)" = "$(url Ghostty.app)" ]
+  [ "$(cat "$ADDED")" = Ghostty.app ]
+  [ "$(count 'defaults import com.apple.dock')" -eq 1 ]
+  [ "$(count 'killall Dock')" -eq 1 ]
+}
+
+@test "dock_remove_app: an app not in the Dock imports nothing, the line goes" {
+  in_lib "$CHOOSE; settings_apply"
+  dock_seed "$(url Ghostty.app)"
+  : > "$STUB_LOG"
+  in_lib "$CHOOSE; dock_remove_app VLC.app VLC"
+  [ "$status" -eq 0 ]
+  [ "$(count 'defaults import')" -eq 0 ]
+  [ "$(count killall)" -eq 0 ]
+  [ "$(cat "$ADDED")" = Ghostty.app ]
+}
+
+@test "dock_remove_app with dock=no does not read the Dock" {
+  in_lib 'CHOICES[dock]=no; dock_remove_app VLC.app VLC'
+  [ "$status" -eq 0 ]
+  [ "$(count 'defaults export')" -eq 0 ]
+}
