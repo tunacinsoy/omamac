@@ -63,7 +63,9 @@ A change to languages or CLIs runs the `bare`, `languages` and `cloud` fixtures.
 
 A fixture may have a `<name>.brew-passwords`, one digit: how many more times per command Homebrew itself asks for the password. Homebrew resets sudo before a cask step that needs it (Docker Desktop's links in `/usr/local`), so omamac's one prompt doesn't cover it. `test/vm.sh` lets the one-liner and the steps type that many more.
 
-A fixture may have a `<name>.steps.sh`. Its commands run in the VM after the two runs, in `zsh -eux` with stdin closed. A "Remove …?" prompt is answered y; any other prompt fails the run. Put every command that prompts before any `zsh -ic`: an interactive zsh takes the terminal and doesn't give it back, so a later prompt can't read the keyboard. Remove an app's quarantine (`xattr -dr com.apple.quarantine <app>`) before opening it: a quarantined app waits on macOS's "Open?" dialog, which nobody can click over SSH, and hangs.
+A fixture may have a `<name>.before.sh`. It runs in the VM before the first run, in `zsh -eux` with stdin closed and no Homebrew yet, to set the VM up like a used Mac: an app installed by hand, or a Dock saved to compare with later.
+
+A fixture may have a `<name>.steps.sh`. Its commands run in the VM after the two runs, in `zsh -eux` with stdin closed. Each distinct "Remove …?", "Let Homebrew take over …?" and "Also remove …?" prompt is answered y; any other prompt fails the run. Put every command that prompts before any `zsh -ic`: an interactive zsh takes the terminal and doesn't give it back, so a later prompt can't read the keyboard. Remove an app's quarantine (`xattr -dr com.apple.quarantine <app>`) before opening it: a quarantined app waits on macOS's "Open?" dialog, which nobody can click over SSH, and hangs.
 
 A steps file may use test-only stand-ins for what the VM can't do, each with a comment saying what real hardware or the user does instead: removing the quarantine stands in for the user's Open click, colima runs under emulation because the VM has no nested virtualization.
 

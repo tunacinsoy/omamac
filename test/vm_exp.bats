@@ -88,3 +88,10 @@ vm_exp() { run /usr/bin/expect -f "$REPO_ROOT/test/vm.exp" 192.0.2.1 true; }
   [ "$(grep -c 'got:y' <<< "$output")" -eq 2 ]
   [[ "$output" != *"extra:"* ]]
 }
+
+@test "each take-over and settings-and-data prompt is answered once" {
+  T_REMOVE="Let Homebrew take over VLC?|Let Homebrew take over VLC?|Also remove VLC's settings and data?|Remove VLC?" vm_exp
+  [ "$status" -eq 0 ]
+  [ "$(grep -c 'got:y' <<< "$output")" -eq 3 ]
+  [[ "$output" != *"extra:"* ]]
+}

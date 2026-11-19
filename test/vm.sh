@@ -106,6 +106,15 @@ OMAMAC_VM_TIMEOUT=30 vm true
 step=fixture
 vm "mkdir -p ~/.local/state/omamac && curl -fsSL $raw/test/fixtures/$fixture.env -o ~/.local/state/omamac/choices.env"
 
+# The fixture's before-steps, if it has any: they set the VM up like a used
+# Mac (an app installed by hand, a Dock to compare with later). No Homebrew yet.
+before="test/fixtures/$fixture.before.sh"
+if [ -f "$before" ]; then
+  step='before the first run'
+  info "Running $before"
+  vm "set -o pipefail; f=\$(mktemp) && curl -fsSL $raw/$before -o \$f && zsh -eux -o pipefail \$f </dev/null"
+fi
+
 # 4. The one-liner, in an interactive login shell: .zshrc loads as in a Terminal
 # window (zsh -lc skips it). zsh has no pipefail by default: without it a
 # failed fetch feeds bash nothing, and bash exits 0.
