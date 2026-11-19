@@ -106,6 +106,9 @@ apps_step_labels() {
   clis_join "${labels[@]}"
 }
 
+# apps_password_say <id>…: the line before a Homebrew call that asks for the password.
+apps_password_say() { ui_info "Homebrew asks for your password for: $(apps_step_labels "$@")."; }
+
 # apps_password_pending [<id>…]: the ids the password step would install now,
 # one per line: the chosen apps with password=yes, then Docker Desktop when
 # chosen, each only when its app is missing. With ids, only those.
@@ -153,7 +156,7 @@ apps_install_password() {
     fi
   done
   OMAMAC_STEP="installing $(apps_step_labels "${ids[@]}")"
-  ui_info "Homebrew asks for your password for: $(apps_step_labels "${ids[@]}")."
+  apps_password_say "${ids[@]}"
   if [ "${#install[@]}" -gt 0 ]; then
     ui_run_open "Installing $(apps_step_labels "${install[@]}")" \
       "$brew" install --cask "${icasks[@]}" || return

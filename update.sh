@@ -128,40 +128,72 @@ update_upgrade_casks() {
   ui_run "Upgrading the cloud CLIs that are casks" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask --greedy "${names[@]}"
 }
 
-# update_upgrade_app <cask> <label>: upgrade an app when Homebrew manages it and
-# says it is outdated. Homebrew replaces the app, which needs App Management;
-# without it, skip only this, say how to fix it, and let update_main finish and
-# exit 1.
-update_upgrade_app() {
-  local cask=$1 label=$2 state out status=0 app="$OMAMAC_APPLICATIONS/${CASK_APP[$1]}"
-  OMAMAC_STEP="upgrading $label"
-  state=$(core_cask_state "$cask") || return
-  [ "$state" = brew ] || return 0
-  # No --greedy: the app updates itself, and --greedy would compare only
-  # Homebrew's own record, so update would call it outdated forever.
-  # brew outdated exits 1 when the named cask is outdated; the output says which.
-  out=$("$OMAMAC_BREW_PREFIX/bin/brew" outdated --cask --quiet "$cask") || true
+# update_upgrade_apps: upgrade the apps Homebrew manages and lists as outdated:
+# Ghostty, Docker Desktop (when chosen) and the chosen apps. Homebrew replaces
+# the app, which needs App Management; without it, skip only that app, say how
+# to fix it, and let update_main finish and exit 1. The password apps share one
+# call in the open, so Homebrew asks once.
+update_upgrade_apps() {
+  local id cask state out label app status
+  local order=(ghostty) casks=() outdated=() pids=() pcasks=()
+  local -A label_of=() password_of=() id_of=()
+  OMAMAC_STEP='upgrading your apps'
+  label_of[ghostty]=Ghostty
+  [ "${CHOICES[docker]:-}" != docker-desktop ] || {
+    label_of[docker-desktop]=$(question_label docker docker-desktop)
+    password_of[docker-desktop]=yes
+    id_of[docker-desktop]=docker-desktop
+    order+=(docker-desktop)
+  }
+  while IFS= read -r id; do
+    order+=("${APP_CASK[$id]}")
+    id_of[${APP_CASK[$id]}]=$id
+    label_of[${APP_CASK[$id]}]=$(apps_label "$id")
+    password_of[${APP_CASK[$id]}]=${APP_PASSWORD[$id]}
+  done < <(apps_chosen)
+  for cask in "${order[@]}"; do
+    state=$(core_cask_state "$cask") || return
+    [ "$state" != brew ] || casks+=("$cask")
+  done
+  [ "${#casks[@]}" -gt 0 ] || return 0
+  # No --greedy: apps update themselves, and --greedy would compare only
+  # Homebrew's own record, so update would call them outdated forever.
+  # brew outdated exits 1 when a named cask is outdated; the output says which.
+  out=$("$OMAMAC_BREW_PREFIX/bin/brew" outdated --cask --quiet "${casks[@]}") || true
   [ -n "$out" ] || return 0
-  app_management_ok "$app" || status=$?
-  case $status in
-    0)
-      if [ "$cask" = docker-desktop ]; then
-        docker_cask_run "Upgrading $label" upgrade --cask "$cask"
-      else
-        ui_run "Upgrading $label" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask "$cask"
-      fi
-      ;;
-    1)
-      ui_fail "$label has an update, but macOS won't let your terminal change apps."
-      ui_fail "Fix: System Settings → Privacy & Security → App Management, turn on your terminal, then run omamac update again."
-      open "$APP_MANAGEMENT_URL" || true
-      UPDATE_NOT_UPGRADED+=("$label")
-      ;;
-    *)
-      ui_fail "$label has an update, but omamac couldn't test write access to $app."
-      UPDATE_NOT_UPGRADED+=("$label")
-      ;;
-  esac
+  mapfile -t outdated <<< "$out"
+  for cask in "${outdated[@]}"; do
+    label=${label_of[$cask]:-}
+    [ -n "$label" ] || continue
+    app="$OMAMAC_APPLICATIONS/${CASK_APP[$cask]}"
+    status=0
+    app_management_ok "$app" || status=$?
+    case $status in
+      0)
+        if [ "${password_of[$cask]:-}" = yes ]; then
+          pids+=("${id_of[$cask]}") pcasks+=("$cask")
+        else
+          OMAMAC_STEP="upgrading $label"
+          ui_run "Upgrading $label" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask "$cask"
+        fi
+        ;;
+      1)
+        ui_fail "$label has an update, but macOS won't let your terminal change apps."
+        ui_fail "Fix: System Settings → Privacy & Security → App Management, turn on your terminal, then run omamac update again."
+        open "$APP_MANAGEMENT_URL" || true
+        UPDATE_NOT_UPGRADED+=("$label")
+        ;;
+      *)
+        ui_fail "$label has an update, but omamac couldn't test write access to $app."
+        UPDATE_NOT_UPGRADED+=("$label")
+        ;;
+    esac
+  done
+  [ "${#pids[@]}" -gt 0 ] || return 0
+  label=$(apps_step_labels "${pids[@]}")
+  OMAMAC_STEP="upgrading $label"
+  apps_password_say "${pids[@]}"
+  ui_run_open "Upgrading $label" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask "${pcasks[@]}"
 }
 
 # update_upgrade_languages: the chosen languages to their newest versions, old
@@ -187,8 +219,7 @@ update_main() {
   apply_all
   update_upgrade
   update_upgrade_casks
-  update_upgrade_app ghostty Ghostty
-  [ "${CHOICES[docker]:-}" != docker-desktop ] || update_upgrade_app docker-desktop "Docker Desktop"
+  update_upgrade_apps
   update_upgrade_languages
   OMAMAC_STEP='printing the summary'
   # This run may be the one that started colima's service, as install would have.
@@ -196,8 +227,8 @@ update_main() {
   [ "${#DOCKER_NOTES[@]}" -eq 0 ] || notes=("" "${DOCKER_NOTES[@]}" "")
   if [ "${#UPDATE_NOT_UPGRADED[@]}" -gt 0 ]; then
     local names verb=is
-    names=${UPDATE_NOT_UPGRADED[0]}
-    [ "${#UPDATE_NOT_UPGRADED[@]}" -eq 1 ] || { names+=" and ${UPDATE_NOT_UPGRADED[1]}"; verb=are; }
+    names=$(clis_join "${UPDATE_NOT_UPGRADED[@]}")
+    [ "${#UPDATE_NOT_UPGRADED[@]}" -eq 1 ] || verb=are
     ui_box "✗ Everything else is up to date. $names $verb not." "${notes[@]}" "Log: $OMAMAC_LOG" >&2
     exit 1
   fi
