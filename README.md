@@ -34,7 +34,7 @@ If you chose Desktops as workspaces, give an app its own desktop: right-click it
 
 If you chose Docker Desktop, open it once to finish its setup.
 
-To let `omamac update` upgrade Ghostty (and Docker Desktop, if you chose it), allow App Management for it: System Settings → Privacy & Security → App Management.
+To let `omamac update` upgrade Ghostty and Docker Desktop, allow App Management for your terminal (Ghostty): System Settings → Privacy & Security → App Management.
 
 ## Keeping it up to date
 
@@ -42,7 +42,7 @@ To let `omamac update` upgrade Ghostty (and Docker Desktop, if you chose it), al
 omamac update
 ```
 
-It updates omamac and what omamac installed, nothing else. It pulls omamac (and stops if you edited its files), rewrites the files omamac writes, puts back any core tool, language or cloud CLI that is missing, puts back the macOS settings you chose if you changed them, then upgrades only what omamac installed: the core tools, Ghostty and Docker Desktop (only if App Management is allowed for them; otherwise update says what to click and exits 1), bash, gum, the cloud CLIs you chose (Google Cloud's cask with `--greedy`), colima and its tools if you chose it, and the languages you chose. After that, `mise prune` deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`. The log goes to `~/.local/state/omamac/logs/`.
+It updates omamac and what omamac installed, nothing else. It pulls omamac (and stops if you edited its files), rewrites the files omamac writes, puts back any core tool, language or cloud CLI that is missing, puts back the macOS settings you chose if you changed them, then upgrades only what omamac installed: the core tools, Ghostty and Docker Desktop (only if your terminal has App Management; otherwise update says what to click and exits 1), bash, gum, the cloud CLIs you chose (Google Cloud's cask with `--greedy`), colima and its tools if you chose it, and the languages you chose. After that, `mise prune` deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`. The log goes to `~/.local/state/omamac/logs/`.
 
 ## What it changes
 

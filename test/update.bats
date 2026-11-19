@@ -437,6 +437,7 @@ desktop_installed() {
   stub sudo 'exit 1'
   run update
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Docker Desktop has an update, but it needs your password, so it wasn't upgraded."* ]]
   [[ "$output" == *"✗ Everything else is up to date. Docker Desktop is not."* ]]
   grep -q '^brew upgrade ' "$STUB_LOG"
   run ! grep -q '^brew upgrade --cask' "$STUB_LOG"

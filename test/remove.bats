@@ -506,6 +506,17 @@ brew uninstall lazydocker" ]
   grep -qx 'docker=docker-desktop' "$CHOICES_FILE"
 }
 
+@test "uninstall docker-desktop: a hand-installed app says it stays before the question" {
+  dockered
+  rm -rf "$OMAMAC_TEST_BREW_PREFIX/Caskroom/docker-desktop"
+  gum_answers no
+  run omamac_uninstall docker-desktop
+  [ "$status" -eq 0 ]
+  # Answering no still shows the line, so it is printed before the answer is read.
+  [[ "$output" == *"Docker Desktop wasn't installed by omamac, so it stays."* ]]
+  [[ "$output" == *"Nothing was removed."* ]]
+}
+
 @test "uninstall docker-desktop: a hand-installed app stays" {
   dockered
   rm -rf "$OMAMAC_TEST_BREW_PREFIX/Caskroom/docker-desktop"

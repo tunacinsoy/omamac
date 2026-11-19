@@ -218,9 +218,9 @@ broken" ]
 @test "colima: a failed marker write stops the run" {
   mkdir -p "$(dirname "$MARKER")"
   chmod a-w "$(dirname "$MARKER")"
-  in_lib colima 'docker_install'
+  in_lib colima 'docker_install || echo "rc=$?"'
   chmod u+w "$(dirname "$MARKER")"
-  [ "$status" -ne 0 ]
+  [[ "$output" == *"rc="* ]]
   [[ "$output" != *"✓ colima is installed"* ]]
 }
 
@@ -254,8 +254,8 @@ DESKTOP_NOTE="Open Docker Desktop once to finish its setup."
 
 @test "desktop: a failed sudo -v stops before the cask" {
   stub sudo 'exit 1'
-  in_lib docker-desktop 'docker_install'
-  [ "$status" -ne 0 ]
+  in_lib docker-desktop 'docker_install || echo "rc=$?"'
+  [[ "$output" == *"rc="* ]]
   ! stub_calls | grep -q 'brew install --cask'
   [[ "$output" != *"✓ Docker Desktop is installed"* ]]
 }

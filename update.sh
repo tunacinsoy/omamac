@@ -143,8 +143,9 @@ update_upgrade_app() {
   app_management_ok "$app" || status=$?
   case $status in
     0)
-      # Docker Desktop's cask writes links in /usr/local; docker_sudo has said why on failure.
+      # Docker Desktop's cask writes links in /usr/local; docker_sudo is silent, so say why.
       if [ "$cask" = docker-desktop ] && ! docker_sudo; then
+        ui_fail "Docker Desktop has an update, but it needs your password, so it wasn't upgraded."
         UPDATE_NOT_UPGRADED+=("$label")
         return 0
       fi

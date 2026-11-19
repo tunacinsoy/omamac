@@ -22,6 +22,7 @@ print -r -- admin | sudo -S -p '' -v
 omamac uninstall docker-desktop
 [[ ! -e /Applications/Docker.app ]]
 if brew list --cask docker-desktop; then exit 1; fi
+if brew list --formula lazydocker; then exit 1; fi
 [[ ! -e /usr/local/bin/docker && ! -L /usr/local/bin/docker ]]
 choices=$(< ~/.local/state/omamac/choices.env)
 [[ $'\n'$choices$'\n' == *$'\n'docker=none$'\n'* ]]

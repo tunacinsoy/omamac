@@ -68,8 +68,8 @@ remove_docker() {
     esac
   fi
   ui_box "Docker Desktop: the app and lazydocker. Your images, containers and volumes stay."
-  ask_yes "Remove Docker Desktop?" || { ui_info "Nothing was removed."; exit 0; }
   [ "$state" != hand ] || ui_info "Docker Desktop wasn't installed by omamac, so it stays."
+  ask_yes "Remove Docker Desktop?" || { ui_info "Nothing was removed."; exit 0; }
   log_start
   docker_uninstall_desktop || return
   CHOICES[docker]=none
