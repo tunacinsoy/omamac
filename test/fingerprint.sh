@@ -34,6 +34,15 @@ ghostty_support=~/Library/Application\ Support/com.mitchellh.ghostty
       find "$d" -type l -exec stat -f '%N -> %Y' {} +
     fi
   done
+  # The apps in Applications (installed or adopted).
+  for a in /Applications/*; do echo "application: ${a##*/}"; done
+  # The Dock's items, numbered so sort keeps their order. Only the URLs: the
+  # Dock rewrites its own bookmarks and ids by itself.
+  for k in persistent-apps persistent-others; do
+    { defaults read com.apple.dock "$k" 2>/dev/null || true; } |
+      sed -n 's/^ *"_CFURLString" = "\{0,1\}\([^"]*\)"\{0,1\};$/\1/p' |
+      awk -v k="$k" '{ printf "dock %s %02d: %s\n", k, NR, $0 }'
+  done
   shasum -a 256 ~/.zprofile ~/.zshrc
   find ~/.config/omamac -type f -exec shasum -a 256 {} +
   # Saved answers and anything else omamac records, but not its logs.
@@ -49,6 +58,8 @@ NSGlobalDomain AppleSpacesSwitchOnActivate
 com.apple.universalaccess reduceMotion
 com.apple.Accessibility ReduceMotionEnabled
 com.apple.WindowManager EnableTiledWindowMargins
+com.apple.dock show-recents
+com.apple.dock autohide
 KEYS
   echo "checkout: $head"
 } | sort
