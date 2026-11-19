@@ -259,3 +259,52 @@ com.apple.Accessibility${TAB}ReduceMotionEnabled${TAB}integer${TAB}0" ]
   [ "$status" -eq 0 ]
   [[ "$output" == *"omamac didn't change Reduce motion; if you turned it on yourself, search for Reduce motion in System Settings."* ]]
 }
+
+@test "Dock cleanup sets show-recents off, once" {
+  in_lib 'CHOICES[dock]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ Dock cleanup"* ]]
+  [ "$(value com.apple.dock show-recents)" = 0 ]
+  [ "$(cat "$REC")" = "com.apple.dock${TAB}show-recents${TAB}absent" ]
+  [ "$(grep -c '^killall Dock' "$STUB_LOG")" -eq 1 ]
+}
+
+@test "Dock auto-hide sets autohide on; a second run writes nothing" {
+  in_lib 'CHOICES[dock_autohide]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ Dock auto-hide"* ]]
+  [ "$(value com.apple.dock autohide)" = 1 ]
+  : > "$STUB_LOG"
+  in_lib 'CHOICES[dock_autohide]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [[ "$(stub_calls)" != *"defaults write"* ]]
+  [[ "$(stub_calls)" != *killall* ]]
+}
+
+@test "uninstalling Dock auto-hide deletes autohide" {
+  in_lib 'CHOICES[dock_autohide]=yes; settings_apply'
+  in_lib 'settings_uninstall dock_autohide'
+  [ "$status" -eq 0 ]
+  [ "$(value com.apple.dock autohide)" = absent ]
+  [ ! -e "$REC" ]
+}
+
+@test "fake-defaults export then import round-trips a plist" {
+  export T_DEFAULTS_DIR="${T_DEFAULTS_DIR:-$BATS_TEST_TMPDIR/defaults}"
+  mkdir -p "$T_DEFAULTS_DIR"
+  run defaults export com.apple.dock "$BATS_TEST_TMPDIR/a.plist"
+  [ "$status" -eq 0 ]
+  [ -s "$BATS_TEST_TMPDIR/a.plist" ]
+  plutil -insert x -string hi "$BATS_TEST_TMPDIR/a.plist"
+  run defaults import com.apple.dock "$BATS_TEST_TMPDIR/a.plist"
+  [ "$status" -eq 0 ]
+  defaults export com.apple.dock "$BATS_TEST_TMPDIR/b.plist"
+  [ "$(plutil -extract x raw "$BATS_TEST_TMPDIR/b.plist")" = hi ]
+  grep -q 'defaults import com.apple.dock' "$STUB_LOG"
+}
+
+@test "fake-defaults import fails on T_DEFAULTS_FAIL" {
+  defaults export com.apple.dock "$BATS_TEST_TMPDIR/a.plist"
+  T_DEFAULTS_FAIL=com.apple.dock:import run defaults import com.apple.dock "$BATS_TEST_TMPDIR/a.plist"
+  [ "$status" -ne 0 ]
+}

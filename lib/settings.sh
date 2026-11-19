@@ -13,6 +13,12 @@ SETTINGS_KEYS_desktops=(
 SETTINGS_KEYS_window_margins=(
   "com.apple.WindowManager EnableTiledWindowMargins boolean true"
 )
+SETTINGS_KEYS_dock=(
+  "com.apple.dock show-recents boolean false"
+)
+SETTINGS_KEYS_dock_autohide=(
+  "com.apple.dock autohide boolean true"
+)
 SETTINGS_REFUSED=0
 SETTINGS_DOCK=0
 SETTINGS_UNMET=()
@@ -64,6 +70,8 @@ settings_label() {
     mru-spaces) echo "Spaces order" ;;
     AppleSpacesSwitchOnActivate) echo "Switching to an app's desktop" ;;
     EnableTiledWindowMargins) echo "Window margins" ;;
+    show-recents) echo "Suggested and recent apps" ;;
+    autohide) echo "Dock auto-hide" ;;
     *) echo "$1" ;;
   esac
 }
@@ -170,7 +178,7 @@ settings_apply() {
   SETTINGS_REFUSED=0
   SETTINGS_DOCK=0
   SETTINGS_PUT_BACK=' '
-  for answer in desktops window_margins; do
+  for answer in desktops window_margins dock dock_autohide; do
     [ "${CHOICES[$answer]:-}" = yes ] || continue
     unit=()
     while IFS= read -r line; do
@@ -211,6 +219,7 @@ settings_dock_restart() {
 settings_what() {
   case $1 in
     desktops) echo "your earlier Spaces, app-switching and Reduce motion settings" ;;
+    dock_autohide) echo "your earlier Dock auto-hide setting" ;;
     *) echo "your earlier window-margin setting" ;;
   esac
 }
