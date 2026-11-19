@@ -376,3 +376,82 @@ ghostty_outdated() { echo ghostty > "$OMAMAC_TEST_BREW_PREFIX/outdated"; }
   [ "$status" -eq 0 ]
   [ "$(grep '^brew upgrade' "$STUB_LOG")" = "brew upgrade $OMAMAC_FORMULAS" ]
 }
+
+# Docker Desktop as install left it: the cask, its app and lazydocker.
+desktop_installed() {
+  choose docker docker-desktop
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install lazydocker
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask docker-desktop
+  : > "$STUB_LOG"
+}
+
+@test "update upgrades lazydocker by name for Docker Desktop" {
+  desktop_installed
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(grep '^brew upgrade' "$STUB_LOG")" = "brew upgrade $OMAMAC_FORMULAS lazydocker" ]
+}
+
+@test "Docker Desktop outdated and allowed: upgraded after sudo" {
+  desktop_installed
+  echo docker-desktop > "$OMAMAC_TEST_BREW_PREFIX/outdated"
+  run update
+  [ "$status" -eq 0 ]
+  grep -qx 'brew outdated --cask --quiet docker-desktop' "$STUB_LOG"
+  [ "$(grep -E '^(sudo|brew upgrade --cask)' "$STUB_LOG" | tr '\n' ',')" = "sudo -n true,brew upgrade --cask docker-desktop," ]
+  run ! grep -q 'greedy.*docker-desktop' "$STUB_LOG"
+}
+
+@test "Docker Desktop current: no sudo, no cask upgrade" {
+  desktop_installed
+  run update
+  [ "$status" -eq 0 ]
+  run ! grep -q '^sudo' "$STUB_LOG"
+  run ! grep -q '^brew upgrade --cask' "$STUB_LOG"
+}
+
+@test "Docker Desktop by hand: never upgraded" {
+  desktop_installed
+  rm -rf "${OMAMAC_TEST_BREW_PREFIX:?}/Caskroom/docker-desktop"
+  echo docker-desktop > "$OMAMAC_TEST_BREW_PREFIX/outdated"
+  run update
+  [ "$status" -eq 0 ]
+  run ! grep -q '^brew outdated.*docker-desktop' "$STUB_LOG"
+  run ! grep -q '^brew upgrade --cask' "$STUB_LOG"
+}
+
+@test "Docker Desktop isn't upgraded unless it is the answer" {
+  choose docker colima
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install colima docker docker-compose docker-buildx lazydocker
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask docker-desktop
+  echo docker-desktop > "$OMAMAC_TEST_BREW_PREFIX/outdated"
+  : > "$STUB_LOG"
+  run update
+  [ "$status" -eq 0 ]
+  run ! grep -q 'docker-desktop' "$STUB_LOG"
+}
+
+@test "Docker Desktop outdated, no password: not upgraded, update finishes, exit 1" {
+  desktop_installed
+  echo docker-desktop > "$OMAMAC_TEST_BREW_PREFIX/outdated"
+  stub sudo 'exit 1'
+  run update
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"✗ Everything else is up to date. Docker Desktop is not."* ]]
+  grep -q '^brew upgrade ' "$STUB_LOG"
+  run ! grep -q '^brew upgrade --cask' "$STUB_LOG"
+}
+
+@test "Ghostty and Docker Desktop not allowed: both named, exit 1" {
+  desktop_installed
+  ghostty_app
+  printf 'ghostty\ndocker-desktop\n' > "$OMAMAC_TEST_BREW_PREFIX/outdated"
+  deny_app_management
+  stub open
+  run update
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Ghostty and Docker Desktop are not"* ]]
+  [[ "$output" == *"Docker Desktop has an update, but macOS won't let your terminal change apps."* ]]
+  grep -q '^brew upgrade ' "$STUB_LOG"
+  run ! grep -q '^brew upgrade --cask' "$STUB_LOG"
+}

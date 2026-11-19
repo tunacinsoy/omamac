@@ -47,8 +47,8 @@ source "$OMAMAC_CHECKOUT/lib/settings.sh"
 source "$OMAMAC_CHECKOUT/lib/apply.sh"
 
 OMAMAC_STEP='starting'
-# Set when a step was skipped on purpose; update finishes, then exits 1.
-UPDATE_FAILED=0
+# Labels of apps whose upgrade was skipped on purpose; update finishes, then exits 1.
+UPDATE_NOT_UPGRADED=()
 
 update_failed() {
   # With set -E the trap also runs inside ( … ) and $( … ); let only the main shell speak.
@@ -126,31 +126,39 @@ update_upgrade_casks() {
   ui_run "Upgrading the cloud CLIs that are casks" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask --greedy "${names[@]}"
 }
 
-# update_upgrade_ghostty: upgrade Ghostty when Homebrew manages it and says it is
-# outdated. Homebrew replaces the app, which needs App Management; without it,
-# skip only this, say how to fix it, and let update_main finish and exit 1.
-update_upgrade_ghostty() {
-  local state out status=0 app="$OMAMAC_APPLICATIONS/${CASK_APP[ghostty]}"
-  OMAMAC_STEP='upgrading Ghostty'
-  state=$(core_cask_state ghostty) || return
+# update_upgrade_app <cask> <label>: upgrade an app when Homebrew manages it and
+# says it is outdated. Homebrew replaces the app, which needs App Management;
+# without it, skip only this, say how to fix it, and let update_main finish and
+# exit 1.
+update_upgrade_app() {
+  local cask=$1 label=$2 state out status=0 app="$OMAMAC_APPLICATIONS/${CASK_APP[$1]}"
+  OMAMAC_STEP="upgrading $label"
+  state=$(core_cask_state "$cask") || return
   [ "$state" = brew ] || return 0
-  # No --greedy: Ghostty updates itself, and --greedy would compare only
+  # No --greedy: the app updates itself, and --greedy would compare only
   # Homebrew's own record, so update would call it outdated forever.
   # brew outdated exits 1 when the named cask is outdated; the output says which.
-  out=$("$OMAMAC_BREW_PREFIX/bin/brew" outdated --cask --quiet ghostty) || true
+  out=$("$OMAMAC_BREW_PREFIX/bin/brew" outdated --cask --quiet "$cask") || true
   [ -n "$out" ] || return 0
   app_management_ok "$app" || status=$?
   case $status in
-    0) ui_run "Upgrading Ghostty" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask ghostty ;;
+    0)
+      # Docker Desktop's cask writes links in /usr/local; docker_sudo has said why on failure.
+      if [ "$cask" = docker-desktop ] && ! docker_sudo; then
+        UPDATE_NOT_UPGRADED+=("$label")
+        return 0
+      fi
+      ui_run "Upgrading $label" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask "$cask"
+      ;;
     1)
-      ui_fail "Ghostty has an update, but macOS won't let your terminal change apps."
+      ui_fail "$label has an update, but macOS won't let your terminal change apps."
       ui_fail "Fix: System Settings → Privacy & Security → App Management, turn on your terminal, then run omamac update again."
       open "$APP_MANAGEMENT_URL" || true
-      UPDATE_FAILED=1
+      UPDATE_NOT_UPGRADED+=("$label")
       ;;
     *)
-      ui_fail "Ghostty has an update, but omamac couldn't test write access to $app."
-      UPDATE_FAILED=1
+      ui_fail "$label has an update, but omamac couldn't test write access to $app."
+      UPDATE_NOT_UPGRADED+=("$label")
       ;;
   esac
 }
@@ -178,14 +186,18 @@ update_main() {
   apply_all
   update_upgrade
   update_upgrade_casks
-  update_upgrade_ghostty
+  update_upgrade_app ghostty Ghostty
+  [ "${CHOICES[docker]:-}" != docker-desktop ] || update_upgrade_app docker-desktop "Docker Desktop"
   update_upgrade_languages
   OMAMAC_STEP='printing the summary'
   # This run may be the one that started colima's service, as install would have.
   local notes=()
   [ "${#DOCKER_NOTES[@]}" -eq 0 ] || notes=("" "${DOCKER_NOTES[@]}" "")
-  if [ "$UPDATE_FAILED" -eq 1 ]; then
-    ui_box "✗ Everything else is up to date. Ghostty is not." "${notes[@]}" "Log: $OMAMAC_LOG" >&2
+  if [ "${#UPDATE_NOT_UPGRADED[@]}" -gt 0 ]; then
+    local names verb=is
+    names=${UPDATE_NOT_UPGRADED[0]}
+    [ "${#UPDATE_NOT_UPGRADED[@]}" -eq 1 ] || { names+=" and ${UPDATE_NOT_UPGRADED[1]}"; verb=are; }
+    ui_box "✗ Everything else is up to date. $names $verb not." "${notes[@]}" "Log: $OMAMAC_LOG" >&2
     exit 1
   fi
   ui_box "omamac and your tools are up to date." "${notes[@]}" "Log: $OMAMAC_LOG"
