@@ -20,6 +20,20 @@ ghostty_support=~/Library/Application\ Support/com.mitchellh.ghostty
     "$ghostty_support/config" "$ghostty_support/config.ghostty"; do
     [ ! -f "$f" ] || shasum -a 256 "$f"
   done
+  # Homebrew services (colima runs as one): registered or not, never the
+  # status, which is the service's own (colima's moves from started to error
+  # in a VM by itself). The first line is a header, or "No services available
+  # to control."; status none means not registered.
+  /opt/homebrew/bin/brew services list |
+    awk 'NR > 1 && NF >= 2 { print "service: " $1 " " ($2 == "none" ? "not registered" : "registered") }'
+  # Docker's folder (plugin links, colima's config.json), the login services'
+  # plists, and Docker Desktop's links: a hash per file, the target per link.
+  for d in ~/.docker ~/Library/LaunchAgents /usr/local/bin /usr/local/cli-plugins; do
+    if [ -d "$d" ]; then
+      find "$d" -type f -exec shasum -a 256 {} +
+      find "$d" -type l -exec stat -f '%N -> %Y' {} +
+    fi
+  done
   shasum -a 256 ~/.zprofile ~/.zshrc
   find ~/.config/omamac -type f -exec shasum -a 256 {} +
   # Saved answers and anything else omamac records, but not its logs.
