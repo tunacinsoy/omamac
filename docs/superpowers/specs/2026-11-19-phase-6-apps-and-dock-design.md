@@ -113,7 +113,7 @@ allow=Cap: allow Screen Recording, and Camera and Microphone if you use them.
 ```
 
 - `lib/apps.sh` reads every file at source time, as data (`key=value`, no `$(…)` ever runs), into `APP_CASK[id]`, `APP_BUNDLE[id]`, `APP_PASSWORD[id]` and `APP_ALLOW[id]` (lines joined with a newline). It adds each cask to `CASK_APP`, so `core_cask_state` works for apps too. A bad line stops with the file's name and line.
-- `password=yes`: `zoom`, `google-drive`. `allow` lines: Cap, Wispr Flow ("Wispr Flow: allow Microphone and Accessibility."), Zoom ("Zoom: allow Camera and Microphone, and Screen Recording to share your screen."). Others get lines when Gate B finds their prompts.
+- `password=yes`: `zoom`, `google-drive`. `allow` lines: Cap, Wispr Flow ("Wispr Flow: allow Microphone and Accessibility."), Zoom ("Zoom: allow Camera and Microphone, and Screen Recording to share."). Others get lines when Gate B finds their prompts.
 - `apps_chosen`: the picked ids in question order (the seven groups, then `wispr-flow` when `wispr_flow=yes`).
 - Wispr Flow is a yes/no answer, not a pick in a group. Three helpers hide that, and every caller (install, `omamac install`, uninstall, doctor and its offers) uses them: `apps_key <id>` (the answer's key: `apps_media`, …, or `wispr_flow`), `apps_label <id>`, and `apps_drop <id>` (`choices_drop`, or `wispr_flow=no`).
 - bats: every option has a file, every file is an option, every file has `cask` and `app`, and the README's "After install" holds every `allow` line.
