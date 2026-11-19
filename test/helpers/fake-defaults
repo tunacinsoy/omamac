@@ -4,6 +4,8 @@
 # T_DEFAULTS_REFUSE=<domain>: reads and writes of that domain are refused.
 # T_DEFAULTS_REFUSE_WRITE=<domain>: only writes of that domain are refused.
 # T_DEFAULTS_FAIL=<domain>:<key>: writes and deletes of that key fail.
+# T_DEFAULTS_FAIL=<domain>:import: import of that domain fails.
+# export/import <domain> <file> copy $T_DEFAULTS_DIR/<domain>.plist.
 dir="${T_DEFAULTS_DIR:?fake-defaults needs T_DEFAULTS_DIR}"
 [ -z "${STUB_LOG:-}" ] || echo "defaults $*" >> "$STUB_LOG"
 cmd="${1:-}" d="${2:-}" k="${3:-}"
@@ -50,6 +52,18 @@ case "$cmd" in
       -int) echo "integer $5" > "$f" ;;
       *) echo "fake-defaults: unsupported write type '${4:-}'" >&2; exit 1 ;;
     esac
+    ;;
+  export)
+    # $3 is the file. A domain with no plist gives an empty dict.
+    if [ -f "$dir/$d.plist" ]; then cp "$dir/$d.plist" "$k"; else /usr/bin/plutil -create xml1 "$k"; fi
+    ;;
+  import)
+    if [ "${T_DEFAULTS_FAIL:-}" = "$d:import" ]; then
+      echo "defaults: unexpected error on $d import" >&2
+      exit 1
+    fi
+    mkdir -p "$dir"
+    cp "$k" "$dir/$d.plist"
     ;;
   *) echo "fake-defaults: unsupported command '$cmd'" >&2; exit 1 ;;
 esac

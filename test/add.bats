@@ -1,5 +1,6 @@
 load helpers/common
 
+load helpers/dock
 bats_require_minimum_version 1.5.0
 
 # The formulas a finished first run has: the core, then bash, gum and lazydocker.
@@ -21,7 +22,7 @@ setup() {
   cp "$REPO_ROOT/test/fixtures/bare.env" "$CHOICES_FILE"
   # Answered yes, so install doesn't ask about them (tests below ask on purpose).
   # Docker Desktop is already installed, so its step does nothing.
-  sed -i '' -e 's/^desktops=.*/desktops=yes/' -e 's/^window_margins=.*/window_margins=yes/' -e 's/^docker=.*/docker=docker-desktop/' "$CHOICES_FILE"
+  sed -i '' -e 's/^dock=.*/dock=yes/' -e 's/^dock_autohide=.*/dock_autohide=yes/' -e 's/^desktops=.*/desktops=yes/' -e 's/^window_margins=.*/window_margins=yes/' -e 's/^docker=.*/docker=docker-desktop/' "$CHOICES_FILE"
   # Every app picked and installed, so install doesn't ask about them either.
   sed -i '' -e "s/^apps_browsers=.*/apps_browsers=$ALL_BROWSERS/" -e "s/^apps_communication=.*/apps_communication=$ALL_COMMUNICATION/" \
     -e 's/^apps_media=.*/apps_media=spotify vlc/' -e 's/^apps_screen_recording=.*/apps_screen_recording=cap/' \
@@ -395,4 +396,39 @@ by_hand() { # <cask> <App.app>
   [ "$status" -eq 0 ]
   [[ "$output" != *"Let Homebrew take over"* ]]
   [ -z "$(prompts | grep 'Let Homebrew take over')" ]
+}
+
+@test "dock no: asked again; yes cleans the Dock" {
+  choose dock no
+  dock_seed "file:///System/Applications/Mail.app/" "file:///Applications/Foo.app/"
+  gum_answers "" "" yes yes
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Dock cleanup"* ]]
+  grep -qx 'dock=yes' "$CHOICES_FILE"
+  grep -q '^defaults export com.apple.dock' "$STUB_LOG"
+  grep -q '^defaults import com.apple.dock' "$STUB_LOG"
+}
+
+@test "dock yes: not asked" {
+  gum_answers "" ""
+  run omamac_install
+  [[ "$(prompts)" != *"Clean up the Dock?"* ]]
+  [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
+}
+
+@test "dock auto-hide no: asked again; yes applies" {
+  choose dock_autohide no
+  gum_answers "" "" yes yes
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Dock auto-hide"* ]]
+  grep -qx 'dock_autohide=yes' "$CHOICES_FILE"
+  [ "$(defaults read com.apple.dock autohide)" = 1 ]
+}
+
+@test "dock auto-hide yes: not asked" {
+  gum_answers "" ""
+  run omamac_install
+  [[ "$(prompts)" != *"Hide the Dock"* ]]
 }

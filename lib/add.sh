@@ -5,7 +5,7 @@
 # answers, then apply. Sourced after lib/ask.sh, lib/log.sh, lib/apps.sh and lib/apply.sh.
 
 # The questions omamac install asks again, with only their unpicked options.
-ADD_KEYS=("${APPS_KEYS[@]}" wispr_flow languages cloud_clis desktops window_margins docker)
+ADD_KEYS=("${APPS_KEYS[@]}" wispr_flow languages cloud_clis desktops window_margins dock dock_autohide docker)
 
 # add_run: CHOICES is loaded (bin/omamac did that). Ask, show the additions,
 # and save and apply them only after "Install?" is yes, so a no changes nothing.

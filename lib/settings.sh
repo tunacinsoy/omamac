@@ -1,6 +1,8 @@
 # shellcheck shell=bash disable=SC2034 # OMAMAC_STEP is read by the caller's ERR trap; SETTINGS_REFUSED by install_summary
-# The macOS settings behind the yes/no answers `desktops` and `window_margins`.
-# Sourced after lib/ui.sh, lib/questions.sh and lib/choices.sh, before lib/apply.sh.
+# The macOS settings behind the yes/no answers `desktops`, `window_margins`,
+# `dock` and `dock_autohide`.
+# Sourced after lib/ui.sh, lib/questions.sh and lib/choices.sh, before lib/dock.sh
+# (settings_apply calls its dock_apply) and lib/apply.sh.
 # Each key is "domain key type value"; the type is the word `defaults read-type`
 # gives (boolean or integer).
 
@@ -12,6 +14,12 @@ SETTINGS_KEYS_desktops=(
 )
 SETTINGS_KEYS_window_margins=(
   "com.apple.WindowManager EnableTiledWindowMargins boolean true"
+)
+SETTINGS_KEYS_dock=(
+  "com.apple.dock show-recents boolean false"
+)
+SETTINGS_KEYS_dock_autohide=(
+  "com.apple.dock autohide boolean true"
 )
 SETTINGS_REFUSED=0
 SETTINGS_DOCK=0
@@ -64,6 +72,8 @@ settings_label() {
     mru-spaces) echo "Spaces order" ;;
     AppleSpacesSwitchOnActivate) echo "Switching to an app's desktop" ;;
     EnableTiledWindowMargins) echo "Window margins" ;;
+    show-recents) echo "Suggested and recent apps" ;;
+    autohide) echo "Dock auto-hide" ;;
     *) echo "$1" ;;
   esac
 }
@@ -170,7 +180,7 @@ settings_apply() {
   SETTINGS_REFUSED=0
   SETTINGS_DOCK=0
   SETTINGS_PUT_BACK=' '
-  for answer in desktops window_margins; do
+  for answer in desktops window_margins dock dock_autohide; do
     [ "${CHOICES[$answer]:-}" = yes ] || continue
     unit=()
     while IFS= read -r line; do
@@ -192,6 +202,7 @@ settings_apply() {
         return 1
       fi
     fi
+    if [ "$answer" = dock ]; then dock_apply || { settings_dock_restart; return 1; }; fi
     ui_ok "${QUESTION_TITLE[$answer]}"
   done
   settings_dock_restart
@@ -211,6 +222,7 @@ settings_dock_restart() {
 settings_what() {
   case $1 in
     desktops) echo "your earlier Spaces, app-switching and Reduce motion settings" ;;
+    dock_autohide) echo "your earlier Dock auto-hide setting" ;;
     *) echo "your earlier window-margin setting" ;;
   esac
 }

@@ -72,7 +72,7 @@ It is done when apps install, update and uninstall cleanly in the VM, including 
 | The Downloads stack | The `persistent-others` item whose URL is the user's Downloads folder | The vision names it. Other folders the user added stay. |
 | omamac's apps in the Dock, in order | Ghostty, the catalog apps in catalog order, then Docker Desktop | Ghostty is the app every omamac user opens first. Each is added only if it is in Applications and not already in the Dock. |
 | When the Dock is cleaned | Once: when `dock=yes` and the record `~/.local/state/omamac/dock-before.plist` doesn't exist | A re-run never undoes the user's own Dock changes. |
-| Adding apps later | `~/.local/state/omamac/dock-added` lists every app omamac has put in the Dock. Each run adds every omamac app that is in Applications and not in that list, then adds it to the list | An app installed later (`omamac install`, a re-run, doctor's Reinstall, a password-step app) reaches the Dock, a run that failed before the Dock step catches up next time, and a tile the user removed is never put back. |
+| Adding apps later | `~/.local/state/omamac/dock-added` lists every app omamac has put in the Dock or found there. Each run adds every omamac app that is in Applications and not in that list, then adds it to the list | An app installed later (`omamac install`, a re-run, doctor's Reinstall, a password-step app) reaches the Dock, a run that failed before the Dock step catches up next time, and a tile the user removed is never put back. |
 | Suggested and recent apps, auto-hide | Settings keys in `lib/settings.sh`: `com.apple.dock show-recents boolean false` (under `dock`) and `com.apple.dock autohide boolean true` (under `dock_autohide`) | The existing record, put-back, doctor and update cover them. |
 | Splitting the work | A gate PR, then 6a (apps), 6b (adoption), 6c (the Dock) | Small steps, each proven in the VM on its own. |
 
@@ -180,12 +180,12 @@ A new check, "Your apps", after "Your tools":
 
 - **`settings.sh`**: `SETTINGS_KEYS_dock=("com.apple.dock show-recents boolean false")`, `SETTINGS_KEYS_dock_autohide=("com.apple.dock autohide boolean true")`. `settings_apply`, `settings_uninstall`, doctor and `remove_setting` (`dock-autohide`) loop over them like the other answers.
 - **`lib/dock.sh`**, `dock_apply`, called by `settings_apply`; it sets `SETTINGS_DOCK=1` when it imports, so the Dock restarts once per run:
-  - `dock=yes` and no record: export the Dock to a copy; write the record (`persistent-apps` and `persistent-others` from the copy, through `plutil -extract … xml1`); edit the copy: remove every `persistent-apps` item that is Apple's (Approaches) and the `persistent-others` item for `file://$HOME/Downloads/`, then append omamac's apps (Ghostty, the chosen catalog apps, Docker Desktop) that are in Applications and not yet in the Dock; `defaults import`. If the import fails, delete the record and fail the step, so the next run starts over. Then write each added app to `dock-added`.
+  - `dock=yes` and no record: export the Dock to a copy; write the record (the whole export from before the first cleanup; uninstall reads only its two arrays); edit the copy: remove every `persistent-apps` item that is Apple's (Approaches) and the `persistent-others` item for `file://$HOME/Downloads/`, then append omamac's apps (Ghostty, the chosen catalog apps, Docker Desktop) that are in Applications and not yet in the Dock. `defaults import`. If the import fails, delete the record and fail the step, so the next run starts over. Then write every omamac app found in the Dock to `dock-added`, added or not.
   - `dock=yes` with the record: append omamac's apps that are in Applications and not in `dock-added` (and not already in the Dock), then add them to `dock-added`.
   - A new tile holds only `tile-type file-tile` and the app's file URL; the Dock fills in the rest (probe).
 - **Uninstall**:
   - `omamac uninstall dock`: export the Dock, put the record's two arrays back in the copy, import, restart the Dock, then `settings_uninstall dock` for `show-recents`; delete the record and `dock-added`; save `dock=no`, last. The box says: "Dock cleanup: your Dock goes back to how it was before omamac cleaned it. Changes you made to it since are undone."
-  - `omamac uninstall <app>`, when `dock=yes`: its tile leaves the Dock (one export, `plutil -remove`, import) and its line leaves `dock-added`.
+  - `omamac uninstall <app>`, when `dock=yes`: its tile leaves the Dock (one export, `plutil -remove`, import) and its line leaves `dock-added`. `omamac uninstall docker-desktop` takes its tile out too. An app uninstalled while `hand` (installed by hand; omamac only forgets it) keeps its tile.
 - **doctor**: "Dock cleanup" ✓ when the record exists and `show-recents` holds; ✗ "omamac hasn't cleaned the Dock" (no record), fix `omamac update`; ✗ for a drifted `show-recents`, as for the other settings. "Dock auto-hide" like the other settings.
 - **Fixture `dock`:** `bare` with `apps_media=vlc dock=yes dock_autohide=yes`. `dock.before.sh` saves the Dock's URLs to a file. Steps:
   1. The Dock is exactly Ghostty and VLC, `persistent-others` is empty, `show-recents` is 0 and `autohide` is 1.
@@ -244,7 +244,6 @@ A new check, "Your apps", after "Your tools":
 - Gate B: the permission prompts each app shows on first launch, for the `allow` lines (only Cap, Wispr Flow and Zoom have one today); whether Google Drive's and Dropbox's system extensions need a click; the Dock on real hardware.
 - Carried from 5b, now closed by Non-goals: adopting Ghostty and Docker Desktop isn't offered; doctor prints the command for Ghostty.
 - For Tuna: Google Drive brings Google Docs, Sheets and Slides into Applications; its uninstall removes them too. Its login item stays after uninstall unless the terminal has Automation access to System Events (Homebrew warns).
-- 6c: `omamac install` asks Dock cleanup and Dock auto-hide again when answered no (`ADD_KEYS`).
 
 ## Left to the builder
 

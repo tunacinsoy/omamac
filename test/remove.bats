@@ -1,4 +1,5 @@
 load helpers/common
+load helpers/dock
 
 bats_require_minimum_version 1.5.0
 
@@ -71,7 +72,7 @@ snapshot() {
   gum_answers
   run --separate-stderr omamac_uninstall php
   [ "$status" -eq 2 ]
-  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, brave, chrome, firefox, whatsapp, telegram, signal, discord, slack, zoom, spotify, vlc, cap, dropbox, google-drive, vscode, raycast, obsidian, wispr-flow, desktops, window-margins, colima, docker-desktop."* ]]
+  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, brave, chrome, firefox, whatsapp, telegram, signal, discord, slack, zoom, spotify, vlc, cap, dropbox, google-drive, vscode, raycast, obsidian, wispr-flow, desktops, window-margins, colima, docker-desktop, dock, dock-autohide."* ]]
   [ -z "$(prompts)" ]
 }
 
@@ -226,7 +227,7 @@ snapshot() {
   gum_answers
   run omamac_uninstall
   [ "$status" -eq 0 ]
-  [[ "$output" == *"omamac installed no languages, cloud CLIs, Docker or apps, so there's nothing to remove."* ]]
+  [[ "$output" == *"omamac installed nothing you can remove."* ]]
   [ -z "$(prompts)" ]
 }
 
@@ -247,7 +248,8 @@ desktops_on() {
     OMAMAC_CHECKOUT='$REPO_ROOT'
     source '$REPO_ROOT/lib/paths.sh'; source '$REPO_ROOT/lib/ui.sh'
     source '$REPO_ROOT/lib/questions.sh'; source '$REPO_ROOT/lib/choices.sh'
-    source '$REPO_ROOT/lib/settings.sh'
+    source '$REPO_ROOT/lib/core.sh'; source '$REPO_ROOT/lib/apps.sh'
+    source '$REPO_ROOT/lib/settings.sh'; source '$REPO_ROOT/lib/dock.sh'
     CHOICES[desktops]=yes; settings_apply" > /dev/null
   choose desktops yes
   : > "$STUB_LOG"
@@ -810,4 +812,132 @@ brew uninstall --cask --zap vlc" ]
   [ "$status" -eq 0 ]
   grep -qx 'brew uninstall --cask visual-studio-code' "$STUB_LOG"
   grep -qx 'apps_developer=' "$CHOICES_FILE"
+}
+
+# dock_on [<code>]: what a first run with dock=yes left. The code sets more answers.
+dock_on() {
+  "$BASH5" -c "
+    set -Eeuo pipefail
+    OMAMAC_CHECKOUT='$REPO_ROOT'
+    for f in paths ui questions choices core apps settings dock; do source '$REPO_ROOT/lib/'\$f.sh; done
+    CHOICES[dock]=yes; ${1:-:}; settings_apply" > /dev/null
+  choose dock yes
+  : > "$STUB_LOG"
+}
+
+# app_url <app>: its URL in the fake Applications.
+app_url() { echo "file://${OMAMAC_TEST_APPLICATIONS// /%20}/$1/"; }
+
+DOCK_RECORD_REL=.local/state/omamac/dock-before.plist
+
+@test "uninstall dock puts the Dock back and show-recents" {
+  dock_seed file:///System/Applications/Mail.app/ file:///Applications/Things.app/ \
+    -- "file://$HOME/Downloads/"
+  apps=$(dock_urls persistent-apps)
+  others=$(dock_urls persistent-others)
+  dock_on
+  [ "$(defaults read com.apple.dock show-recents)" = 0 ]
+  gum_answers yes
+  run omamac_uninstall dock
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Dock cleanup: your Dock goes back to how it was before omamac cleaned it. Changes you made to it since are undone."* ]]
+  grep -qx 'gum confirm --default=false Remove Dock cleanup?' "$STUB_LOG"
+  [[ "$output" == *"✓ Dock cleanup is removed"* ]]
+  [ "$(dock_urls persistent-apps)" = "$apps" ]
+  [ "$(dock_urls persistent-others)" = "$others" ]
+  run defaults read com.apple.dock show-recents
+  [ "$status" -ne 0 ]
+  [ ! -e "$HOME/$DOCK_RECORD_REL" ]
+  grep -qx 'dock=no' "$CHOICES_FILE"
+}
+
+@test "uninstall dock: no changes nothing" {
+  dock_seed file:///System/Applications/Mail.app/
+  dock_on
+  cp "$T_DEFAULTS_DIR/com.apple.dock.plist" "$BATS_TEST_TMPDIR/after.plist"
+  gum_answers no
+  run omamac_uninstall dock
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Nothing was removed."* ]]
+  cmp "$T_DEFAULTS_DIR/com.apple.dock.plist" "$BATS_TEST_TMPDIR/after.plist"
+  [ "$(defaults read com.apple.dock show-recents)" = 0 ]
+  [ -f "$HOME/$DOCK_RECORD_REL" ]
+  grep -qx 'dock=yes' "$CHOICES_FILE"
+}
+
+@test "uninstall dock with no record puts show-recents back only" {
+  dock_on
+  rm "$HOME/$DOCK_RECORD_REL"
+  gum_answers yes
+  run omamac_uninstall dock
+  [ "$status" -eq 0 ]
+  run ! grep -q '^defaults import' "$STUB_LOG"
+  run defaults read com.apple.dock show-recents
+  [ "$status" -ne 0 ]
+  grep -qx 'dock=no' "$CHOICES_FILE"
+}
+
+@test "uninstall dock: not set by omamac" {
+  gum_answers
+  run omamac_uninstall dock
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Dock cleanup isn't set by omamac."* ]]
+  [ -z "$(prompts)" ]
+}
+
+@test "uninstall dock-autohide maps the name" {
+  choose dock_autohide yes
+  defaults write com.apple.dock autohide -bool true
+  mkdir -p "$(dirname "$(REC)")"
+  printf 'com.apple.dock\tautohide\tabsent\n' > "$(REC)"
+  gum_answers yes
+  run omamac_uninstall dock-autohide
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Dock auto-hide: your earlier Dock auto-hide setting"* ]]
+  grep -qx 'gum confirm --default=false Remove Dock auto-hide?' "$STUB_LOG"
+  run defaults read com.apple.dock autohide
+  [ "$status" -ne 0 ]
+  grep -qx 'dock_autohide=no' "$CHOICES_FILE"
+}
+
+@test "uninstall vlc with dock=yes takes its tile out" {
+  app_run apps_media vlc vlc
+  dock_on 'CHOICES[apps_media]=vlc'
+  [[ "$(dock_urls persistent-apps)" == *"$(app_url VLC.app)"* ]]
+  gum_answers no yes
+  run omamac_uninstall vlc
+  [ "$status" -eq 0 ]
+  [[ "$(dock_urls persistent-apps)" != *VLC* ]]
+  [ "$(cat "$HOME/.local/state/omamac/dock-added")" = Ghostty.app ]
+}
+
+@test "uninstall vlc installed by hand keeps its tile" {
+  choose apps_media vlc
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/VLC.app"
+  dock_on 'CHOICES[apps_media]=vlc'
+  gum_answers yes
+  run omamac_uninstall vlc
+  [ "$status" -eq 0 ]
+  [[ "$(dock_urls persistent-apps)" == *"$(app_url VLC.app)"* ]]
+  run ! grep -q '^defaults import' "$STUB_LOG"
+}
+
+@test "uninstall docker-desktop with dock=yes takes its tile out" {
+  dockered
+  dock_on 'CHOICES[docker]=docker-desktop'
+  [[ "$(dock_urls persistent-apps)" == *"$(app_url Docker.app)"* ]]
+  gum_answers no yes
+  run omamac_uninstall docker-desktop
+  [ "$status" -eq 0 ]
+  [[ "$(dock_urls persistent-apps)" != *Docker* ]]
+  grep -qx 'docker=none' "$CHOICES_FILE"
+}
+
+@test "no name: the menu offers both Dock answers" {
+  choose dock yes
+  choose dock_autohide yes
+  gum_answers none
+  run omamac_uninstall
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "gum choose --header What should omamac remove? --label-delimiter=: Nothing:none Dock cleanup:dock Dock auto-hide:dock-autohide" ]
 }

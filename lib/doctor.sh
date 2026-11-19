@@ -240,9 +240,14 @@ doctor_check_settings() {
     doctor_report info "$what" "skipped, your saved answers can't be read"
     return 0
   fi
-  for answer in desktops window_margins; do
+  for answer in desktops window_margins dock dock_autohide; do
     [ "${CHOICES[$answer]:-}" = yes ] || continue
     title=${QUESTION_TITLE[$answer]}
+    # Without the record, update never cleaned the Dock, so there is nothing to check.
+    if [ "$answer" = dock ] && [ ! -f "$OMAMAC_DOCK_RECORD" ]; then
+      doctor_report fail "$title" "omamac hasn't cleaned the Dock" "omamac update" || status=1
+      continue
+    fi
     settings_check "$answer"
     if [ "${#SETTINGS_UNMET[@]}" -gt 0 ]; then
       # Names joined with ", ".

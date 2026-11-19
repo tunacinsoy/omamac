@@ -45,6 +45,8 @@ source "$OMAMAC_CHECKOUT/lib/docker.sh"
 source "$OMAMAC_CHECKOUT/lib/appmanagement.sh"
 # shellcheck source=lib/settings.sh
 source "$OMAMAC_CHECKOUT/lib/settings.sh"
+# shellcheck source=lib/dock.sh
+source "$OMAMAC_CHECKOUT/lib/dock.sh"
 # shellcheck source=lib/apply.sh
 source "$OMAMAC_CHECKOUT/lib/apply.sh"
 

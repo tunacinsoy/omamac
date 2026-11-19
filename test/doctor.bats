@@ -1,5 +1,6 @@
 load helpers/common
 
+load helpers/dock
 bats_require_minimum_version 1.5.0
 
 setup() { setup_sandbox; }
@@ -1069,4 +1070,56 @@ healthy_apps() {
   run doctor
   [ "$status" -eq 0 ]
   [[ "$output" != *"Docker Desktop"* ]]
+}
+
+# dock_record: the copy omamac keeps of the Dock it cleaned.
+dock_record() { plutil -create xml1 "$HOME/.local/state/omamac/dock-before.plist"; }
+
+@test "dock: record and Recents off: ✓" {
+  healthy_mac
+  choose dock yes
+  dock_record
+  defaults write com.apple.dock show-recents -bool false
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ Dock cleanup"* ]]
+}
+
+@test "dock: no record: ✗" {
+  healthy_mac
+  choose dock yes
+  defaults write com.apple.dock show-recents -bool false
+  expect_fail "Dock cleanup" "omamac update"
+  [[ "$output" == *"omamac hasn't cleaned the Dock"* ]]
+}
+
+@test "dock: Recents back on: ✗ naming it" {
+  healthy_mac
+  choose dock yes
+  dock_record
+  defaults write com.apple.dock show-recents -bool true
+  expect_fail "Dock cleanup" "omamac update"
+  [[ "$output" == *"Suggested and recent apps was changed since omamac set it"* ]]
+}
+
+@test "dock auto-hide: changed: ✗" {
+  healthy_mac
+  choose dock_autohide yes
+  defaults write com.apple.dock autohide -bool false
+  expect_fail "Dock auto-hide" "omamac update"
+}
+
+@test "dock auto-hide: set: ✓" {
+  healthy_mac
+  choose dock_autohide yes
+  defaults write com.apple.dock autohide -bool true
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ Dock auto-hide"* ]]
+}
+
+@test "dock no: no Dock line" {
+  healthy_mac
+  run doctor
+  [[ "$output" != *"Dock"* ]]
 }
