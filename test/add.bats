@@ -357,11 +357,21 @@ by_hand() { # <cask> <App.app>
   grep -qx 'wispr_flow=no' "$CHOICES_FILE"
 }
 
-@test "install adopt: an app from Homebrew or not installed is asked nothing" {
+@test "install adopt: a not-installed app is asked nothing" {
   choose apps_media ''
   rm -rf "$OMAMAC_TEST_BREW_PREFIX/Caskroom/vlc" "$OMAMAC_TEST_APPLICATIONS/VLC.app"
   gum_answers "spotify vlc" "" "" yes
   run omamac_install
   [ "$status" -eq 0 ]
-  run ! grep -q 'Let Homebrew take over' "$STUB_LOG"
+  [[ "$output" != *"Let Homebrew take over"* ]]
+  [ -z "$(prompts | grep 'Let Homebrew take over')" ]
+}
+
+@test "install adopt: an app already from Homebrew is asked nothing" {
+  choose apps_media spotify
+  gum_answers vlc "" "" yes
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"Let Homebrew take over"* ]]
+  [ -z "$(prompts | grep 'Let Homebrew take over')" ]
 }
