@@ -37,6 +37,8 @@ source "$OMAMAC_CHECKOUT/lib/theme.sh"
 source "$OMAMAC_CHECKOUT/lib/languages.sh"
 # shellcheck source=lib/clis.sh
 source "$OMAMAC_CHECKOUT/lib/clis.sh"
+# shellcheck source=lib/docker.sh
+source "$OMAMAC_CHECKOUT/lib/docker.sh"
 # shellcheck source=lib/appmanagement.sh
 source "$OMAMAC_CHECKOUT/lib/appmanagement.sh"
 # shellcheck source=lib/settings.sh

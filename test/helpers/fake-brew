@@ -80,6 +80,9 @@ case "${1:-}" in
         bash) ln -sf "${BASH5:-/opt/homebrew/bin/bash}" "$prefix/bin/bash" ;;
         gum)  ln -sf "${HELPERS_DIR:?fake-brew needs HELPERS_DIR}/fake-gum" "$prefix/bin/gum" ;;
         mise) ln -sf "${HELPERS_DIR:?fake-brew needs HELPERS_DIR}/fake-mise" "$prefix/bin/mise" ;;
+        colima) ln -sf "${HELPERS_DIR:?fake-brew needs HELPERS_DIR}/fake-colima" "$prefix/bin/colima" ;;
+        # Like Homebrew: docker's plugins sit in the formula's opt folder.
+        docker-compose | docker-buildx) mkdir -p "$prefix/opt/$f/bin" && : > "$prefix/opt/$f/bin/$f" ;;
       esac
     done
     ;;
@@ -109,6 +112,32 @@ case "${1:-}" in
     done
     ;;
   upgrade)
+    ;;
+  services)
+    # A registered service is the file $prefix/services/<formula>.
+    f=${3:?fake-brew: services needs a formula}
+    case "${2:-}" in
+      info)
+        [ "${T_BREW_SERVICES_INFO_FAIL:-0}" != 1 ] || { echo "Error: brew services info failed" >&2; exit 1; }
+        if [ -e "$prefix/services/$f" ]; then r=true; else r=false; fi
+        echo "[{\"name\":\"$f\",\"registered\":$r}]"
+        ;;
+      start)
+        [ "${T_BREW_SERVICES_FAIL:-0}" != 1 ] || { echo "Error: Failure while executing launchctl" >&2; exit 1; }
+        # Like Homebrew: a second start exits 1.
+        if [ -e "$prefix/services/$f" ]; then
+          echo "Error: Service \`$f\` already started, use \`brew services restart $f\` to restart." >&2
+          exit 1
+        fi
+        mkdir -p "$prefix/services" && : > "$prefix/services/$f"
+        ;;
+      stop)
+        # Like Homebrew: stopping a service that isn't registered only warns.
+        [ -e "$prefix/services/$f" ] || echo "Warning: Service \`$f\` is not started." >&2
+        rm -f "$prefix/services/$f"
+        ;;
+      *) echo "fake-brew: unknown services command $*" >&2; exit 1 ;;
+    esac
     ;;
   outdated)
     # Like Homebrew: a named item that is outdated is printed, and the status is 1.

@@ -208,11 +208,11 @@ snapshot() {
 
 @test "partial file: only the new question is asked, saved answers kept" {
   sed -i '' -e '/^docker=/d' -e 's/^apps_media=$/apps_media=vlc/' "$CHOICES_FILE"
-  gum_answers orbstack yes
+  gum_answers docker-desktop yes
   run install
   [ "$status" -eq 0 ]
   [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
-  grep -qx 'docker=orbstack' "$CHOICES_FILE"
+  grep -qx 'docker=docker-desktop' "$CHOICES_FILE"
   grep -qx 'apps_media=vlc' "$CHOICES_FILE"
   [ "$(grep -c '=' "$CHOICES_FILE")" = 16 ]
 }

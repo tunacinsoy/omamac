@@ -41,7 +41,7 @@ prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
   [[ "$(prompts | sed -n 1p)" != *--no-limit* ]]
   [[ "$(prompts | sed -n 2p)" == *"--no-limit"* ]]
   [[ "$(prompts | sed -n 16p)" != *--no-limit* ]]
-  [[ "$(prompts | sed -n 16p)" == *"--label-delimiter=: No Docker:none colima:colima"* ]]
+  [[ "$(prompts | sed -n 16p)" == *"--label-delimiter=: No Docker:none colima:colima Docker Desktop:docker-desktop"* ]]
 }
 
 @test "answers land in CHOICES, multi in table order" {

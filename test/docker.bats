@@ -1,0 +1,177 @@
+load helpers/common
+
+bats_require_minimum_version 1.5.0
+
+setup() {
+  setup_sandbox
+  install_fake_brew
+  export OMAMAC_LOG="$BATS_TEST_TMPDIR/omamac.log"
+  P="$OMAMAC_TEST_BREW_PREFIX"
+  PLUGINS="$HOME/.docker/cli-plugins"
+  MARKER="$HOME/.local/state/omamac/colima-service"
+  NOTE="colima starts Docker in the background now and at each login. The first start downloads Linux and takes a few minutes."
+  : > "$STUB_LOG"
+}
+
+# in_lib <docker> <code>: run bash 5 code with the Docker step loaded and
+# CHOICES[docker] set to <docker>.
+in_lib() {
+  run "$BASH5" -c "set -Eeuo pipefail
+    for f in paths ui questions choices core clis docker; do source '$REPO_ROOT/lib/'\$f.sh; done
+    CHOICES[docker]='$1'
+    $2"
+}
+
+installs() { grep '^brew install' "$STUB_LOG" || true; }
+starts() { grep -c '^brew services start colima$' "$STUB_LOG" || true; }
+
+@test "colima: installs only the missing formulas, in one call" {
+  "$P/bin/brew" install docker
+  : > "$STUB_LOG"
+  in_lib colima 'docker_install'
+  [ "$status" -eq 0 ]
+  [ "$(installs)" = "brew install colima docker-compose docker-buildx lazydocker" ]
+  [[ "$output" == *"✓ colima is installed"* ]]
+}
+
+@test "colima: links both plugins to Homebrew's" {
+  in_lib colima 'docker_install'
+  [ "$status" -eq 0 ]
+  [ "$(readlink "$PLUGINS/docker-compose")" = "$P/opt/docker-compose/bin/docker-compose" ]
+  [ "$(readlink "$PLUGINS/docker-buildx")" = "$P/opt/docker-buildx/bin/docker-buildx" ]
+  [ -e "$PLUGINS/docker-compose" ]
+  [ -e "$PLUGINS/docker-buildx" ]
+}
+
+@test "colima: leaves a user's plugin file alone" {
+  mkdir -p "$PLUGINS"
+  echo mine > "$PLUGINS/docker-compose"
+  in_lib colima 'docker_install'
+  [ "$status" -eq 0 ]
+  [ "$(cat "$PLUGINS/docker-compose")" = mine ]
+  [ ! -L "$PLUGINS/docker-compose" ]
+  [ "$(grep -c 'ℹ.*docker-compose' <<< "$output")" -eq 1 ]
+  [ "$(readlink "$PLUGINS/docker-buildx")" = "$P/opt/docker-buildx/bin/docker-buildx" ]
+}
+
+@test "docker_link_state: ours, missing or theirs" {
+  mkdir -p "$PLUGINS"
+  ln -s "$P/opt/docker-compose/bin/docker-compose" "$PLUGINS/docker-compose"
+  ln -s /somewhere/else "$PLUGINS/docker-buildx"
+  in_lib colima 'docker_link_state docker-compose; docker_link_state docker-buildx
+    rm "$HOME/.docker/cli-plugins/docker-buildx"; docker_link_state docker-buildx
+    echo x > "$HOME/.docker/cli-plugins/docker-buildx"; docker_link_state docker-buildx'
+  [ "$status" -eq 0 ]
+  [ "$output" = "ours
+theirs
+missing
+theirs" ]
+}
+
+@test "colima: starts the service once and writes the marker" {
+  in_lib colima 'docker_install; printf "notes: %s\n" "${DOCKER_NOTES[*]}"'
+  [ "$status" -eq 0 ]
+  [ "$(starts)" -eq 1 ]
+  [ -f "$MARKER" ]
+  [[ "$output" == *"notes: $NOTE"* ]]
+}
+
+@test "colima: a second run starts nothing and changes nothing" {
+  in_lib colima 'docker_install'
+  [ "$status" -eq 0 ]
+  before="$(readlink "$PLUGINS/docker-compose") $(readlink "$PLUGINS/docker-buildx") $(stat -f %m "$MARKER")"
+  : > "$STUB_LOG"
+  in_lib colima 'docker_install; printf "notes: %s\n" "${DOCKER_NOTES[*]}"'
+  [ "$status" -eq 0 ]
+  [ "$(starts)" -eq 0 ]
+  [ -z "$(installs)" ]
+  [ "$(readlink "$PLUGINS/docker-compose") $(readlink "$PLUGINS/docker-buildx") $(stat -f %m "$MARKER")" = "$before" ]
+  [[ "$output" == *"notes: "* && "$output" != *"first start"* ]]
+}
+
+@test "colima: a registered service isn't started, the marker is written" {
+  mkdir -p "$P/services"
+  : > "$P/services/colima"
+  in_lib colima 'docker_install'
+  [ "$status" -eq 0 ]
+  [ "$(starts)" -eq 0 ]
+  [ -f "$MARKER" ]
+}
+
+@test "colima: with the marker, a stopped service stays stopped" {
+  mkdir -p "$(dirname "$MARKER")"
+  : > "$MARKER"
+  in_lib colima 'docker_install'
+  [ "$status" -eq 0 ]
+  [ "$(starts)" -eq 0 ]
+  [ ! -e "$P/services/colima" ]
+}
+
+@test "colima: a failed install starts the service on the next run" {
+  T_BREW_FAIL=1 in_lib colima 'docker_install'
+  [ "$status" -ne 0 ]
+  [ "$(starts)" -eq 0 ]
+  [ ! -e "$MARKER" ]
+  in_lib colima 'docker_install'
+  [ "$status" -eq 0 ]
+  [ "$(starts)" -eq 1 ]
+  [ -f "$MARKER" ]
+}
+
+@test "colima: a failed service start is tried again on the next run" {
+  T_BREW_SERVICES_FAIL=1 in_lib colima 'docker_install'
+  [ "$status" -ne 0 ]
+  [ ! -e "$MARKER" ]
+  : > "$STUB_LOG"
+  in_lib colima 'docker_install'
+  [ "$status" -eq 0 ]
+  [ "$(starts)" -eq 1 ]
+  [ -f "$MARKER" ]
+  [ -e "$P/services/colima" ]
+}
+
+@test "colima: Homebrew failing to read the service stops the step" {
+  T_BREW_SERVICES_INFO_FAIL=1 in_lib colima 'docker_service_registered'
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"colima's service"* ]]
+  T_BREW_SERVICES_INFO_FAIL=1 in_lib colima 'docker_install'
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"✗"*"colima's service"* ]]
+  [ "$(starts)" -eq 0 ]
+  [ ! -e "$MARKER" ]
+}
+
+@test "none: installs nothing" {
+  in_lib none 'docker_install'
+  [ "$status" -eq 0 ]
+  [ -z "$(stub_calls)" ]
+  [ ! -e "$HOME/.docker" ]
+  [ ! -e "$MARKER" ]
+}
+
+@test "docker_formulas: colima's five; nothing for the others" {
+  in_lib none 'docker_formulas colima | tr "\n" " "; echo "|$(docker_formulas docker-desktop)|$(docker_formulas none)|"'
+  [ "$status" -eq 0 ]
+  [ "$output" = "colima docker docker-compose docker-buildx lazydocker |||" ]
+}
+
+@test "the Docker question has no OrbStack" {
+  in_lib none 'question_values docker | tr "\n" " "; echo "${QUESTION_HELP[docker]}"'
+  [ "$status" -eq 0 ]
+  [ "$output" = "none colima docker-desktop colima runs Docker in the background from the command line. Docker Desktop is an app; larger companies need a paid plan for it." ]
+}
+
+@test "install summary prints the colima line" {
+  "$P/bin/brew" install gum
+  choices="$HOME/.local/state/omamac/choices.env"
+  mkdir -p "$(dirname "$choices")"
+  sed 's/^docker=none$/docker=colima/' "$REPO_ROOT/test/fixtures/bare.env" > "$choices"
+  gum_answers yes
+  run "$BASH5" "$REPO_ROOT/install.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"and the languages, cloud CLIs and Docker you chose."* ]]
+  [[ "$output" == *"colima starts Docker in the background now and at each login."* ]]
+  [[ "$output" == *"The first start downloads Linux and takes a few minutes."* ]]
+  # The notes come before the log line.
+  [[ "$output" == *"takes a few minutes."*"Log: "* ]]
+}
