@@ -72,7 +72,7 @@ It is done when apps install, update and uninstall cleanly in the VM, including 
 | The Downloads stack | The `persistent-others` item whose URL is the user's Downloads folder | The vision names it. Other folders the user added stay. |
 | omamac's apps in the Dock, in order | Ghostty, the catalog apps in catalog order, then Docker Desktop | Ghostty is the app every omamac user opens first. Each is added only if it is in Applications and not already in the Dock. |
 | When the Dock is cleaned | Once: when `dock=yes` and the record `~/.local/state/omamac/dock-before.plist` doesn't exist | A re-run never undoes the user's own Dock changes. |
-| Adding apps later | `~/.local/state/omamac/dock-added` lists every app omamac has put in the Dock. Each run adds every omamac app that is in Applications and not in that list, then adds it to the list | An app installed later (`omamac install`, a re-run, doctor's Reinstall, a password-step app) reaches the Dock, a run that failed before the Dock step catches up next time, and a tile the user removed is never put back. |
+| Adding apps later | `~/.local/state/omamac/dock-added` lists every app omamac has put in the Dock or found there. Each run adds every omamac app that is in Applications and not in that list, then adds it to the list | An app installed later (`omamac install`, a re-run, doctor's Reinstall, a password-step app) reaches the Dock, a run that failed before the Dock step catches up next time, and a tile the user removed is never put back. |
 | Suggested and recent apps, auto-hide | Settings keys in `lib/settings.sh`: `com.apple.dock show-recents boolean false` (under `dock`) and `com.apple.dock autohide boolean true` (under `dock_autohide`) | The existing record, put-back, doctor and update cover them. |
 | Splitting the work | A gate PR, then 6a (apps), 6b (adoption), 6c (the Dock) | Small steps, each proven in the VM on its own. |
 
@@ -244,7 +244,6 @@ A new check, "Your apps", after "Your tools":
 - Gate B: the permission prompts each app shows on first launch, for the `allow` lines (only Cap, Wispr Flow and Zoom have one today); whether Google Drive's and Dropbox's system extensions need a click; the Dock on real hardware.
 - Carried from 5b, now closed by Non-goals: adopting Ghostty and Docker Desktop isn't offered; doctor prints the command for Ghostty.
 - For Tuna: Google Drive brings Google Docs, Sheets and Slides into Applications; its uninstall removes them too. Its login item stays after uninstall unless the terminal has Automation access to System Events (Homebrew warns).
-- 6c: `omamac install` asks Dock cleanup and Dock auto-hide again when answered no (`ADD_KEYS`).
 
 ## Left to the builder
 
