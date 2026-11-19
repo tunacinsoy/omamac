@@ -4,9 +4,9 @@
 # jq: herdr's key bindings need it.
 CORE_FORMULAS=(starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq)
 
-# Casks, and the app each one puts in /Applications.
 CORE_CASKS=(ghostty)
-declare -A CORE_CASK_APP=([ghostty]=Ghostty.app)
+# The casks omamac installs, core or not, and the app each puts in Applications.
+declare -A CASK_APP=([ghostty]=Ghostty.app [docker-desktop]=Docker.app)
 
 # core_where <installed|missing> <formula>…: the given formulas in that state,
 # one per line, in the given order. One brew list for all of them: each call
@@ -36,7 +36,7 @@ core_missing() { core_where missing "${CORE_FORMULAS[@]}"; }
 # Homebrew may still list the cask). Returns non-zero if Homebrew can't list.
 core_cask_state() {
   local cask=$1 list line listed=0
-  local app=$OMAMAC_APPLICATIONS/${CORE_CASK_APP[$cask]}
+  local app=$OMAMAC_APPLICATIONS/${CASK_APP[$cask]}
   list=$("$OMAMAC_BREW_PREFIX/bin/brew" list --cask -1) || return
   while IFS= read -r line; do
     if [ "$line" = "$cask" ]; then listed=1; fi

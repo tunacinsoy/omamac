@@ -130,7 +130,7 @@ update_upgrade_casks() {
 # outdated. Homebrew replaces the app, which needs App Management; without it,
 # skip only this, say how to fix it, and let update_main finish and exit 1.
 update_upgrade_ghostty() {
-  local state out status=0 app="$OMAMAC_APPLICATIONS/${CORE_CASK_APP[ghostty]}"
+  local state out status=0 app="$OMAMAC_APPLICATIONS/${CASK_APP[ghostty]}"
   OMAMAC_STEP='upgrading Ghostty'
   state=$(core_cask_state ghostty) || return
   [ "$state" = brew ] || return 0

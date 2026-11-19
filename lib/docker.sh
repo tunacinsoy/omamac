@@ -13,6 +13,7 @@ DOCKER_NOTES=()
 docker_formulas() {
   case $1 in
     colima) printf '%s\n' colima docker docker-compose docker-buildx lazydocker ;;
+    docker-desktop) echo lazydocker ;;
   esac
 }
 
@@ -55,13 +56,52 @@ docker_service_registered() {
   return 2
 }
 
+# docker_sudo: 0 when sudo is valid, asking for the password only if it isn't.
+# Docker Desktop's cask writes links in /usr/local, so it needs it. sudo comes
+# from PATH, so bats can stub it.
+docker_sudo() {
+  sudo -n true 2> /dev/null && return 0
+  ui_info "Docker Desktop needs your password for its links in /usr/local."
+  sudo -v
+}
+
+# docker_install_desktop: lazydocker, then the Docker Desktop cask in the
+# state it is in (the same three as Ghostty's, see core_cask_state).
+docker_install_desktop() {
+  local list missing=() state
+  list=$(core_where missing lazydocker) || return
+  [ -z "$list" ] || mapfile -t missing <<< "$list"
+  if [ "${#missing[@]}" -gt 0 ]; then
+    ui_run "Installing lazydocker" "$OMAMAC_BREW_PREFIX/bin/brew" install "${missing[@]}" || return
+  fi
+  state=$(core_cask_state docker-desktop) || return
+  case $state in
+    missing)
+      docker_sudo || { ui_fail "Docker Desktop needs your password, so it wasn't installed."; return 1; }
+      # A plain install of a cask Homebrew lists does nothing; reinstall puts the app back.
+      if core_cask_listed docker-desktop; then
+        ui_run "Reinstalling Docker Desktop" "$OMAMAC_BREW_PREFIX/bin/brew" reinstall --cask docker-desktop || return
+      else
+        ui_run "Installing Docker Desktop" "$OMAMAC_BREW_PREFIX/bin/brew" install --cask docker-desktop || return
+      fi
+      DOCKER_NOTES+=("Open Docker Desktop once to finish its setup.")
+      ;;
+    hand) ui_info "Docker Desktop is already installed, not through Homebrew. omamac won't update it." ;;
+  esac
+  ui_ok "Docker Desktop is installed"
+}
+
 # docker_install: what the Docker answer needs. For colima: the missing
 # formulas in one brew call, the plugin links, and the login service, started
-# only once (see OMAMAC_COLIMA_MARKER).
+# only once (see OMAMAC_COLIMA_MARKER). For Docker Desktop: see above.
 docker_install() {
   local formulas=() list missing=() plugin rc why
   DOCKER_NOTES=()
-  [ "${CHOICES[docker]:-none}" = colima ] || return 0
+  case ${CHOICES[docker]:-none} in
+    colima) ;;
+    docker-desktop) docker_install_desktop; return ;;
+    *) return 0 ;;
+  esac
   mapfile -t formulas < <(docker_formulas colima)
   # Not mapfile < <(…): that would hide a failed brew list and install nothing.
   list=$(core_where missing "${formulas[@]}") || return
@@ -89,8 +129,9 @@ docker_install() {
       1) ui_run "Starting colima's service" "$OMAMAC_BREW_PREFIX/bin/brew" services start colima || return ;;
       *) ui_fail "$why"; return 1 ;;
     esac
-    mkdir -p "$OMAMAC_STATE_DIR"
-    : > "$OMAMAC_COLIMA_MARKER"
+    # || return: doctor's Reinstall runs this with errexit off.
+    mkdir -p "$OMAMAC_STATE_DIR" || return
+    : > "$OMAMAC_COLIMA_MARKER" || return
     # Two lines, so the summary box fits an 80-column terminal.
     DOCKER_NOTES+=("colima starts Docker in the background now and at each login."
       "The first start downloads Linux and takes a few minutes.")

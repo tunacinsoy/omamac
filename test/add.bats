@@ -2,8 +2,8 @@ load helpers/common
 
 bats_require_minimum_version 1.5.0
 
-# The formulas a finished first run has: the core, then bash and gum.
-OMAMAC_FORMULAS='starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq bash gum'
+# The formulas a finished first run has: the core, then bash, gum and lazydocker.
+OMAMAC_FORMULAS='starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq bash gum lazydocker'
 
 setup() {
   setup_sandbox
@@ -11,12 +11,12 @@ setup() {
   export TMPDIR="$BATS_TEST_TMPDIR"
   # shellcheck disable=SC2086 # one formula per word
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install $OMAMAC_FORMULAS
-  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask ghostty
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask ghostty docker-desktop
   CHOICES_FILE="$HOME/.local/state/omamac/choices.env"
   mkdir -p "$(dirname "$CHOICES_FILE")"
   cp "$REPO_ROOT/test/fixtures/bare.env" "$CHOICES_FILE"
   # Answered yes, so install doesn't ask about them (tests below ask on purpose).
-  # docker-desktop installs nothing in 5a and isn't asked about.
+  # Docker Desktop is already installed, so its step does nothing.
   sed -i '' -e 's/^desktops=.*/desktops=yes/' -e 's/^window_margins=.*/window_margins=yes/' -e 's/^docker=.*/docker=docker-desktop/' "$CHOICES_FILE"
   # Only the run's own calls.
   : > "$STUB_LOG"
@@ -233,14 +233,12 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   grep -q '^brew install colima ' "$STUB_LOG"
 }
 
-@test "install: Docker Desktop isn't named as installed yet" {
-  # It installs nothing until Phase 5b.
+@test "install: Docker Desktop is named as installed" {
   choose docker none
   gum_answers go "" docker-desktop yes
   run omamac_install
   [ "$status" -eq 0 ]
   [[ "$output" == *"Docker: Docker Desktop"* ]]
-  [[ "$output" == *"Installed: Go"* ]]
-  [[ "$output" != *"Installed: Go, Docker Desktop"* ]]
+  [[ "$output" == *"Installed: Go, Docker Desktop"* ]]
   grep -qx 'docker=docker-desktop' "$CHOICES_FILE"
 }

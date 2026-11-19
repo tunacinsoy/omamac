@@ -179,7 +179,7 @@ broken" ]
 @test "docker_formulas: colima's five; nothing for the others" {
   in_lib none 'docker_formulas colima | tr "\n" " "; echo "|$(docker_formulas docker-desktop)|$(docker_formulas none)|"'
   [ "$status" -eq 0 ]
-  [ "$output" = "colima docker docker-compose docker-buildx lazydocker |||" ]
+  [ "$output" = "colima docker docker-compose docker-buildx lazydocker |lazydocker||" ]
 }
 
 @test "the Docker question has no OrbStack" {
@@ -203,8 +203,7 @@ broken" ]
   [[ "$output" == *"takes a few minutes."*"Log: "* ]]
 }
 
-@test "install summary doesn't name Docker for Docker Desktop yet" {
-  # It installs nothing until Phase 5b.
+@test "install summary names Docker for Docker Desktop" {
   "$P/bin/brew" install gum
   choices="$HOME/.local/state/omamac/choices.env"
   mkdir -p "$(dirname "$choices")"
@@ -212,6 +211,97 @@ broken" ]
   gum_answers yes
   run "$BASH5" "$REPO_ROOT/install.sh"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"and the languages and cloud CLIs you chose."* ]]
-  [[ "$output" != *"Docker you chose"* ]]
+  [[ "$output" == *"and the languages, cloud CLIs and Docker you chose."* ]]
+  [[ "$output" == *"Open Docker Desktop once to finish its setup."* ]]
+}
+
+@test "colima: a failed marker write stops the run" {
+  mkdir -p "$(dirname "$MARKER")"
+  chmod a-w "$(dirname "$MARKER")"
+  in_lib colima 'docker_install'
+  chmod u+w "$(dirname "$MARKER")"
+  [ "$status" -ne 0 ]
+  [[ "$output" != *"✓ colima is installed"* ]]
+}
+
+DESKTOP_NOTE="Open Docker Desktop once to finish its setup."
+
+@test "docker_formulas: Docker Desktop's is lazydocker" {
+  in_lib docker-desktop 'docker_formulas docker-desktop'
+  [ "$output" = lazydocker ]
+}
+
+@test "desktop: installs lazydocker and the cask, asking for sudo first" {
+  # shellcheck disable=SC2016 # the stub expands $1 itself
+  stub sudo '[ "$1" != -n ] || exit 1'
+  in_lib docker-desktop 'docker_install; printf "%s\n" "${DOCKER_NOTES[@]}"'
+  [ "$status" -eq 0 ]
+  [ -d "$OMAMAC_TEST_APPLICATIONS/Docker.app" ]
+  [[ "$output" == *"needs your password"* ]]
+  [[ "$output" == *"✓ Docker Desktop is installed"* ]]
+  [[ "$output" == *"$DESKTOP_NOTE"* ]]
+  [ "$(stub_calls | grep -c '^brew install lazydocker$')" -eq 1 ]
+  [ "$(stub_calls | grep -E '^(sudo|brew install --cask)' | tr '\n' ',')" = "sudo -n true,sudo -v,brew install --cask docker-desktop," ]
+}
+
+@test "desktop: valid sudo asks nothing" {
+  in_lib docker-desktop 'docker_install'
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"needs your password"* ]]
+  ! stub_calls | grep -q '^sudo -v'
+  stub_calls | grep -qx 'brew install --cask docker-desktop'
+}
+
+@test "desktop: a failed sudo -v stops before the cask" {
+  stub sudo 'exit 1'
+  in_lib docker-desktop 'docker_install'
+  [ "$status" -ne 0 ]
+  ! stub_calls | grep -q 'brew install --cask'
+  [[ "$output" != *"✓ Docker Desktop is installed"* ]]
+}
+
+@test "desktop: already from Homebrew, a second run changes nothing" {
+  "$P/bin/brew" install lazydocker
+  "$P/bin/brew" install --cask docker-desktop
+  : > "$STUB_LOG"
+  in_lib docker-desktop 'docker_install; echo "notes=${#DOCKER_NOTES[@]}"'
+  [ "$status" -eq 0 ]
+  ! stub_calls | grep -Eq '^brew (install|reinstall)'
+  ! stub_calls | grep -q '^sudo'
+  [[ "$output" == *"notes=0"* ]]
+  [[ "$output" == *"✓ Docker Desktop is installed"* ]]
+}
+
+@test "desktop: listed by Homebrew but the app is gone, reinstalls it" {
+  "$P/bin/brew" install lazydocker
+  "$P/bin/brew" install --cask docker-desktop
+  rm -rf "$OMAMAC_TEST_APPLICATIONS/Docker.app"
+  : > "$STUB_LOG"
+  in_lib docker-desktop 'docker_install; printf "%s\n" "${DOCKER_NOTES[@]}"'
+  [ "$status" -eq 0 ]
+  stub_calls | grep -qx 'brew reinstall --cask docker-desktop'
+  [ -d "$OMAMAC_TEST_APPLICATIONS/Docker.app" ]
+  [[ "$output" == *"$DESKTOP_NOTE"* ]]
+}
+
+@test "desktop: a hand-installed app is used as it is" {
+  "$P/bin/brew" install lazydocker
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/Docker.app"
+  : > "$STUB_LOG"
+  in_lib docker-desktop 'docker_install; echo "notes=${#DOCKER_NOTES[@]}"'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ Docker Desktop is already installed, not through Homebrew. omamac won't update it."* ]]
+  [[ "$output" == *"✓ Docker Desktop is installed"* ]]
+  [[ "$output" == *"notes=0"* ]]
+  ! stub_calls | grep -q -- '--cask'
+  ! stub_calls | grep -q '^sudo'
+}
+
+@test "desktop: the user's own docker formula stays, the cask installs" {
+  "$P/bin/brew" install docker
+  : > "$STUB_LOG"
+  in_lib docker-desktop 'docker_install'
+  [ "$status" -eq 0 ]
+  stub_calls | grep -qx 'brew install --cask docker-desktop'
+  ! stub_calls | grep -Eq '^brew (uninstall|install) docker$'
 }
