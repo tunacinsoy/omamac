@@ -57,11 +57,13 @@ test/vm.sh <branch> <fixture>
 
 It runs the one-liner twice in a throwaway VM, checks that the second run changed nothing, and posts `vm` on the commit. Fixtures live in `test/fixtures/`. The log goes to `test/logs/`.
 
+There is one `vm` status per commit, so a pass never replaces a failure already on it: after a fail, push a new commit and run every fixture again. Two fixtures may run side by side on one commit (Tart runs two macOS VMs at most). `OMAMAC_VM_TIMEOUT=<seconds> test/vm.sh …` raises the 2700 s that `vm.exp` waits for each prompt.
+
 Tests that need mise use a fake, `test/helpers/fake-mise`. Its `T_*` knobs (for example `T_MISE_KEEP`) set what it reports and which tools it keeps.
 
 A change to languages or CLIs runs the `bare`, `languages` and `cloud` fixtures. A change to the macOS settings runs `bare` and `desktop`. A change to Docker runs `bare`, `colima` and `docker-desktop`. A change to apps runs `bare`, `apps`, `adopt` and `docker-desktop`. A change to the Dock runs `bare` and `dock`.
 
-A fixture may have a `<name>.brew-passwords`, one digit: how many more times per command Homebrew itself asks for the password. Homebrew resets sudo before a cask step that needs it (Docker Desktop's links in `/usr/local`, Zoom's and Google Drive's installers), so omamac's one prompt doesn't cover it. `test/vm.sh` lets the one-liner and the steps type that many more.
+A fixture may have a `<name>.brew-passwords`, one digit: how many more times per command Homebrew itself asks for the password. Homebrew resets sudo before a cask step that needs it (Docker Desktop's links in `/usr/local`, Zoom's and Google Drive's installers), so omamac's one prompt doesn't cover it. `test/vm.sh` lets the one-liner and the steps type that many more. A `<name>.steps-passwords`, also one digit, sets the steps' count on its own, for steps that uninstall several apps whose casks ask: all of a steps file is one count.
 
 A fixture may have a `<name>.before.sh`. It runs in the VM before the first run, in `zsh -eux` with stdin closed and no Homebrew yet, to set the VM up like a used Mac: an app installed by hand, or a Dock saved to compare with later.
 
