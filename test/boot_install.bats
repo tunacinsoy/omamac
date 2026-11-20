@@ -137,6 +137,17 @@ call_line() { stub_calls | grep -n -m1 -E "$1" | cut -d: -f1 | grep .; }
   [ ! -e "$RAN" ]
 }
 
+@test "a file where the checkout goes stops untouched, without network help" {
+  mkdir -p "$(dirname "$HOME_CHECKOUT")"
+  echo mine > "$HOME_CHECKOUT"
+  run_boot
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"$HOME_CHECKOUT exists and isn't an omamac checkout. Move it away and run this again."* ]]
+  [[ "$output" != *"internet"* ]]
+  [ "$(cat "$HOME_CHECKOUT")" = mine ]
+  [ ! -e "$RAN" ]
+}
+
 @test "wrong password stops before anything" {
   T_SUDO_FAIL=1 run_boot
   [ "$status" -eq 1 ]
