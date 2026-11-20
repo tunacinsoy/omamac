@@ -59,8 +59,8 @@ omamac_failed() {
   # With set -E the trap also runs inside ( … ) and $( … ); let only the main shell speak.
   [ "$BASHPID" -eq "$$" ] || exit 1
   ui_fail "omamac stopped while $OMAMAC_STEP."
-  # install has saved the picks by now, so running it again wouldn't offer them.
-  if [ "$OMAMAC_CMD" = install ]; then
+  # Once install has saved the picks, running it again wouldn't offer them.
+  if [ "$OMAMAC_CMD" = install ] && [ -n "${ADD_SAVED:-}" ]; then
     ui_fail "Fix the problem and run omamac update."
   else
     ui_fail "Fix the problem and run omamac $OMAMAC_CMD again."
@@ -137,6 +137,7 @@ omamac_main() {
       fi
       OMAMAC_CMD=uninstall
       trap omamac_failed ERR
+      [ "$#" -lt 2 ] || remove_refuse_core "$2"
       omamac_choices
       remove_run "${@:2}"
       ;;

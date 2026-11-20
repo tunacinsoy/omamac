@@ -171,6 +171,16 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   [[ "$output" == *"Fix the problem and run omamac update."* ]]
 }
 
+@test "a failure before the answers are saved says to run omamac install again" {
+  # The adoption check lists casks as soon as VLC is picked.
+  choose apps_media ""
+  gum_answers vlc
+  T_BREW_LIST_FAIL=1 run omamac_install
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Fix the problem and run omamac install again."* ]]
+  [[ "$output" != *"omamac update"* ]]
+}
+
 @test "extra arguments: usage, exit 2" {
   gum_answers "" ""
   run --separate-stderr omamac_install go

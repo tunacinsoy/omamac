@@ -51,6 +51,15 @@ snapshot() {
   (cd "$HOME" && find . -type f | sort | while read -r f; do echo "$f $(shasum < "$f") $(stat -f %m "$f")"; done)
 }
 
+@test "a core name is refused even without saved answers" {
+  rm "$CHOICES_FILE"
+  gum_answers
+  run --separate-stderr omamac_uninstall herdr
+  [ "$status" -eq 1 ]
+  [[ "$stderr" == *"herdr is part of omamac's core and can't be removed on its own."* ]]
+  [[ "$stderr" != *"doesn't know your answers"* ]]
+}
+
 @test "a core name is refused" {
   gum_answers
   for name in herdr zsh gum; do

@@ -169,6 +169,19 @@ remove_docker() {
 # remove_run [<name>]: CHOICES is loaded (bin/omamac did that). Nothing is
 # changed before "Remove?" is yes, and the choice is saved last, so a failure
 # leaves it saved for doctor to report.
+# remove_refuse_core <name>: stop when name is a core tool. bin/omamac calls it
+# before loading the answers, so it works without them too.
+remove_refuse_core() {
+  local v
+  # bash and gum are omamac's own, so they count as core.
+  for v in "${CORE_FORMULAS[@]}" "${CORE_CASKS[@]}" bash gum zsh; do
+    if [ "$1" = "$v" ]; then
+      ui_fail "$1 is part of omamac's core and can't be removed on its own."
+      exit 1
+    fi
+  done
+}
+
 remove_run() {
   local name=${1:-} key='' k v label status tool joined list ids=() options=() tools=() all=() apps=()
   OMAMAC_STEP='checking what to remove'
@@ -202,13 +215,6 @@ remove_run() {
   mapfile -t apps < <(apps_ids)
   for v in "${apps[@]}"; do
     [ "$name" != "$v" ] || { remove_app "$name"; return; }
-  done
-  # bash and gum are omamac's own, so they count as core.
-  for v in "${CORE_FORMULAS[@]}" "${CORE_CASKS[@]}" bash gum zsh; do
-    if [ "$name" = "$v" ]; then
-      ui_fail "$name is part of omamac's core and can't be removed on its own."
-      exit 1
-    fi
   done
   for k in "${REMOVE_KEYS[@]}"; do
     if question_has "$k" "$name"; then key=$k; fi

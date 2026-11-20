@@ -42,6 +42,18 @@ prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
   [ ! -s "$STUB_LOG.gum-env" ]
 }
 
+@test "a gum failure under omamac <command> says to run that command again" {
+  gum_answers "exit 2"
+  OMAMAC_CMD=install in_ask 'ask_missing'
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Run omamac install again."* ]]
+  [[ "$output" != *"one-liner"* ]]
+  gum_answers "exit 2"
+  in_ask 'ask_missing'
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Run the one-liner again."* ]]
+}
+
 @test "multi uses --no-limit, single does not" {
   gum_answers "${FRESH_ANSWERS[@]}"
   in_ask 'ask_missing'

@@ -97,6 +97,8 @@ add_run() {
   fi
   OMAMAC_STEP='saving your answers'
   choices_save "$OMAMAC_CHOICES_FILE"
+  # bin/omamac's ERR trap: from here, a failure is finished by omamac update.
+  ADD_SAVED=1
   log_start
   apply_all
   OMAMAC_STEP='printing the summary'
