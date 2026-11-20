@@ -66,6 +66,8 @@ vm_exp() { run /usr/bin/expect -f "$REPO_ROOT/test/vm.exp" 192.0.2.1 true; }
   OMAMAC_VM_TIMEOUT=10m vm_exp
   [ "$status" -eq 2 ]
   [[ "$output" == *"OMAMAC_VM_TIMEOUT must be a whole number, not '10m'"* ]]
+  OMAMAC_VM_TIMEOUT=010 vm_exp
+  [ "$status" -eq 2 ]
 }
 
 @test "a command killed by a signal fails" {

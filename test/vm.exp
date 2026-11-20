@@ -25,7 +25,8 @@ set max_passwords 1
 if {[info exists env(OMAMAC_VM_MAX_PASSWORDS)]} { set max_passwords $env(OMAMAC_VM_MAX_PASSWORDS) }
 # Both are compared as numbers below; anything else would fail in an odd place.
 foreach {name value} [list OMAMAC_VM_TIMEOUT $timeout OMAMAC_VM_MAX_PASSWORDS $max_passwords] {
-  if {![regexp {^[0-9]+$} $value]} {
+  # No leading zero: Tcl would read 010 as octal.
+  if {![regexp {^(0|[1-9][0-9]*)$} $value]} {
     puts stderr "vm.exp: $name must be a whole number, not '$value'"
     exit 2
   }

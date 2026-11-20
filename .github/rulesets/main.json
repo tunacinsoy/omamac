@@ -14,7 +14,7 @@
         "require_extra_approval_for_unattributed_changes": true,
         "allowed_merge_methods": ["merge", "squash", "rebase"], "required_reviewers": [] } },
     { "type": "required_status_checks", "parameters": {
-        "strict_required_status_checks_policy": true,
+        "strict_required_status_checks_policy": true, "do_not_enforce_on_create": false,
         "required_status_checks": [
           { "context": "bats", "integration_id": 15368 },
           { "context": "vm" } ] } }
