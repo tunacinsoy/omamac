@@ -561,6 +561,16 @@ settings_set() {
   [ -z "$(grep '^mise install' "$STUB_LOG")" ]
 }
 
+@test "a broken offer prompt says to run omamac doctor again" {
+  healthy_mac
+  choose languages go
+  gum_answers "exit 2"
+  run doctor
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Run omamac doctor again."* ]]
+  [[ "$output" != *"one-liner again"* ]]
+}
+
 @test "Reinstall it: mise install go runs" {
   healthy_mac
   choose languages go

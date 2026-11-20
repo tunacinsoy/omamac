@@ -30,7 +30,7 @@ Checked against `main` at 6d04933 (after PR #21 if merged first).
 | doctor's Reinstall of one app ends with "Your apps are installed" (6a) | Fix, Task 3 |
 | A regular file at `~/.local/share/omamac` gives network help (2) | Fix, Task 3 |
 | The sandbox doesn't unset `STARSHIP_CONFIG` (4b) | Fix, Task 1 |
-| A gum error on a yes/no reads as "no" (2) | Closed: `ask_broken` stops on any other exit |
+| A gum error on a yes/no reads as "no" (2) | Issue: gum exits 1 for "no" and for its own errors, so the exit code can't tell them apart; `ask_need_tty` covers the likely cause (no terminal) |
 | A render failure in doctor reads as ✓ (3b) | Closed: `herdr_render` left doctor in f5709cc; `languages_render` reads ✗ |
 | A `run ! grep` passes when the log is missing (3c) | Closed: every one targets a log that always exists |
 | The README names Ctrl g `,` twice (3b) | Closed: once |
@@ -66,7 +66,7 @@ Checked against `main` at 6d04933 (after PR #21 if merged first).
 
 - [x] `omamac install` failing before its answers are saved: `omamac_failed` says "run omamac install again" (nothing was saved), and "run omamac update" only after `choices_save` in `lib/add.sh`. A flag set right after the save (for example `ADD_SAVED=1`) decides. Tests: a failure while asking (Homebrew can't list) and one after saving.
 - [x] `ask_broken`: under `omamac <cmd>` (`OMAMAC_CMD` set), "Run omamac <cmd> again."; at the first run, as today. Tests for both.
-- [x] `omamac uninstall <core tool>` without `choices.env`: the core message, not "doesn't know your answers". Move the core check out of `remove_run` into a function `bin/omamac` calls before `omamac_choices`; `remove_run` keeps calling it, so the order inside doesn't change. Test.
+- [x] `omamac uninstall <core tool>` without `choices.env`: the core message, not "doesn't know your answers". Move the core check out of `remove_run` into `remove_refuse_core`, which `bin/omamac` calls before `omamac_choices`. `remove_run` no longer checks: its only caller is `bin/omamac`, and its menu offers no core name. Test.
 - [x] Tests pass; commit.
 
 ## Task 3: doctor's Reinstall line, and a file where omamac goes

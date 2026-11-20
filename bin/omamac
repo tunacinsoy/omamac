@@ -118,7 +118,11 @@ omamac_main() {
   local cmd=${1:-help}
   case "$cmd" in
     help | -h | --help) omamac_usage ;;
-    doctor) doctor_run ;;
+    doctor)
+      # Its Reinstall offers ask; a broken prompt then names omamac doctor.
+      OMAMAC_CMD=doctor
+      doctor_run
+      ;;
     update) omamac_update ;;
     install)
       if [ "$#" -gt 1 ]; then

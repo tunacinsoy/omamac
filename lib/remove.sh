@@ -166,9 +166,6 @@ remove_docker() {
   ui_ok "Docker Desktop is removed"
 }
 
-# remove_run [<name>]: CHOICES is loaded (bin/omamac did that). Nothing is
-# changed before "Remove?" is yes, and the choice is saved last, so a failure
-# leaves it saved for doctor to report.
 # remove_refuse_core <name>: stop when name is a core tool. bin/omamac calls it
 # before loading the answers, so it works without them too.
 remove_refuse_core() {
@@ -182,6 +179,9 @@ remove_refuse_core() {
   done
 }
 
+# remove_run [<name>]: CHOICES is loaded (bin/omamac did that). Nothing is
+# changed before "Remove?" is yes, and the choice is saved last, so a failure
+# leaves it saved for doctor to report.
 remove_run() {
   local name=${1:-} key='' k v label status tool joined list ids=() options=() tools=() all=() apps=()
   OMAMAC_STEP='checking what to remove'
