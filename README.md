@@ -34,7 +34,7 @@ The exception: if you chose Zoom, Google Drive or Docker Desktop, Homebrew asks 
 
 Answer no to "Install?" and nothing is saved, so the next run asks again. Once you've said yes, your answers are kept and later runs only ask "Install?".
 
-Allow about 10 minutes, mostly for Apple's Command Line Tools. If it stops, fix what it says and run the same line again; it picks up where it stopped. Running it again on a Mac that is set up updates omamac's code and changes nothing else.
+Allow 10 to 20 minutes, depending on how much you pick: most of it is Apple's Command Line Tools and your apps' downloads. If it stops, fix what it says and run the same line again; it picks up where it stopped. Running it again on a Mac that is set up updates omamac's code and changes nothing else.
 
 Each run writes a log to `~/.local/state/omamac/logs/`. The newest 10 are kept.
 
