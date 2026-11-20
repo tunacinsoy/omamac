@@ -58,6 +58,16 @@ vm_exp() { run /usr/bin/expect -f "$REPO_ROOT/test/vm.exp" 192.0.2.1 true; }
   [ "$status" -eq 1 ]
 }
 
+@test "a timeout or password limit that isn't a number stops first" {
+  OMAMAC_VM_MAX_PASSWORDS=two vm_exp
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"OMAMAC_VM_MAX_PASSWORDS must be a whole number, not 'two'"* ]]
+  [[ "$output" != *"Password:"* ]]
+  OMAMAC_VM_TIMEOUT=10m vm_exp
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"OMAMAC_VM_TIMEOUT must be a whole number, not '10m'"* ]]
+}
+
 @test "a command killed by a signal fails" {
   T_KILL=1 vm_exp
   [ "$status" -eq 1 ]

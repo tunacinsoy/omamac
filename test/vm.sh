@@ -36,6 +36,13 @@ if [ -f "$TEST_DIR/fixtures/$fixture.brew-passwords" ]; then
   brew_passwords=$(<"$TEST_DIR/fixtures/$fixture.brew-passwords")
   [[ $brew_passwords =~ ^[0-9]$ ]] || refuse "test/fixtures/$fixture.brew-passwords must hold one digit"
 fi
+# All of steps.sh is one vm.exp call, so uninstalling several password apps
+# adds up. A separate count keeps the first run's limit tight.
+steps_passwords=$brew_passwords
+if [ -f "$TEST_DIR/fixtures/$fixture.steps-passwords" ]; then
+  steps_passwords=$(<"$TEST_DIR/fixtures/$fixture.steps-passwords")
+  [[ $steps_passwords =~ ^[0-9]$ ]] || refuse "test/fixtures/$fixture.steps-passwords must hold one digit"
+fi
 cd "$TEST_DIR/.."
 changes=$(git status --porcelain)
 [ -z "$changes" ] || refuse "The working tree has changes; commit or stash them first:
@@ -46,7 +53,8 @@ remote=$(git ls-remote origin "refs/heads/$branch" | cut -f1) || refuse "Couldn'
 [ "$sha" = "$remote" ] || refuse "HEAD ($sha) isn't origin/$branch ($remote): push first"
 
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
-vm_name="omamac-test-${sha:0:7}-$stamp"
+# The fixture keeps two runs of one commit, started in the same second, apart.
+vm_name="omamac-test-${sha:0:7}-$fixture-$stamp"
 raw="https://raw.githubusercontent.com/$REPO/$sha"
 logs="$TEST_DIR/logs"
 log="$logs/$stamp-${branch//\//-}-$fixture.log"
@@ -61,7 +69,7 @@ ip=''
 # 7, 8. However the script ends: copy the VM's omamac logs out, post the status,
 # and stop and delete the VM.
 finish() {
-  local status=$? state description
+  local status=$? state description previous
   set +e
   if [ -n "$ip" ]; then
     echo "--- omamac's logs in the VM"
@@ -69,6 +77,16 @@ finish() {
   fi
   tart stop "$vm_name" >/dev/null 2>&1
   tart delete "$vm_name" >/dev/null 2>&1
+  # One `vm` status per commit, and the last post wins: a pass of one fixture
+  # must not cover another fixture's fail on the same commit.
+  if [ "$status" -eq 0 ]; then
+    if ! previous=$(gh api "repos/$REPO/commits/$sha/status" \
+      --jq '.statuses[] | select(.context == "vm") | .state'); then
+      status=1 step="reading the commit's vm status"
+    elif [ "$previous" = failure ]; then
+      status=1 step='an earlier run on this commit, which failed (push a new commit to run again)'
+    fi
+  fi
   if [ "$status" -eq 0 ]; then
     state=success description="$fixture: passed"
   else
@@ -160,7 +178,7 @@ steps="test/fixtures/$fixture.steps.sh"
 if [ -f "$steps" ]; then
   step=steps
   info "Running $steps"
-  OMAMAC_VM_MAX_PASSWORDS=$((1 + brew_passwords)) vm "set -o pipefail; f=\$(mktemp) && curl -fsSL $raw/$steps -o \$f && zsh -lic \"zsh -eux -o pipefail \$f </dev/null\""
+  OMAMAC_VM_MAX_PASSWORDS=$((1 + steps_passwords)) vm "set -o pipefail; f=\$(mktemp) && curl -fsSL $raw/$steps -o \$f && zsh -lic \"zsh -eux -o pipefail \$f </dev/null\""
   step='doctor after the steps'
   vm "zsh -lic 'omamac doctor'"
 fi
