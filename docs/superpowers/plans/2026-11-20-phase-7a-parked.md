@@ -82,7 +82,7 @@ Checked against `main` at 6d04933 (after PR #21 if merged first).
 
 ## Task 5: review, VM runs, PR, merge (controller)
 
-- [x] Whole-branch review by a fresh reviewer.
-- [x] Push; open the PR with the decisions table and the issue links.
-- [x] VM: `bare` and `apps` (Task 3 touches app installs and Task 2 install's failure paths).
-- [x] Merge when `bats` and `vm` are green; post the "Left for later phases" comment.
+- [ ] Whole-branch review by a fresh reviewer.
+- [ ] Push; open the PR with the decisions table and the issue links.
+- [ ] VM: `bare` and `apps` (Task 3 touches app installs and Task 2 install's failure paths).
+- [ ] Merge when `bats` and `vm` are green; post the "Left for later phases" comment.
