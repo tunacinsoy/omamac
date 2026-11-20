@@ -34,6 +34,14 @@ prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
   [ "$(grep -c '^gum confirm --default=false ' "$STUB_LOG")" = 5 ]
 }
 
+@test "the user's GUM_ settings don't reach the prompts" {
+  gum_answers "${FRESH_ANSWERS[@]}"
+  GUM_CHOOSE_SELECTED=tokyo-night GUM_CONFIRM_DEFAULT=true in_ask 'ask_missing'
+  [ "$status" -eq 0 ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 16 ]
+  [ ! -s "$STUB_LOG.gum-env" ]
+}
+
 @test "multi uses --no-limit, single does not" {
   gum_answers "${FRESH_ANSWERS[@]}"
   in_ask 'ask_missing'

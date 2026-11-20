@@ -4,6 +4,10 @@
 OMAMAC_LOG=${OMAMAC_LOG:-/dev/null}
 # gum by its full path: doctor must still report when Homebrew isn't on PATH.
 UI_GUM=${OMAMAC_BREW_PREFIX:?lib/ui.sh needs lib/paths.sh first}/bin/gum
+# gum reads GUM_* settings from the environment; the user's own could
+# pre-select an answer or hide a prompt, so none reach omamac's gum.
+for _ui_var in "${!GUM_@}"; do unset "$_ui_var"; done
+unset _ui_var
 
 # Each helper falls back to plain text with the same markers when gum is missing,
 # so doctor can still say what's wrong.

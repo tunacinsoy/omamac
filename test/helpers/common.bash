@@ -7,8 +7,8 @@ BASH5=/opt/homebrew/bin/bash
 # Give each test its own HOME, stub dir, stub log and fake Homebrew prefix.
 setup_sandbox() {
   export HOME="$BATS_TEST_TMPDIR/home"
-  # herdr reads this; a developer's own value must not reach the tests.
-  unset HERDR_CONFIG_PATH
+  # herdr and starship read these; a developer's own must not reach the tests.
+  unset HERDR_CONFIG_PATH STARSHIP_CONFIG
   export STUB_DIR="$BATS_TEST_TMPDIR/stubs"
   export STUB_LOG="$BATS_TEST_TMPDIR/stub.log"
   export OMAMAC_TEST_BREW_PREFIX="$BATS_TEST_TMPDIR/opt/homebrew"
