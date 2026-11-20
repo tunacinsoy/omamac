@@ -20,6 +20,8 @@ case "${1:-}" in
     # Log the call, check the prompt reads the (fake) terminal, then answer
     # from the queue in T_GUM_ANSWERS: one line per prompt.
     [ -z "${STUB_LOG:-}" ] || echo "gum $*" >> "$STUB_LOG"
+    # The GUM_ settings the prompt saw, so tests can check none reach it.
+    [ -z "${STUB_LOG:-}" ] || env | grep '^GUM_' >> "$STUB_LOG.gum-env" || true
     IFS= read -r first || first=''
     if [ "$first" != fake-tty ]; then
       echo "fake-gum: prompt not reading the tty" >&2

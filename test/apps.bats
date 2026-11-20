@@ -245,6 +245,8 @@ changes() { grep -E '^brew (install|reinstall|uninstall|upgrade|tap|services)' "
   in_steps 'CHOICES[apps_media]=vlc; CHOICES[apps_developer]=vscode; apps_install vlc'
   [ "$status" -eq 0 ]
   [ "$(changes)" = "brew reinstall --cask vlc" ]
+  # doctor's Reinstall of one app: not the whole run's line.
+  [[ "$output" != *"Your apps are installed"* ]]
 }
 
 @test "a failed Chrome download stops the run naming Chrome; the next run installs only Chrome" {

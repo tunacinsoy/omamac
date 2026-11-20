@@ -237,5 +237,6 @@ apps_install() {
         ;;
     esac
   done
-  ui_ok "Your apps are installed"
+  # Only for the whole run; doctor's Reinstall of one app names it already.
+  [ "$#" -gt 0 ] || ui_ok "Your apps are installed"
 }

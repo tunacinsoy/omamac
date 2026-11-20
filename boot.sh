@@ -132,6 +132,10 @@ boot_check_ref() {
 }
 
 boot_checkout() {
+  # A file there would make git clone fail, which reads as no network.
+  if [ -e "$OMAMAC_HOME" ] && [ ! -d "$OMAMAC_HOME" ]; then
+    boot_die "$OMAMAC_HOME exists and isn't an omamac checkout. Move it away and run this again. The checkout wasn't changed."
+  fi
   if [ -d "$OMAMAC_HOME" ] && [ -n "$(ls -A "$OMAMAC_HOME")" ]; then
     [ -d "$OMAMAC_HOME/.git" ] ||
       boot_die "$OMAMAC_HOME exists and isn't an omamac checkout. Move it away and run this again. The checkout wasn't changed."
