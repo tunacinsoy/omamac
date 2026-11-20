@@ -8,7 +8,7 @@ dock_urls() {
     sed -n 's/^ *"_CFURLString" = "\{0,1\}\([^"]*\)"\{0,1\};$/\1/p'
 }
 settings_now() {
-  while read -r domain key value; do
+  while read -r domain key _; do
     now=$(defaults read "$domain" "$key" 2>/dev/null) || now=absent
     print -r -- "$domain $key $now"
   done < ~/settings-before
@@ -21,22 +21,22 @@ ids=(brave chrome firefox whatsapp telegram signal discord slack zoom spotify vl
 # 1. Every app is in Applications and Homebrew lists its cask. No app's
 # binary runs: it would wait on macOS's first-open check.
 casks=$(brew list --cask -1)
-dock_want=(file:///Applications/Ghostty.app/)
-for id in $ids; do
-  cask=$(sed -n 's/^cask=//p' $checkout/apps/$id)
-  app=$(sed -n 's/^app=//p' $checkout/apps/$id)
+dock_want=file:///Applications/Ghostty.app/
+for id in "${ids[@]}"; do
+  cask=$(sed -n 's/^cask=//p' "$checkout/apps/$id")
+  app=$(sed -n 's/^app=//p' "$checkout/apps/$id")
   [[ -d /Applications/$app ]]
   [[ $'\n'$casks$'\n' == *$'\n'$cask$'\n'* ]]
-  dock_want+=("file:///Applications/${app// /%20}/")
+  dock_want+=$'\n'"file:///Applications/${app// /%20}/"
 done
-dock_want+=(file:///Applications/Docker.app/)
+dock_want+=$'\n'file:///Applications/Docker.app/
 # Docker Desktop: its docker link points into the app; never run (first-open check).
 [[ -d /Applications/Docker.app ]]
 [[ $(readlink /usr/local/bin/docker) == /Applications/Docker.app/* ]]
 lazydocker --version
 # Every language is installed by mise.
 for tool in ruby node go python erlang elixir rust java; do
-  [[ -n $(cd ~ && $mise ls --installed --no-header $tool) ]]
+  [[ -n $(cd ~ && $mise ls --installed --no-header "$tool") ]]
 done
 # Every cloud CLI. Not az version: its first run waits on macOS's first-open check.
 [[ -x /opt/homebrew/bin/az ]]
@@ -46,7 +46,7 @@ gh --version
 terraform version
 
 # 2. The Dock: no Apple app, no Downloads, omamac's apps in order.
-[[ $(dock_urls persistent-apps) == ${(pj:\n:)dock_want} ]]
+[[ $(dock_urls persistent-apps) == "$dock_want" ]]
 [[ -z $(dock_urls persistent-others) ]]
 [[ $(defaults read com.apple.dock autohide) == 1 ]]
 [[ $(defaults read com.apple.dock mru-spaces) == 0 ]]
@@ -71,21 +71,21 @@ if [[ $before != "$after" ]]; then
 fi
 
 # 5. Uninstall every pick. vm.exp says yes to each data question.
-for id in $ids; do
-  cask=$(sed -n 's/^cask=//p' $checkout/apps/$id)
-  app=$(sed -n 's/^app=//p' $checkout/apps/$id)
-  omamac uninstall $id
+for id in "${ids[@]}"; do
+  cask=$(sed -n 's/^cask=//p' "$checkout/apps/$id")
+  app=$(sed -n 's/^app=//p' "$checkout/apps/$id")
+  omamac uninstall "$id"
   [[ ! -e /Applications/$app ]]
-  if brew list --cask $cask >/dev/null 2>&1; then exit 1; fi
+  if brew list --cask "$cask" >/dev/null 2>&1; then exit 1; fi
 done
 omamac uninstall docker-desktop
 [[ ! -e /Applications/Docker.app ]]
 if brew list --cask docker-desktop >/dev/null 2>&1; then exit 1; fi
-for id in ruby node go python elixir rust java; do omamac uninstall $id; done
+for id in ruby node go python elixir rust java; do omamac uninstall "$id"; done
 for tool in ruby node go python elixir rust java; do
-  [[ -z $(cd ~ && $mise ls --installed --no-header $tool) ]]
+  [[ -z $(cd ~ && $mise ls --installed --no-header "$tool") ]]
 done
-for id in azure aws gcloud gh terraform; do omamac uninstall $id; done
+for id in azure aws gcloud gh terraform; do omamac uninstall "$id"; done
 for cmd in az aws gcloud gh terraform; do [[ ! -e /opt/homebrew/bin/$cmd ]]; done
 omamac uninstall dock
 omamac uninstall dock-autohide
