@@ -1189,3 +1189,36 @@ dock_record() { plutil -create xml1 "$HOME/.local/state/omamac/dock-before.plist
   run doctor
   [[ "$output" != *"Dock"* ]]
 }
+
+@test "doctor lists your tools under ✓ Your tools, by section" {
+  healthy_mac
+  choose languages 'go rust'
+  choose cloud_clis gh
+  mise_has go
+  mise_has rust
+  mkdir -p "$OMAMAC_TEST_BREW_PREFIX/Cellar/gh"
+  run doctor
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -A2 -xF '✓ Your tools' | grep -qxF '    Languages: Go, Rust'
+  printf '%s\n' "$output" | grep -qxF '    Cloud CLIs: GitHub CLI'
+  [[ "$output" != *"Coding agents:"* ]]
+}
+
+@test "doctor's list leaves out what's gone; the ✗ line names it" {
+  healthy_mac
+  choose languages 'go rust'
+  mise_has go
+  run doctor
+  [ "$status" -eq 1 ]
+  printf '%s\n' "$output" | grep -qxF '    Languages: Go'
+  [[ "$output" == *"✗ Rust — you chose it, but mise no longer has it"* ]]
+}
+
+@test "doctor lists your apps under ✓ Your apps, by group" {
+  healthy_mac
+  healthy_apps vlc wispr-flow
+  run doctor
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -qxF '    Media: VLC'
+  printf '%s\n' "$output" | grep -qxF '    Wispr Flow'
+}

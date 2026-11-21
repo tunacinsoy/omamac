@@ -373,7 +373,32 @@ doctor_check_chosen() {
       "omamac update puts it back; omamac uninstall $id drops it" || result=1
   done
   if [ "${#skipped[@]}" -eq 0 ] && [ "$result" -eq 0 ]; then doctor_report ok "$what"; fi
+  [ "${#skipped[@]}" -gt 0 ] || doctor_list languages "${CLI_KEYS[@]}" docker
   return "$result"
+}
+
+# doctor_list <key>…: under a ✓ or ✗ line, one line per question with picks:
+# what omamac installed, by its labels, leaving out what DOCTOR_GONE names. A
+# yes/no question's line is its title alone ("Wispr Flow").
+doctor_list() {
+  local key id ids labels
+  for key in "$@"; do
+    ids=() labels=()
+    case ${QUESTION_KIND[$key]} in
+      yesno) [ "${CHOICES[$key]:-}" != yes ] || ids=("${key//_/-}") ;;
+      single) [ "${CHOICES[$key]:-none}" = none ] || ids=("${CHOICES[$key]}") ;;
+      *) read -ra ids <<< "${CHOICES[$key]:-}" ;;
+    esac
+    for id in ${ids[@]+"${ids[@]}"}; do
+      [[ " ${DOCTOR_GONE[*]} " != *" $id "* ]] || continue
+      if [ "${QUESTION_KIND[$key]}" = yesno ]; then
+        printf '    %s\n' "${QUESTION_TITLE[$key]}"
+        continue 2
+      fi
+      labels+=("$(question_label "$key" "$id")")
+    done
+    [ "${#labels[@]}" -eq 0 ] || printf '    %s: %s\n' "${QUESTION_TITLE[$key]}" "$(clis_join "${labels[@]}")"
+  done
 }
 
 # doctor_check_apps: "Your apps". Appends the chosen apps that are gone to DOCTOR_GONE,
@@ -409,6 +434,7 @@ doctor_check_apps() {
     esac
   done
   if [ "$result" -eq 0 ]; then doctor_report ok "$what"; fi
+  doctor_list "${APPS_KEYS[@]}" wispr_flow
   return "$result"
 }
 
