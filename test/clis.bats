@@ -32,7 +32,7 @@ installs() { grep '^brew install' "$STUB_LOG" || true; }
   [ "$status" -eq 0 ]
   [ "$(installs)" = "brew install awscli gh
 brew install --cask gcloud-cli" ]
-  [[ "$output" == *"✓ Cloud CLIs are installed"* ]]
+  [[ "$output" == *"✓ Your CLIs are installed"* ]]
 }
 
 @test "terraform: taps first, only when not tapped" {
@@ -77,7 +77,7 @@ brew install hashicorp/tap/terraform" ]
   in_lib 'gh gcloud' 'clis_install'
   [ "$status" -eq 0 ]
   [ -z "$(installs)" ]
-  [[ "$output" == *"✓ Cloud CLIs are installed"* ]]
+  [[ "$output" == *"✓ Your CLIs are installed"* ]]
 }
 
 @test "clis_where keeps the given order and splits by state" {
@@ -115,12 +115,54 @@ the azure-cli cask" ]
   T_BREW_LIST_FAIL=1 in_lib gh 'clis_install'
   [ "$status" -ne 0 ]
   [ -z "$(installs)" ]
-  [[ "$output" != *"Cloud CLIs are installed"* ]]
+  [[ "$output" != *"CLIs are installed"* ]]
 }
 
 @test "brew tap fails: fails, installs nothing" {
   T_BREW_TAP_FAIL=1 in_lib terraform 'clis_install'
   [ "$status" -ne 0 ]
   [ -z "$(installs)" ]
-  [[ "$output" != *"Cloud CLIs are installed"* ]]
+  [[ "$output" != *"CLIs are installed"* ]]
+}
+
+@test "coding agents: formulas and casks install beside the cloud CLIs, in one call each" {
+  in_lib gh 'CHOICES[coding_agents]="claude-code opencode codex copilot-cli antigravity-cli"; clis_install'
+  [ "$status" -eq 0 ]
+  [ "$(installs)" = "brew install gh opencode
+brew install --cask claude-code codex copilot-cli antigravity-cli" ]
+  [[ "$output" == *"Installing GitHub CLI, opencode"* ]]
+  [[ "$output" == *"Installing Claude Code, Codex, Copilot, Antigravity CLI"* ]]
+  [[ "$output" == *"✓ Your CLIs are installed"* ]]
+}
+
+@test "clis_chosen, clis_key and clis_label cover both CLI questions" {
+  in_lib 'gh aws' 'CHOICES[coding_agents]="codex"
+    echo $(clis_chosen); clis_key codex; clis_key gh; clis_label copilot-cli; clis_label gcloud
+    clis_key vlc || echo "vlc: $?"'
+  [ "$status" -eq 0 ]
+  [ "$output" = "gh aws codex
+coding_agents
+cloud_clis
+Copilot
+Google Cloud CLI
+vlc: 1" ]
+}
+
+@test "clis_what names each coding agent's formula or cask" {
+  in_lib '' 'for id in claude-code codex copilot-cli antigravity-cli opencode; do clis_what "$id"; done'
+  [ "$output" = "the claude-code cask
+the codex cask
+the copilot-cli cask
+the antigravity-cli cask
+opencode" ]
+}
+
+@test "every CLI option has a formula or a cask" {
+  in_lib '' 'for key in "${CLI_KEYS[@]}"; do
+      for id in $(question_values "$key"); do
+        [ -n "${CLI_FORMULA[$id]:-}${CLI_CASK[$id]:-}" ] || echo "no package: $id"
+      done
+    done'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }

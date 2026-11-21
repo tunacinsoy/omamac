@@ -81,7 +81,7 @@ snapshot() {
   gum_answers
   run --separate-stderr omamac_uninstall php
   [ "$status" -eq 2 ]
-  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, brave, chrome, firefox, whatsapp, telegram, signal, discord, slack, zoom, spotify, vlc, cap, dropbox, google-drive, vscode, raycast, obsidian, wispr-flow, desktops, window-margins, colima, docker-desktop, dock, dock-autohide."* ]]
+  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, claude-code, codex, copilot-cli, antigravity-cli, opencode, brave, chrome, firefox, whatsapp, telegram, signal, discord, slack, zoom, spotify, vlc, cap, dropbox, google-drive, vscode, claude, chatgpt, gemini, antigravity, raycast, obsidian, wispr-flow, desktops, window-margins, colima, docker-desktop, dock, dock-autohide."* ]]
   [ -z "$(prompts)" ]
 }
 
@@ -949,4 +949,40 @@ DOCK_RECORD_REL=.local/state/omamac/dock-before.plist
   run omamac_uninstall
   [ "$status" -eq 0 ]
   [ "$(prompts)" = "gum choose --header What should omamac remove? --label-delimiter=: Nothing:none Dock cleanup:dock Dock auto-hide:dock-autohide" ]
+}
+
+@test "every name omamac uninstall takes is one thing only" {
+  run "$BASH5" -c "source '$REPO_ROOT/lib/questions.sh'
+    for k in \"\${QUESTION_KEYS[@]}\"; do
+      case \${QUESTION_KIND[\$k]} in multi) question_values \"\$k\" ;; esac
+    done
+    echo wispr-flow desktops window-margins colima docker-desktop dock dock-autohide | tr ' ' '\n'"
+  [ "$status" -eq 0 ]
+  [ -z "$(sort <<< "$output" | uniq -d)" ]
+}
+
+@test "antigravity-cli: brew uninstall --cask antigravity-cli, the Antigravity app stays" {
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask antigravity-cli antigravity
+  choose coding_agents 'antigravity-cli opencode'
+  choose apps_ai antigravity
+  : > "$STUB_LOG"
+  gum_answers yes
+  run omamac_uninstall antigravity-cli
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Antigravity CLI: the antigravity-cli cask"* ]]
+  [ "$(grep '^brew uninstall' "$STUB_LOG")" = "brew uninstall --cask antigravity-cli" ]
+  [ -e "$OMAMAC_TEST_BREW_PREFIX/Caskroom/antigravity" ]
+  grep -qx 'coding_agents=opencode' "$CHOICES_FILE"
+  grep -qx 'apps_ai=antigravity' "$CHOICES_FILE"
+}
+
+@test "opencode: brew uninstall opencode" {
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install opencode
+  choose coding_agents opencode
+  : > "$STUB_LOG"
+  gum_answers yes
+  run omamac_uninstall opencode
+  [ "$status" -eq 0 ]
+  [ "$(grep '^brew uninstall' "$STUB_LOG")" = "brew uninstall opencode" ]
+  grep -qx 'coding_agents=' "$CHOICES_FILE"
 }

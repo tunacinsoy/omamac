@@ -197,7 +197,7 @@ broken" ]
   gum_answers yes
   run "$BASH5" "$REPO_ROOT/install.sh"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"and the languages, cloud CLIs and Docker you chose."* ]]
+  [[ "$output" == *"and the languages, cloud CLIs, coding agents and Docker you chose."* ]]
   [[ "$output" == *"colima starts Docker in the background now and at each login."* ]]
   [[ "$output" == *"The first start downloads Linux and takes a few minutes."* ]]
   # The notes come before the log line.
@@ -212,7 +212,7 @@ broken" ]
   gum_answers yes
   run "$BASH5" "$REPO_ROOT/install.sh"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"and the languages, cloud CLIs and Docker you chose."* ]]
+  [[ "$output" == *"and the languages, cloud CLIs, coding agents and Docker you chose."* ]]
   [[ "$output" == *"Open Docker Desktop once to finish its setup."* ]]
 }
 

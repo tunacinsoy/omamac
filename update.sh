@@ -75,14 +75,14 @@ update_choices() {
 }
 
 # update_upgrade: upgrade, by name, the installed formulas omamac installs:
-# the core, bash, gum and the chosen cloud CLIs (full names).
+# the core, bash, gum and the chosen cloud CLIs and coding agents (full names).
 update_upgrade() {
   local list pinned_list installed=() pinned=() kept=() name ids=() chosen=()
   local -A is_pinned=()
   OMAMAC_STEP='upgrading your tools'
   list=$(core_where installed "${CORE_FORMULAS[@]}" bash gum)
   [ -z "$list" ] || mapfile -t installed <<< "$list"
-  read -ra ids <<< "${CHOICES[cloud_clis]:-}"
+  mapfile -t ids < <(clis_chosen)
   if [ "${#ids[@]}" -gt 0 ]; then
     list=$(clis_where installed "${ids[@]}")
     [ -z "$list" ] || mapfile -t chosen <<< "$list"
@@ -117,8 +117,8 @@ update_upgrade() {
 # greedy call, as casks update themselves and brew would otherwise skip them.
 update_upgrade_casks() {
   local ids=() id list casks=() names=()
-  read -ra ids <<< "${CHOICES[cloud_clis]:-}"
-  OMAMAC_STEP='upgrading the cloud CLI casks'
+  mapfile -t ids < <(clis_chosen)
+  OMAMAC_STEP='upgrading the CLI casks'
   for id in "${ids[@]}"; do
     [ -z "${CLI_CASK[$id]:-}" ] || casks+=("$id")
   done
@@ -127,7 +127,7 @@ update_upgrade_casks() {
   [ -n "$list" ] || return 0
   mapfile -t casks <<< "$list"
   for id in "${casks[@]}"; do names+=("${CLI_CASK[$id]}"); done
-  ui_run "Upgrading the cloud CLIs that are casks" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask --greedy "${names[@]}"
+  ui_run "Upgrading the CLIs that are casks" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask --greedy "${names[@]}"
 }
 
 # update_upgrade_apps: upgrade the apps Homebrew manages and lists as outdated:

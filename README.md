@@ -9,7 +9,7 @@ Every Mac gets:
 - neovim with LazyVim, btop, mise, eza, bat, zoxide, ripgrep, fd, lazygit, tree-sitter-cli and jq;
 - one theme for Ghostty, herdr, btop, the prompt and neovim, switched with `omamac theme`.
 
-It asks first, and installs only what you pick: desktop apps, Wispr Flow, languages, cloud CLIs, Docker (colima or Docker Desktop), and four macOS settings (desktops as workspaces, window margins, Dock cleanup, Dock auto-hide). Nothing is picked for you. Tools and apps come from Homebrew; languages come from mise.
+It asks first, and installs only what you pick: desktop apps (AI apps among them), Wispr Flow, languages, cloud CLIs, coding agents for the terminal, Docker (colima or Docker Desktop), and four macOS settings (desktops as workspaces, window margins, Dock cleanup, Dock auto-hide). Nothing is picked for you. Tools and apps come from Homebrew; languages come from mise.
 
 ## Before you begin
 
@@ -52,6 +52,8 @@ To let `omamac update` upgrade Ghostty, Docker Desktop and your apps, and `omama
 
 If you chose Docker Desktop, open it once to finish its setup.
 
+Each coding agent and AI app asks you to sign in the first time you use it: run `claude`, `codex`, `copilot`, `agy` or `opencode` in Ghostty, or open the app. ChatGPT's app includes Codex; Antigravity CLI is Google's successor to Gemini CLI. omamac stores no keys or logins.
+
 If you chose desktops as workspaces, give an app its own desktop: right-click its Dock icon, then Options, then Assign To. macOS can refuse Reduce motion; omamac then says so. Search for Reduce motion in System Settings and turn it on.
 
 omamac doesn't set up git, SSH keys or GitHub sign-in. To do it yourself:
@@ -72,12 +74,12 @@ omamac update
 It updates omamac and what omamac installed, nothing else:
 
 - pulls omamac (and stops if you edited its files) and rewrites the files omamac writes;
-- puts back any core tool, app, language or cloud CLI that is missing, and the macOS settings you chose if you changed them;
-- upgrades the core tools, bash, gum, colima and its tools if you chose it, the cloud CLIs you chose (Google Cloud's cask with `--greedy`) and the languages you chose;
+- puts back any core tool, app, language, cloud CLI or coding agent that is missing, and the macOS settings you chose if you changed them;
+- upgrades the core tools, bash, gum, colima and its tools if you chose it, the cloud CLIs and coding agents you chose (the casks among them with `--greedy`) and the languages you chose;
 - upgrades Ghostty, Docker Desktop and your apps only when Homebrew lists them as outdated (they update themselves), and only if your terminal has App Management; otherwise it says what to click and exits 1. Homebrew may ask for your password for some of them;
 - runs `mise prune`, which deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`.
 
-`omamac install` adds the apps, languages and cloud CLIs you didn't pick before. It also asks again any macOS setting you answered no, and the Docker question if you answered No Docker.
+`omamac install` adds the apps, languages, cloud CLIs and coding agents you didn't pick before. It also asks again any macOS setting you answered no, and the Docker question if you answered No Docker.
 
 `omamac doctor` checks that everything is healthy. For each problem it says why it matters and how to fix it, and it offers to reinstall a pick that is gone.
 
@@ -99,8 +101,8 @@ Ghostty starts it for you; or run `herdr`. Ctrl g is the prefix, then `p` pane, 
 
 `omamac uninstall <name>` removes one thing you picked, after asking; with no name, it asks what to remove.
 
-- **Apps:** `brave`, `chrome`, `firefox`, `whatsapp`, `telegram`, `signal`, `discord`, `slack`, `zoom`, `spotify`, `vlc`, `cap`, `dropbox`, `google-drive`, `vscode`, `raycast`, `obsidian` and `wispr-flow`. omamac first asks whether to remove the app's settings and data too; Enter alone is no, and yes lets Homebrew delete what the app keeps in `~/Library`. Homebrew may ask for your password. An app Homebrew took over is removed like the others; one still installed by hand stays, and omamac only forgets your pick. With Dock cleanup on, the app's tile leaves the Dock; an app you installed by hand keeps its tile.
-- **Languages:** `ruby` (with Rails), `node`, `go`, `python`, `elixir`, `rust` and `java`. **Cloud CLIs:** `azure`, `aws`, `gcloud`, `gh` and `terraform`. A version another mise config uses stays, and Homebrew taps stay.
+- **Apps:** `brave`, `chrome`, `firefox`, `whatsapp`, `telegram`, `signal`, `discord`, `slack`, `zoom`, `spotify`, `vlc`, `cap`, `dropbox`, `google-drive`, `vscode`, `claude`, `chatgpt`, `gemini`, `antigravity`, `raycast`, `obsidian` and `wispr-flow`. omamac first asks whether to remove the app's settings and data too; Enter alone is no, and yes lets Homebrew delete what the app keeps in `~/Library`. Homebrew may ask for your password. An app Homebrew took over is removed like the others; one still installed by hand stays, and omamac only forgets your pick. With Dock cleanup on, the app's tile leaves the Dock; an app you installed by hand keeps its tile.
+- **Languages:** `ruby` (with Rails), `node`, `go`, `python`, `elixir`, `rust` and `java`. **Cloud CLIs:** `azure`, `aws`, `gcloud`, `gh` and `terraform`. **Coding agents:** `claude-code`, `codex`, `copilot-cli`, `antigravity-cli` and `opencode`. A version another mise config uses stays, and Homebrew taps stay.
 - **macOS settings:** `omamac uninstall desktops`, `window-margins` and `dock-autohide` put the earlier values back and turn the answer to no. `omamac uninstall dock` puts the Dock back to how it was before the cleanup; changes you made to it since are undone, and suggested and recent apps come back.
 - **Docker:** `omamac uninstall colima` removes colima, its tools, links and service; your Docker data stays in `~/.colima`. `omamac uninstall docker-desktop` removes the Docker Desktop app and lazydocker (a hand-installed app stays); your images, containers and volumes stay unless you say yes to removing its settings and data, which also deletes `~/.docker`.
 
@@ -122,6 +124,7 @@ To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/ins
 - The apps you chose, installed with Homebrew (casks) in Applications. If you chose an app you installed by hand, omamac asks "Let Homebrew take over …?" (Enter alone is no). Yes keeps the app where it is, and Homebrew updates it from then on; no leaves it as it is and drops it from your picks. A Zoom or Google Drive you installed by hand is left alone and dropped, since Homebrew would install it again. For an app you install by hand later, `omamac doctor` and each run show the command. Zoom and Google Drive run an installer, so Homebrew asks for your password; omamac says so first. Google Drive also brings Google Docs, Sheets and Slides. VS Code, Obsidian, VLC and Firefox add a command to `/opt/homebrew/bin`, such as `code`.
 - bash, gum and the core tools (`starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`), installed with Homebrew.
 - The languages you chose (Ruby on Rails, Node.js, Go, Python, Elixir, Rust, Java), installed with mise, and the cloud CLIs you chose (Azure, AWS, Google Cloud, GitHub, Terraform), installed with Homebrew. Terraform comes from `hashicorp/tap`.
+- The coding agents you chose (Claude Code, Codex CLI, Copilot CLI, Antigravity CLI, opencode), installed with Homebrew.
 - `~/.config/mise/conf.d/omamac.toml`: the languages, written by omamac again on every run. Your own pins in `~/.config/mise/config.toml` win and are never touched.
 - `~/.config/nvim`: LazyVim's starter, only if you don't have one. Yours is kept. If omamac made it, it holds `lua/plugins/omamac.lua`.
 - One line in `~/.zprofile` (skipped if it already sets up Homebrew) and one in `~/.zshrc`. Both end in `# added by omamac`.

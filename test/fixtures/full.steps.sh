@@ -16,7 +16,10 @@ settings_now() {
 checkout=~/.local/share/omamac
 mise=/opt/homebrew/bin/mise
 # The catalog in catalog order (lib/questions.sh), then Wispr Flow.
-ids=(brave chrome firefox whatsapp telegram signal discord slack zoom spotify vlc cap dropbox google-drive vscode raycast obsidian wispr-flow)
+ids=(brave chrome firefox whatsapp telegram signal discord slack zoom spotify vlc cap dropbox google-drive vscode
+  claude chatgpt gemini antigravity raycast obsidian wispr-flow)
+# Each coding agent as <id>:<its command>.
+agents=(claude-code:claude codex:codex copilot-cli:copilot antigravity-cli:agy opencode:opencode)
 
 # 1. Every app is in Applications and Homebrew lists its cask. No app's
 # binary runs: it would wait on macOS's first-open check.
@@ -44,6 +47,9 @@ aws --version
 gcloud version
 gh --version
 terraform version
+# Every coding agent's command is Homebrew's. None runs: a cask's binary may
+# wait on macOS's first-open check, and each wants a sign-in.
+for a in "${agents[@]}"; do [[ -x /opt/homebrew/bin/${a#*:} ]]; done
 
 # 2. The Dock: no Apple app, no Downloads, omamac's apps in order.
 [[ $(dock_urls persistent-apps) == "$dock_want" ]]
@@ -87,14 +93,18 @@ for tool in ruby node go python elixir rust java; do
 done
 for id in azure aws gcloud gh terraform; do omamac uninstall "$id"; done
 for cmd in az aws gcloud gh terraform; do [[ ! -e /opt/homebrew/bin/$cmd ]]; done
+for a in "${agents[@]}"; do
+  omamac uninstall "${a%%:*}"
+  [[ ! -e /opt/homebrew/bin/${a#*:} ]]
+done
 omamac uninstall dock
 omamac uninstall dock-autohide
 omamac uninstall desktops
 omamac uninstall window-margins
 choices=$(< ~/.local/state/omamac/choices.env)
 for line in apps_browsers= apps_communication= apps_media= apps_screen_recording= apps_storage= \
-  apps_developer= apps_productivity= wispr_flow=no desktops=no window_margins=no dock=no \
-  dock_autohide=no languages= cloud_clis= docker=none; do
+  apps_developer= apps_ai= apps_productivity= wispr_flow=no desktops=no window_margins=no dock=no \
+  dock_autohide=no languages= cloud_clis= coding_agents= docker=none; do
   [[ $'\n'$choices$'\n' == *$'\n'$line$'\n'* ]]
 done
 

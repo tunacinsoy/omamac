@@ -41,7 +41,7 @@ apps_load() {
 }
 apps_load || return 1
 
-APPS_KEYS=(apps_browsers apps_communication apps_media apps_screen_recording apps_storage apps_developer apps_productivity)
+APPS_KEYS=(apps_browsers apps_communication apps_media apps_screen_recording apps_storage apps_developer apps_ai apps_productivity)
 
 # apps_ids: every app id, in question order.
 apps_ids() {
