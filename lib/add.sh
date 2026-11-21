@@ -228,5 +228,9 @@ add_run() {
     [ "${#allow[@]}" -eq 0 ] || lines+=("${allow[@]}")
   fi
   [ "${#DOCKER_NOTES[@]}" -eq 0 ] || lines+=("${DOCKER_NOTES[@]}")
-  ui_box "${lines[@]}" "Log: $OMAMAC_LOG" "Open a new terminal window to use them."
+  read -ra had <<< "${picks[languages]:-}"
+  for v in ${had[@]+"${had[@]}"}; do lines+=("$(question_label languages "$v"): ${LANGUAGE_COMMANDS[$v]}"); done
+  # mise sets the PATH before each prompt, and zsh looks up a command it hasn't
+  # seen, so a shell already open (herdr keeps them) needs no restart.
+  ui_box "${lines[@]}" "Log: $OMAMAC_LOG" "They work in every shell; one already open needs one Enter first."
 }

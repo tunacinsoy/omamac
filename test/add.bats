@@ -149,7 +149,10 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   [ "${#logs[@]}" -eq 1 ]
   [[ "$output" == *"Installed: Go, Rust, AWS CLI"* ]]
   [[ "$output" == *"Log: ${logs[0]}"* ]]
-  [[ "$output" == *"Open a new terminal window to use them."* ]]
+  [[ "$output" == *"Go: go"* ]]
+  [[ "$output" == *"Rust: rustc and cargo"* ]]
+  [[ "$output" == *"They work in every shell; one already open needs one Enter first."* ]]
+  [[ "$output" != *"new terminal"* ]]
 }
 
 @test "Ctrl-C at a question: exit 130, nothing saved" {
@@ -548,6 +551,14 @@ by_hand() { # <cask> <App.app>
   run "$BASH5" -c "OMAMAC_CHECKOUT='$REPO_ROOT'
     for lib in paths ui questions choices log core apps clis ask add; do source '$REPO_ROOT/lib/'\$lib.sh; done
     for s in \"\${ADD_SECTIONS[@]}\"; do add_section \"\$s\" >/dev/null || echo \"not a section: \$s\"; ! add_id_key \"\$s\" || echo \"also a name: \$s\"; done"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "every language names its commands" {
+  run "$BASH5" -c "OMAMAC_CHECKOUT='$REPO_ROOT'
+    for lib in paths ui questions languages; do source '$REPO_ROOT/lib/'\$lib.sh; done
+    for id in \$(question_values languages); do [ -n \"\${LANGUAGE_COMMANDS[\$id]:-}\" ] || echo \"no commands: \$id\"; done"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
