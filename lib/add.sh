@@ -6,14 +6,124 @@
 
 # The questions omamac install asks again, with only their unpicked options.
 ADD_KEYS=("${APPS_KEYS[@]}" wispr_flow languages cloud_clis coding_agents desktops window_margins dock dock_autohide docker)
+ADD_SECTIONS=(apps languages cloud-clis coding-agents docker macos)
 
-# add_run: CHOICES is loaded (bin/omamac did that). Ask, show the additions,
-# and save and apply them only after "Install?" is yes, so a no changes nothing.
+# add_section <name>: the questions of one section of omamac install, one per line.
+# Returns 1 when the name isn't a section.
+add_section() {
+  case $1 in
+    apps) printf '%s\n' "${APPS_KEYS[@]}" wispr_flow ;;
+    languages) echo languages ;;
+    cloud-clis) echo cloud_clis ;;
+    coding-agents) echo coding_agents ;;
+    docker) echo docker ;;
+    macos) printf '%s\n' desktops window_margins dock dock_autohide ;;
+    *) return 1 ;;
+  esac
+}
+
+# add_id_key <id>: the question an id answers, the same ids omamac uninstall
+# takes: a yes/no question's id is its key with dashes (dock-autohide), any
+# other question's are its values. Returns 1 for an unknown id.
+add_id_key() {
+  local key
+  for key in "${ADD_KEYS[@]}"; do
+    if [ "${QUESTION_KIND[$key]}" = yesno ]; then
+      [ "${key//_/-}" != "$1" ] || { echo "$key"; return 0; }
+    elif [ "$1" != none ] && question_has "$key" "$1"; then
+      echo "$key"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# add_targets <name>…: sort what omamac install was given into ADD_ASK (the
+# questions of the sections named) and ADD_IDS (key and id, one per line). An
+# unknown name stops the run before anything is asked.
+add_targets() {
+  local name key keys=()
+  ADD_ASK=() ADD_IDS=()
+  for name in "$@"; do
+    if mapfile -t keys < <(add_section "$name") && [ "${#keys[@]}" -gt 0 ]; then
+      ADD_ASK+=("${keys[@]}")
+    elif key=$(add_id_key "$name"); then
+      ADD_IDS+=("$key $name")
+    else
+      ui_fail "omamac doesn't know '$name'. Name a section ($(clis_join "${ADD_SECTIONS[@]}")) or what to install, such as $(clis_join go docker-desktop vscode)."
+      exit 2
+    fi
+  done
+  # Asked in the table's order, each once.
+  mapfile -t keys < <(printf '%s\n' "${ADD_ASK[@]}")
+  ADD_ASK=()
+  for key in "${ADD_KEYS[@]}"; do
+    [[ " ${keys[*]} " != *" $key "* ]] || ADD_ASK+=("$key")
+  done
+}
+
+# add_pick_ids: turn ADD_IDS into picks, as if their questions had been
+# answered: an id already picked is said and skipped, a hand-installed app is
+# offered to Homebrew. Writes into add_run's picks.
+add_pick_ids() {
+  local line key id had=() label
+  for line in "${ADD_IDS[@]}"; do
+    key=${line%% *} id=${line#* }
+    case ${QUESTION_KIND[$key]} in
+      yesno)
+        label=${QUESTION_TITLE[$key]}
+        if [ "${CHOICES[$key]:-}" = yes ] || [ "${picks[$key]:-}" = yes ]; then
+          ui_info "$label is already on."
+          continue
+        fi
+        CHOICES[$key]=yes
+        [ "$key" != wispr_flow ] || apps_ask_adopt wispr-flow
+        [ "${CHOICES[$key]}" != yes ] || picks[$key]=yes
+        CHOICES[$key]=no
+        ;;
+      single)
+        label=$(question_label "$key" "$id")
+        if [ "${CHOICES[$key]:-none}" = "$id" ]; then
+          ui_info "$label is already installed."
+          continue
+        fi
+        if [ "${CHOICES[$key]:-none}" != none ] || { [ -n "${picks[$key]:-}" ] && [ "${picks[$key]}" != "$id" ]; }; then
+          ui_fail "${QUESTION_TITLE[$key]} is already $(question_label "$key" "${picks[$key]:-${CHOICES[$key]}}"). To switch, uninstall it first: omamac uninstall ${picks[$key]:-${CHOICES[$key]}}."
+          exit 2
+        fi
+        picks[$key]=$id
+        ;;
+      *)
+        label=$(question_label "$key" "$id")
+        read -ra had <<< "${CHOICES[$key]:-}"
+        if [[ " ${had[*]} ${picks[$key]:-} " == *" $id "* ]]; then
+          ui_info "$label is already installed."
+          continue
+        fi
+        # apps_ask_adopt reads and drops from CHOICES; put the saved answer back.
+        CHOICES[$key]=$id
+        if [[ $key == apps_* ]]; then apps_ask_adopt "$id"; fi
+        [ -z "${CHOICES[$key]}" ] || picks[$key]="${picks[$key]:+${picks[$key]} }$id"
+        CHOICES[$key]=${had[*]}
+        ;;
+    esac
+  done
+}
+
+# add_run [<section or id>…]: CHOICES is loaded (bin/omamac did that). Ask
+# every question, only the sections named, or nothing for the ids named; show
+# the additions, and save and apply them only after "Install?" is yes, so a no
+# changes nothing.
 add_run() {
   local key v had=() new=() left=() lines=() labels=() names=() apps=() allow=() joined asked=''
   local -A picks=()
+  local ask=("${ADD_KEYS[@]}")
+  if [ "$#" -gt 0 ]; then
+    add_targets "$@"
+    ask=(${ADD_ASK[@]+"${ADD_ASK[@]}"})
+  fi
   OMAMAC_STEP='asking the questions'
-  for key in "${ADD_KEYS[@]}"; do
+  for key in ${ask[@]+"${ask[@]}"}; do
     if [ "${QUESTION_KIND[$key]}" = yesno ]; then
       [ "${CHOICES[$key]:-}" != yes ] || continue
       [ -n "$asked" ] || ask_need_tty
@@ -56,6 +166,11 @@ add_run() {
     picks[$key]=${CHOICES[$key]}
     CHOICES[$key]=${had[*]}
   done
+  if [ "$#" -gt 0 ] && [ "${#ADD_IDS[@]}" -gt 0 ]; then
+    [ -n "$asked" ] || ask_need_tty
+    asked=1
+    add_pick_ids
+  fi
   if [ -z "$asked" ]; then
     ui_info "You've picked everything omamac offers here."
     exit 0
