@@ -32,6 +32,8 @@ in_lib() {
   grep -qxF 'macos-option-as-alt = left' "$BATS_TEST_TMPDIR/out"
   grep -qxF 'keybind = alt+arrow_left=unbind' "$BATS_TEST_TMPDIR/out"
   grep -qxF 'keybind = alt+arrow_right=unbind' "$BATS_TEST_TMPDIR/out"
+  grep -qxF 'keybind = super+d=ignore' "$BATS_TEST_TMPDIR/out"
+  grep -qxF 'keybind = super+shift+d=ignore' "$BATS_TEST_TMPDIR/out"
   ! grep -q '@' "$BATS_TEST_TMPDIR/out"
   # The theme's colours come last, so they win over the template.
   tail -n 20 "$BATS_TEST_TMPDIR/out" | grep -qxF "$(grep '^background = ' "$REPO_ROOT/themes/tokyo-night/ghostty.conf")"
