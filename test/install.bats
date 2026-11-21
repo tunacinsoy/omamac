@@ -142,10 +142,12 @@ snapshot() {
   [[ "$output" == *"Open Ghostty"* ]]
   [[ "$output" == *"App Management"* ]]
   [[ "$output" == *"click Open"* ]]
-  [[ "$output" == *"three Ghostty settings"* ]]
+  [[ "$output" == *"five Ghostty settings"* ]]
   [[ "$output" == *"colours"* ]]
   [[ "$output" == *"command"* ]]
   [[ "$output" == *"macos-option-as-alt"* ]]
+  [[ "$output" == *"Option ←/→, which go to herdr"* ]]
+  [[ "$output" == *"Cmd D, which does nothing"* ]]
 }
 
 @test "fresh: asks, saves, then writes the Phase 1 files" {
