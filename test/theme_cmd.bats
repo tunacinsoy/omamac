@@ -29,6 +29,16 @@ omamac_theme() {
 # stamp: every omamac theme file's mtime.
 stamp() { (cd "$OM" && find . -type f -exec stat -f '%N %m' {} + | sort); }
 
+@test "theme nord reaches VS Code" {
+  local bin="$OMAMAC_TEST_APPLICATIONS/Visual Studio Code.app/Contents/Resources/app/bin"
+  mkdir -p "$bin"
+  ln -sf "$HELPERS_DIR/fake-code" "$bin/code"
+  run omamac_theme nord
+  [ "$status" -eq 0 ]
+  cmp "$HOME/.vscode/extensions/omamac.omamac-theme-1.0.0/themes/omamac.json" "$REPO_ROOT/themes/nord/vscode.json"
+  [[ "$output" == *"neovim and VS Code the next time they open"* ]]
+}
+
 @test "theme dracula: saved, applied, reloaded, summary" {
   run omamac_theme dracula
   [ "$status" -eq 0 ]

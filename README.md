@@ -7,7 +7,7 @@ Every Mac gets:
 - Ghostty, the terminal, which opens straight into herdr, the multiplexer;
 - zsh with the starship prompt, aliases, history search and fzf;
 - neovim with LazyVim, btop, mise, eza, bat, zoxide, ripgrep, fd, lazygit, tree-sitter-cli and jq;
-- one theme for Ghostty, herdr, btop, the prompt and neovim, switched with `omamac theme`.
+- one theme for Ghostty, herdr, btop, the prompt, neovim and VS Code, switched with `omamac theme`.
 
 It asks first, and installs only what you pick: desktop apps (AI apps among them), Wispr Flow, languages, cloud CLIs, coding agents for the terminal, Docker (colima or Docker Desktop), and four macOS settings (desktops as workspaces, window margins, Dock cleanup, Dock auto-hide). Nothing is picked for you. Tools and apps come from Homebrew; languages come from mise.
 
@@ -85,9 +85,11 @@ It updates omamac and what omamac installed, nothing else:
 
 ## Themes
 
-`omamac theme [<theme>]` saves a theme, applies it to Ghostty, herdr, btop, the prompt and neovim, and reloads Ghostty, herdr and btop if they are running. Without a name it asks. The themes are `catppuccin`, `dracula`, `everforest`, `gruvbox`, `kanagawa`, `matte-black`, `nord`, `one-dark`, `osaka-jade`, `ristretto`, `rose-pine`, `solarized` and `tokyo-night`.
+`omamac theme [<theme>]` saves a theme, applies it to Ghostty, herdr, btop, the prompt, neovim and VS Code, and reloads Ghostty, herdr and btop if they are running. neovim and VS Code show it the next time they open. Without a name it asks. The themes are `catppuccin`, `dracula`, `everforest`, `gruvbox`, `kanagawa`, `matte-black`, `nord`, `one-dark`, `osaka-jade`, `ristretto`, `rose-pine`, `solarized` and `tokyo-night`.
 
 btop: settings you save from btop's menu go into omamac's `btop.conf` and don't last, because omamac writes it again. Running `/opt/homebrew/bin/btop` without the alias makes btop write its own config in `~/.config/btop`, which then takes over from omamac's.
+
+VS Code: omamac installs a small extension of its own, `omamac.omamac-theme`, that holds the theme as one colour theme named "omamac" and makes it VS Code's default. omamac never writes your `settings.json`. If you set `workbench.colorTheme` there (or pick a theme in VS Code, which writes it), yours wins, and omamac says so. To follow omamac's theme again, pick "omamac" in VS Code's theme list, or remove that line. omamac only reads your default profile's settings, and VS Code's "auto detect color scheme" setting picks its own themes, so omamac's doesn't show while it is on.
 
 neovim: if you have your own `~/.config/nvim`, omamac leaves it alone, and `omamac doctor` offers to move it aside to `~/.config/nvim.bak-<date>` so LazyVim and the theme can be set up.
 
@@ -114,6 +116,7 @@ To change an earlier answer, for example colima to Docker Desktop, uninstall one
 2. If omamac installed them: `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq` and `brew uninstall --cask ghostty`.
 3. Delete the two lines ending in `# added by omamac`, and the line naming `~/.config/omamac/ghostty.conf` from your Ghostty config.
 4. Delete the three folders (`~/.config/omamac`, `~/.local/share/omamac`, `~/.local/state/omamac`) and `~/.config/mise/conf.d/omamac.toml`, and `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`).
+5. If VS Code stays: `code --uninstall-extension omamac.omamac-theme`.
 
 To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
 
@@ -134,6 +137,7 @@ To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/ins
 - One line in a Ghostty config file: `config-file = ?~/.config/omamac/ghostty.conf`. It goes in the last of Ghostty's four config files that exists, or in a new `~/.config/ghostty/config.ghostty`. If one of them already has it, nothing is added.
 - `~/.config/omamac/ghostty.conf`: written again on every run. It takes over three Ghostty settings: its colours (your theme), `command` (starts herdr) and `macos-option-as-alt` (left). Ghostty loads the included file after the rest of your config, wherever the line sits, so these win over the same settings in your own files.
 - Theme files in `~/.config/omamac`, written again on every run and every `omamac theme`: `ghostty.conf`, `herdr.toml`, `starship.toml` (the prompt), `btop.conf` with `btop-themes/<theme>.theme`, and `neovim.lua` (loaded by `~/.config/nvim/lua/plugins/omamac.lua`).
+- If VS Code is installed: omamac's theme extension, `omamac.omamac-theme`, in `~/.vscode/extensions/omamac.omamac-theme-1.0.0`, written again whenever the theme changes. If VS Code has already run on this Mac and doesn't list it yet, omamac installs it once with VS Code's `code --install-extension`. `omamac uninstall vscode` removes it with the rest of `~/.vscode` when you say yes to removing the app's data too. Disabling it in VS Code's Extensions view lasts; removing it there doesn't, since the next run installs it again.
 - `zshrc` sets `STARSHIP_CONFIG` to omamac's `starship.toml` and aliases `btop` to use omamac's `btop.conf` and themes. It does each only if you have no `~/.config/starship.toml` or `~/.config/btop/btop.conf` (and no `STARSHIP_CONFIG` of your own). If you do, your file is kept and never written, and the theme doesn't reach that tool.
 - `~/.local/state/omamac`: logs, your saved answers (`choices.env`), `macos-settings.tsv` (the earlier value of each macOS setting omamac changed), `colima-service` (tells omamac it already started colima's service), `dock-before.plist` (the Dock from before the cleanup) and `dock-added` (the apps omamac has put in, or found in, the Dock: it never adds them again, so a tile you remove stays gone).
 - If you chose colima: `colima docker docker-compose docker-buildx lazydocker`, installed with Homebrew; two links in `~/.docker/cli-plugins`, `docker-compose` and `docker-buildx`, to Homebrew's plugins, so `docker compose` and `docker buildx` work (a file of yours there is kept; a link of yours that points at nothing, such as one Docker Desktop left, is kept too, and omamac says to remove it); and colima's login service, started once with `brew services start colima`. To stop colima starting at login: `brew services stop colima`. omamac won't start it again.

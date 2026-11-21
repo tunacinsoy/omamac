@@ -12,6 +12,12 @@ for c in vlc cap zoom visual-studio-code claude chatgpt github-copilot-app antig
 done
 code=$(brew --prefix)/bin/code
 [[ -L $code && $(readlink "$code") == /Applications/Visual\ Studio\ Code.app/* ]]
+# VS Code hasn't run, so omamac wrote its theme extension's folder: the chosen
+# theme, no settings.json, and no list of VS Code's own.
+ext=~/.vscode/extensions/omamac.omamac-theme-1.0.0
+cmp $ext/themes/omamac.json ~/.local/share/omamac/themes/tokyo-night/vscode.json
+[[ ! -e ~/Library/Application\ Support/Code/User/settings.json ]]
+[[ ! -e ~/.vscode/extensions/extensions.json ]]
 # Updating again changes nothing.
 omamac update
 before=$(fp)
@@ -21,6 +27,9 @@ if [[ $before != "$after" ]]; then
   diff <(print -r -- "$before") <(print -r -- "$after")
   exit 1
 fi
+# A theme switch reaches VS Code.
+omamac theme nord
+cmp $ext/themes/omamac.json ~/.local/share/omamac/themes/nord/vscode.json
 # A yes to the data question takes VLC's settings too.
 defaults write org.videolan.vlc omamac-test -bool true
 [[ -f ~/Library/Preferences/org.videolan.vlc.plist ]]

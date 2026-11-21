@@ -39,7 +39,7 @@ healthy_mac() {
 omamac_lib() {
   "$BASH5" -c "set -Eeuo pipefail
     OMAMAC_CHECKOUT='$REPO_ROOT'
-    for lib in paths ui questions choices herdr ghostty neovim theme languages apply; do source \"$REPO_ROOT/lib/\$lib.sh\"; done
+    for lib in paths ui questions choices herdr ghostty neovim theme vscode languages apply; do source \"$REPO_ROOT/lib/\$lib.sh\"; done
     choices_load \"\$OMAMAC_CHOICES_FILE\"
     $1" >/dev/null
 }
@@ -227,6 +227,46 @@ expect_fail() {
   run doctor
   [ "$status" -eq 0 ]
   [[ "$output" == *"ℹ btop config — your own btop config is kept, so themes don't reach btop"* ]]
+}
+
+# vscode_app: VS Code is installed, with the fake code command in it.
+vscode_app() {
+  local bin="$OMAMAC_TEST_APPLICATIONS/Visual Studio Code.app/Contents/Resources/app/bin"
+  mkdir -p "$bin"
+  ln -sf "$HELPERS_DIR/fake-code" "$bin/code"
+}
+
+@test "no VS Code: no VS Code line" {
+  healthy_mac
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"VS Code theme"* ]]
+}
+
+@test "VS Code with omamac's theme is ok" {
+  healthy_mac
+  vscode_app
+  omamac_lib vscode_theme_install
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ VS Code theme"* ]]
+}
+
+@test "VS Code without omamac's theme is a fail" {
+  healthy_mac
+  vscode_app
+  expect_fail "VS Code theme" "omamac update"
+  [[ "$output" == *"VS Code doesn't have omamac's theme"* ]]
+}
+
+@test "own VS Code theme is info" {
+  healthy_mac
+  vscode_app
+  mkdir -p "$HOME/Library/Application Support/Code/User"
+  echo '{ "workbench.colorTheme": "Solarized Light" }' > "$HOME/Library/Application Support/Code/User/settings.json"
+  run doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ℹ VS Code theme — your own VS Code theme is kept, so themes don't reach VS Code"* ]]
 }
 
 @test "a missing theme file is a fail" {
@@ -1010,6 +1050,7 @@ healthy_apps() {
   choose apps_developer vscode
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask visual-studio-code
   rm -r "$OMAMAC_TEST_BREW_PREFIX/Caskroom/visual-studio-code"
+  omamac_lib vscode_theme_install
   run doctor
   [ "$status" -eq 0 ]
   printf '%s\n' "$output" | grep -qxF "ℹ VS Code — installed by hand, so omamac won't update it. To let Homebrew take it over: brew install --cask --adopt visual-studio-code"

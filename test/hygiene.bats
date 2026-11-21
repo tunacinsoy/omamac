@@ -93,10 +93,11 @@ setup() { setup_sandbox; }
 }
 
 @test "omamac never passes --force" {
-  # On a cask it would overwrite an app the user installed by hand.
+  # On a cask it would overwrite an app the user installed by hand. VS Code's
+  # --install-extension --force replaces only omamac's own extension (lib/vscode.sh).
   cd "$REPO_ROOT"
   run grep -rnE -e '--force|--cask.*[[:space:]]-f([[:space:]]|$)' bin lib install.sh update.sh
-  [ "$status" -eq 1 ]
+  [ -z "$(grep -vF -- '--install-extension "$tmp/omamac-theme.vsix" --force' <<< "$output")" ]
 }
 
 @test "--greedy only in update_upgrade_casks" {

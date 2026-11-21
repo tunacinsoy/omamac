@@ -84,6 +84,8 @@ for id in "${ids[@]}"; do
   [[ ! -e /Applications/$app ]]
   if brew list --cask "$cask" >/dev/null 2>&1; then exit 1; fi
 done
+# VS Code's data went with it, omamac's theme extension too.
+[[ ! -e ~/.vscode ]]
 omamac uninstall docker-desktop
 [[ ! -e /Applications/Docker.app ]]
 if brew list --cask docker-desktop >/dev/null 2>&1; then exit 1; fi

@@ -147,6 +147,18 @@ doctor_check_theme_files() {
   fi
 }
 
+# doctor_check_vscode: one line when VS Code is installed.
+doctor_check_vscode() {
+  [ -x "$(vscode_code)" ] || return 0
+  if vscode_user_theme; then
+    doctor_report info "VS Code theme" "your own VS Code theme is kept, so themes don't reach VS Code"
+  elif vscode_has_theme; then
+    doctor_report ok "VS Code theme"
+  else
+    doctor_report fail "VS Code theme" "VS Code doesn't have omamac's theme" "omamac update"
+  fi
+}
+
 doctor_check_starship() {
   if theme_starship_user_config; then
     doctor_report info "starship config" "your own starship config is kept, so themes don't reach the prompt"
@@ -500,6 +512,7 @@ doctor_run() {
   doctor_check_chosen || status=1
   doctor_check_apps || status=1
   if [ "$DOCTOR_HAS_CHOICES" -eq 1 ]; then docker_check || status=1; fi
+  if [ "$DOCTOR_HAS_CHOICES" -eq 1 ]; then doctor_check_vscode || status=1; fi
   doctor_check_settings || status=1
   doctor_offer
   doctor_offer_neovim || status=1

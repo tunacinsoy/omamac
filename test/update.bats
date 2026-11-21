@@ -153,6 +153,20 @@ snapshot() {
 # choose <key> <value>: set one saved answer.
 choose() { sed -i '' "s/^$1=.*/$1=$2/" "$CHOICES_FILE"; }
 
+@test "VS Code picked: its theme goes in after the app, written once" {
+  choose apps_developer vscode
+  run update
+  [ "$status" -eq 0 ]
+  # The step needs the app's code command, so it can only pass after the app.
+  cmp "$HOME/.vscode/extensions/omamac.omamac-theme-1.0.0/themes/omamac.json" "$REPO_ROOT/themes/tokyo-night/vscode.json"
+  before=$(stat -f %m "$HOME/.vscode/extensions/omamac.omamac-theme-1.0.0/themes/omamac.json")
+  sleep 1.1
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(stat -f %m "$HOME/.vscode/extensions/omamac.omamac-theme-1.0.0/themes/omamac.json")" = "$before" ]
+  ! grep -q '^code ' "$STUB_LOG"
+}
+
 @test "upgrades chosen cloud formulas by full name" {
   choose cloud_clis 'terraform gh'
   run update

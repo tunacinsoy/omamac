@@ -44,3 +44,6 @@ OMAMAC_DOCK_ADDED=$OMAMAC_STATE_DIR/dock-added
 # Written once omamac has started colima's login service (lib/docker.sh). With
 # it, omamac never starts the service again, so a user's stop stays.
 OMAMAC_COLIMA_MARKER=$OMAMAC_STATE_DIR/colima-service
+# VS Code's extensions folder and the user's own settings, which omamac only reads (lib/vscode.sh).
+OMAMAC_VSCODE_EXTENSIONS=$HOME/.vscode/extensions
+OMAMAC_VSCODE_SETTINGS="$HOME/Library/Application Support/Code/User/settings.json"
