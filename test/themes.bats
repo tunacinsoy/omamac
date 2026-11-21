@@ -13,10 +13,10 @@ ids() {
   [ "$output" = "$(ids)" ]
 }
 
-@test "each theme has its four files" {
+@test "each theme has its five files" {
   local id f
   for id in $(ids); do
-    for f in ghostty.conf btop.theme neovim.lua starship.toml; do
+    for f in ghostty.conf btop.theme neovim.lua starship.toml vscode.json; do
       [ -s "$REPO_ROOT/themes/$id/$f" ] || { echo "missing or empty: $id/$f"; return 1; }
     done
   done
@@ -35,6 +35,24 @@ ids() {
     n=$(grep -vc '^#' "$file")
     [ "$n" -eq 20 ] || { echo "$id: $n non-comment lines"; return 1; }
   done
+}
+
+@test "vscode.json: valid, named omamac, with Ghostty's background" {
+  local id file want
+  for id in $(ids); do
+    file="$REPO_ROOT/themes/$id/vscode.json"
+    jq -e '.name == "omamac" and (.type == "dark" or .type == "light") and (.colors | length > 0)' "$file" >/dev/null ||
+      { echo "$id: not a VS Code theme named omamac"; return 1; }
+    want=$(sed -n 's/^background = //p' "$REPO_ROOT/themes/$id/ghostty.conf" | tr 'A-F' 'a-f')
+    [ "$(jq -r '.colors["editor.background"]' "$file" | tr 'A-F' 'a-f')" = "$want" ] ||
+      { echo "$id: editor background isn't Ghostty's $want"; return 1; }
+  done
+}
+
+@test "rose-pine is the one light theme" {
+  run bash -c "cd '$REPO_ROOT/themes' && jq -r 'select(.type == \"light\") | input_filename' */vscode.json"
+  [ "$status" -eq 0 ]
+  [ "$output" = rose-pine/vscode.json ]
 }
 
 @test "starship palette names its theme" {
