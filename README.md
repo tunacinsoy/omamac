@@ -88,7 +88,7 @@ To skip the questions you don't need:
 
 Sections and names can be mixed: `omamac install cloud-clis go`.
 
-`omamac doctor` checks that everything is healthy. For each problem it says why it matters and how to fix it, and it offers to reinstall a pick that is gone.
+`omamac doctor` checks that everything is healthy, and lists what omamac installed for you, by section (languages, cloud CLIs, coding agents, Docker, then your apps by group). For each problem it says why it matters and how to fix it, and it offers to reinstall a pick that is gone.
 
 ## Themes
 
