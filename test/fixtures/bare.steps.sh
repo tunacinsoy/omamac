@@ -9,7 +9,9 @@ if [[ $before != "$after" ]]; then
   diff <(print -r -- "$before") <(print -r -- "$after")
   exit 1
 fi
-out=$(nvim --headless "+Lazy! sync" +qa 2>&1) || { print -r -- "$out"; exit 1; }
+# Ten minutes, then lazy's output: a stalled plugin clone has no time limit of
+# its own, and would otherwise wait for vm.exp's 45.
+out=$(perl -e 'alarm 600; exec @ARGV' nvim --headless "+Lazy! sync" +qa 2>&1) || { print -r -- "$out"; exit 1; }
 if print -r -- "$out" | grep -Eq 'Error detected|E5108'; then print -r -- "$out"; exit 1; fi
 [[ $(zsh -ic 'alias ls') == *eza* ]]
 [[ $(zsh -ic 'print -r -- $HERDR_CONFIG_PATH') == ~/.config/omamac/herdr.toml ]]

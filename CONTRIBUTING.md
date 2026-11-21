@@ -55,7 +55,7 @@ When a new macOS ships, change `BASE` in `test/image.sh` (in a PR about the gate
 test/vm.sh <branch> <fixture>
 ```
 
-It runs the one-liner twice in a throwaway VM, checks that the second run changed nothing, and posts `vm` on the commit. Fixtures live in `test/fixtures/`. The log goes to `test/logs/`.
+It runs the one-liner twice in a throwaway VM (its disk grown to 120 GB, room for `full`), checks that the second run changed nothing, and posts `vm` on the commit. Fixtures live in `test/fixtures/`. The log goes to `test/logs/`.
 
 There is one `vm` status per commit, so a pass never replaces a failure already on it: after a fail, push a new commit and run every fixture again. Two fixtures may run side by side on one commit (Tart runs two macOS VMs at most). `OMAMAC_VM_TIMEOUT=<seconds> test/vm.sh …` raises the 2700 s that `vm.exp` waits for each prompt.
 
