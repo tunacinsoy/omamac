@@ -197,6 +197,14 @@ prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
   done <<< "$output"
 }
 
+@test "a long summary line goes on, indented, at a comma" {
+  in_ask 'choices_load "$REPO_ROOT/test/fixtures/bare.env"
+    CHOICES[coding_agents]="claude-code codex copilot-cli antigravity-cli opencode"
+    ask_summary'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *$'Coding agents: Claude Code CLI, Codex CLI, Copilot CLI, Antigravity CLI,\n  opencode CLI'* ]]
+}
+
 @test "no terminal: stops before asking, never reads it as no" {
   gum_answers "${FRESH_ANSWERS[@]}"
   rm "$OMAMAC_TEST_TTY"

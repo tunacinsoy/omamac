@@ -83,7 +83,7 @@ ask_missing() {
 
 # ask_summary: one line per answer, labels as the questions showed them.
 ask_summary() {
-  local key value v joined lines=() words=() labels=()
+  local key value v i joined lines=() words=() labels=()
   for key in "${QUESTION_KEYS[@]}"; do
     value=${CHOICES[$key]:-}
     if [ -z "$value" ]; then
@@ -93,8 +93,20 @@ ask_summary() {
     labels=()
     read -ra words <<< "$value"
     for v in "${words[@]}"; do labels+=("$(question_label "$key" "$v")"); done
-    printf -v joined '%s, ' "${labels[@]}"
-    lines+=("${QUESTION_TITLE[$key]}: ${joined%, }")
+    # A line longer than 74 characters goes on, indented, so the box fits an
+    # 80-column terminal (a border and two spaces of padding on each side).
+    joined="${QUESTION_TITLE[$key]}:"
+    for i in "${!labels[@]}"; do
+      v=${labels[$i]}
+      [ "$i" -eq $((${#labels[@]} - 1)) ] || v+=,
+      if [ $((${#joined} + 1 + ${#v})) -gt 74 ]; then
+        lines+=("$joined")
+        joined="  $v"
+      else
+        joined+=" $v"
+      fi
+    done
+    lines+=("$joined")
   done
   ui_box "${lines[@]}"
 }

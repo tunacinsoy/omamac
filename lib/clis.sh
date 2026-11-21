@@ -9,7 +9,7 @@ CLI_KEYS=(cloud_clis coding_agents)
 declare -gA CLI_FORMULA=([aws]=awscli [gh]=gh [terraform]=hashicorp/tap/terraform
   [opencode]=opencode)
 declare -gA CLI_CASK=([azure]=azure-cli [gcloud]=gcloud-cli
-  [claude-code]=claude-code [antigravity-cli]=antigravity-cli)
+  [claude-code]=claude-code [codex]=codex [copilot-cli]=copilot-cli [antigravity-cli]=antigravity-cli)
 
 # clis_chosen: the picked CLI ids of every CLI question, in question order, one per line.
 clis_chosen() {

@@ -53,7 +53,8 @@ question languages multi Languages "Programming languages" \
 question cloud_clis multi "Cloud CLIs" "Cloud command-line tools" \
   "Azure CLI:azure" "AWS CLI:aws" "Google Cloud CLI:gcloud" "GitHub CLI:gh" Terraform:terraform
 question coding_agents multi "Coding agents" "Coding agents for the terminal" \
-  "Claude Code CLI:claude-code" "Antigravity CLI:antigravity-cli" "opencode CLI:opencode"
+  "Claude Code CLI:claude-code" "Codex CLI:codex" "Copilot CLI:copilot-cli" \
+  "Antigravity CLI:antigravity-cli" "opencode CLI:opencode"
 question_help coding_agents "They run in the terminal, in herdr. Each asks you to sign in the first time."
 # "No Docker" comes first: Enter picks the option under the cursor, and Enter
 # alone must never opt in to anything.
