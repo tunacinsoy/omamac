@@ -56,6 +56,7 @@ vscode|visual-studio-code|Visual Studio Code.app||
 claude|claude|Claude.app||
 chatgpt|chatgpt|ChatGPT.app||
 gemini|google-gemini|Gemini.app||
+copilot|github-copilot-app|GitHub Copilot.app||
 antigravity|antigravity|Antigravity.app||
 raycast|raycast|Raycast.app||
 obsidian|obsidian|Obsidian.app||

@@ -3,11 +3,11 @@
 fp() { curl -fsSL "https://raw.githubusercontent.com/tunacinsoy/omamac/$(git -C ~/.local/share/omamac rev-parse HEAD)/test/fingerprint.sh" | /bin/bash; }
 # The apps are in Applications, Homebrew lists their casks, and VS Code's link
 # points into the app. No app's binary runs: it would wait on macOS's first-open check.
-for app in VLC.app Cap.app zoom.us.app 'Visual Studio Code.app' Claude.app ChatGPT.app Gemini.app Antigravity.app 'Wispr Flow.app'; do
+for app in VLC.app Cap.app zoom.us.app 'Visual Studio Code.app' Claude.app ChatGPT.app Gemini.app 'GitHub Copilot.app' Antigravity.app 'Wispr Flow.app'; do
   [[ -d /Applications/$app ]]
 done
 casks=$(brew list --cask -1)
-for c in vlc cap zoom visual-studio-code claude chatgpt google-gemini antigravity wispr-flow; do
+for c in vlc cap zoom visual-studio-code claude chatgpt google-gemini github-copilot-app antigravity wispr-flow; do
   [[ $'\n'$casks$'\n' == *$'\n'$c$'\n'* ]]
 done
 code=$(brew --prefix)/bin/code

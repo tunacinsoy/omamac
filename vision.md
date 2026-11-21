@@ -140,7 +140,7 @@ omamac configures tools whose config files the user may already have written, on
 - Multiplexer: **herdr only** (`brew install herdr`), with omawsl's herdr config and key bindings. zellij is not offered: one multiplexer means one config, one set of bindings and no question to ask.
 - Languages via mise, at the latest version when chosen: Ruby on Rails, Node.js, Go, Python, Elixir, Rust, Java. PHP is left out for now (see "Backlog").
 - Cloud CLIs via Homebrew: Azure CLI, AWS CLI, Google Cloud CLI, GitHub CLI (`gh`), and Terraform from HashiCorp's official tap (`hashicorp/tap/terraform`), since it's no longer in Homebrew's main repository.
-- Coding agents via Homebrew, their own question after the cloud CLIs: Claude Code, Antigravity CLI (Google's successor to Gemini CLI) and opencode. Codex CLI and GitHub Copilot CLI wait for another way in (see "Backlog"). They run in the terminal, in herdr. omamac installs, updates and uninstalls them like the cloud CLIs; signing in stays with the user. The same tools as desktop apps are the "AI apps" group of the app catalog, so someone who prefers a window and someone who prefers the terminal each pick their own.
+- Coding agents via Homebrew, their own question after the cloud CLIs: Claude Code, Antigravity CLI (Google's successor to Gemini CLI) and opencode. Codex CLI and GitHub Copilot CLI wait (see "Backlog"); Copilot is offered as GitHub's desktop app. They run in the terminal, in herdr. omamac installs, updates and uninstalls them like the cloud CLIs; signing in stays with the user. The same tools as desktop apps are the "AI apps" group of the app catalog, so someone who prefers a window and someone who prefers the terminal each pick their own.
 - Docker: one choice, nothing pre-selected: colima, Docker Desktop or none. colima runs as a background service that starts at login.
 
 **Terminal and look**
@@ -159,7 +159,7 @@ Because omamac runs natively on the host, it can install real desktop apps as Ho
 | Screen recording | Cap (`cap` cask) |
 | Storage and sync | Dropbox, Google Drive |
 | Developer | VS Code |
-| AI apps | Claude, ChatGPT (includes Codex), Gemini, Antigravity |
+| AI apps | Claude, ChatGPT (includes Codex), Gemini, GitHub Copilot, Antigravity |
 | Productivity | Raycast, Obsidian |
 | Voice dictation | Wispr Flow |
 
@@ -293,9 +293,9 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - Everything omamac prints is polished and visual, and as short as possible.
 - Ghostty's built-in font; no font installed or set.
 - Languages and cloud CLIs as omawsl offers them, except PHP for now; Terraform from HashiCorp's official tap; `gh` with the cloud CLIs.
-- Coding agents as their own question (Claude Code, Antigravity CLI, opencode), and their desktop apps as the AI apps group (Claude, ChatGPT with Codex, Gemini, Antigravity).
+- Coding agents as their own question (Claude Code, Antigravity CLI, opencode), and their desktop apps as the AI apps group (Claude, ChatGPT with Codex, Gemini, GitHub Copilot, Antigravity).
 - A tool with one config file and no include (herdr, starship, btop) uses omamac's file only when the user has none; a user's own is left alone and doctor explains. The user's own mise pins win.
-- The v1 app catalog is the 21 apps in the table plus Wispr Flow; an app that isn't a clean cask is dropped.
+- The v1 app catalog is the 22 apps in the table plus Wispr Flow; an app that isn't a clean cask is dropped.
 - Gatekeeper and permission prompts stay with the user, one line each in the summary, built from each app's catalog file.
 - First-run question order: theme, desktop apps, Wispr Flow, desktops, window margins, Dock, Dock auto-hide, languages, cloud CLIs, coding agents, Docker; adoption questions come after the questions at the first run, right after each app question in `omamac install`, before the summary; one summary and "Install?" at the end.
 - An existing `~/.config/nvim` is left alone with no extra files; doctor explains (ℹ) why themes don't reach neovim and what to do.
@@ -345,7 +345,7 @@ Ideas Tuna wants kept in view but not built yet. Nothing here is a commitment; e
 
 **More dictation apps.** Superwhisper, VoiceInk and the like could join Wispr Flow (the question then becomes single choice). No criteria yet; decide when someone actually asks.
 
-**Codex CLI and GitHub Copilot CLI.** Their Homebrew casks run the binary during `brew install`, and on a fresh Mac the quarantined binary waits on macOS's first-launch check, so the unattended run stops (found in Phase 7c's VM runs). omawsl installs both as npm packages (`@openai/codex`, `@github/copilot`); omamac could do the same through mise, which needs Node.js through mise too. To work out: whether choosing either brings Node.js along, and how update and uninstall treat it.
+**Codex CLI and GitHub Copilot CLI.** Their Homebrew casks run the binary during `brew install`, and on a fresh Mac the quarantined binary waits on macOS's first-launch check, so the unattended run stops (found in Phase 7c's VM runs). They come back when Homebrew offers them without that step (a formula, or a cask that doesn't run the binary). They stay with Homebrew: mise is for languages only.
 
 **Removing omamac itself.** v1 uninstalls one thing at a time and can't remove omamac. A later `omamac uninstall omamac` could remove the core tools, omamac's include lines, its generated files, its state and the checkout, leaving the user's optional picks as ordinary Homebrew and mise installs. This closes the v1 gap against "uninstall restores the previous state".
 
@@ -444,4 +444,4 @@ One line per decision: date, question, answer, who decided. Move the item out of
 - 2026-11-19 — Password — Docker Desktop's cask: Homebrew resets sudo and asks once more; omamac runs that step right after "Install?", in the open, and never bypasses the reset — Tuna
 - 2026-11-19 — Zoom and Google Drive — kept in the catalog; with Docker Desktop they share one Homebrew step right after "Install?", so Homebrew asks for the password once more, once for all of them — Tuna
 - 2026-11-19 — Upgrading apps — no `--greedy`; an app is upgraded only when Homebrew lists it as outdated, since apps update themselves; `--greedy` stays for the cloud CLI casks — Tuna
-- 2026-11-21 — AI tools in v1, before Gate B — coding agents as their own terminal question (Claude Code, Antigravity CLI, opencode), and an AI apps group of desktop apps (Claude, ChatGPT, Gemini, Antigravity), for parity with omawsl. Gemini CLI is deprecated in Homebrew (disabled 2026-12-18), so Antigravity CLI, its successor, takes its place; the Codex app is now part of ChatGPT's. Codex CLI's and Copilot CLI's casks run their binary during `brew install`, which waits on macOS's first-launch check, so they are left out until another way in (Backlog) — Tuna
+- 2026-11-21 — AI tools in v1, before Gate B — coding agents as their own terminal question (Claude Code, Antigravity CLI, opencode), and an AI apps group of desktop apps (Claude, ChatGPT, Gemini, GitHub Copilot, Antigravity), for parity with omawsl. Gemini CLI is deprecated in Homebrew (disabled 2026-12-18), so Antigravity CLI, its successor, takes its place; the Codex app is now part of ChatGPT's. Codex CLI's and Copilot CLI's casks run their binary during `brew install`, which waits on macOS's first-launch check, so they are left out (Backlog); Copilot comes as GitHub's desktop app. Languages stay with mise and everything else with Homebrew, so no npm route — Tuna
