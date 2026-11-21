@@ -153,6 +153,19 @@ snapshot() {
 # choose <key> <value>: set one saved answer.
 choose() { sed -i '' "s/^$1=.*/$1=$2/" "$CHOICES_FILE"; }
 
+@test "VS Code picked: its theme goes in after the app, once" {
+  choose apps_developer vscode
+  run update
+  [ "$status" -eq 0 ]
+  cmp "$HOME/.vscode/extensions/omamac.omamac-theme-1.0.0/themes/omamac.json" "$REPO_ROOT/themes/tokyo-night/vscode.json"
+  app=$(grep -n '^brew install --cask .*visual-studio-code' "$STUB_LOG" | cut -d: -f1)
+  theme=$(grep -n '^code --install-extension' "$STUB_LOG" | cut -d: -f1)
+  [ -n "$app" ] && [ -n "$theme" ] && [ "$app" -lt "$theme" ]
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^code --install-extension' "$STUB_LOG")" -eq 1 ]
+}
+
 @test "upgrades chosen cloud formulas by full name" {
   choose cloud_clis 'terraform gh'
   run update

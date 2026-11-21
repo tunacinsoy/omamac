@@ -97,5 +97,7 @@ theme_run() {
   theme_apply
   theme_reload
   vscode_theme_install
-  ui_ok "Theme: $(question_label theme "$id"). What's running shows it now; neovim and VS Code the next time they open."
+  local later='neovim the next time it opens'
+  [ ! -x "$(vscode_code)" ] || later='neovim and VS Code the next time they open'
+  ui_ok "Theme: $(question_label theme "$id"). What's running shows it now; $later."
 }

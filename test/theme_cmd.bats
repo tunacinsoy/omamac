@@ -58,7 +58,7 @@ stamp() { (cd "$OM" && find . -type f -exec stat -f '%N %m' {} + | sort); }
   run omamac_theme dracula
   [ "$status" -eq 0 ]
   [[ "$output" == *"Your own starship config is kept, so the theme doesn't reach the prompt."* ]]
-  [[ "$output" == *"Theme: Dracula. What's running shows it now; neovim and VS Code the next time they open."* ]]
+  [[ "$output" == *"Theme: Dracula. What's running shows it now; neovim the next time it opens."* ]]
 }
 
 @test "own btop and neovim configs: said so" {

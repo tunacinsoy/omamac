@@ -21,12 +21,13 @@ vscode_installed_theme() { echo "$OMAMAC_VSCODE_EXTENSIONS/$VSCODE_EXTENSION-$VS
 # vscode_has_theme: VS Code has the chosen theme's colours.
 vscode_has_theme() { cmp -s "$(vscode_theme_file)" "$(vscode_installed_theme)"; }
 
-# vscode_user_theme: the user set a theme of their own in VS Code's settings.
-# Picking "omamac" in VS Code writes it there too, and that isn't their own.
+# vscode_user_theme: the user set a theme of their own in VS Code's settings. A
+# line that starts with // is a comment. Picking "omamac" in VS Code writes it
+# there too, and that isn't their own.
 vscode_user_theme() {
   local lines
-  lines=$(grep -s '"workbench.colorTheme"' "$OMAMAC_VSCODE_SETTINGS") || return 1
-  grep -qv '"workbench.colorTheme" *: *"omamac"' <<< "$lines"
+  lines=$(grep -s '"workbench.colorTheme"' "$OMAMAC_VSCODE_SETTINGS" | grep -v '^[[:space:]]*//') || return 1
+  grep -qv '"workbench.colorTheme"[[:space:]]*:[[:space:]]*"omamac"' <<< "$lines"
 }
 
 # vscode_package <theme file> <out>: the extension's package.json. VS Code bases
@@ -57,25 +58,31 @@ vscode_theme_install() {
   code=$(vscode_code)
   [ -x "$code" ] || return 0
   ui_step "VS Code's theme"
+  local shows=''
   if ! vscode_has_theme; then
     OMAMAC_STEP="installing omamac's theme in VS Code"
     tmp=$(mktemp -d)
-    mkdir -p "$tmp/extension/themes"
-    cp "$(vscode_theme_file)" "$tmp/extension/themes/omamac.json"
-    vscode_package "$(vscode_theme_file)" "$tmp/extension/package.json"
-    # A .vsix is a zip with the extension in extension/; zip names entries from the folder it runs in.
-    (cd "$tmp" && zip -qr omamac-theme.vsix extension)
+    # && because errexit is off inside { } ||; a failure removes the temp folder
+    # before the caller's ERR trap fires. A .vsix is a zip with the extension in
+    # extension/; zip names entries from the folder it runs in.
+    {
+      mkdir -p "$tmp/extension/themes" &&
+      cp "$(vscode_theme_file)" "$tmp/extension/themes/omamac.json" &&
+      vscode_package "$(vscode_theme_file)" "$tmp/extension/package.json" &&
+      (cd "$tmp" && zip -qr omamac-theme.vsix extension)
+    } || { rm -rf "$tmp"; return 1; }
     if ! "$code" --install-extension "$tmp/omamac-theme.vsix" --force >> "$OMAMAC_LOG" 2>&1; then
       rm -rf "$tmp"
       ui_fail "VS Code didn't install omamac's theme. VS Code's message is in $OMAMAC_LOG"
       return 1
     fi
     rm -rf "$tmp"
+    shows=' It shows the next time VS Code opens.'
   fi
   if vscode_user_theme; then
     ui_info "Your own VS Code theme is kept, so the theme doesn't reach VS Code."
     ui_ok "omamac's theme is in VS Code"
   else
-    ui_ok "VS Code has the theme. It shows the next time VS Code opens."
+    ui_ok "VS Code has the theme.$shows"
   fi
 }

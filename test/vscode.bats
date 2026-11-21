@@ -56,6 +56,7 @@ install() {
   [ "$status" -eq 0 ]
   [ ! -s "$STUB_LOG" ]
   [[ "$output" == *"VS Code has the theme"* ]]
+  [[ "$output" != *"It shows the next time"* ]]
 }
 
 @test "another theme replaces the colours" {
@@ -95,6 +96,35 @@ install() {
   [ "$status" -eq 0 ]
   [[ "$output" != *"Your own VS Code theme"* ]]
   [[ "$output" == *"VS Code has the theme"* ]]
+}
+
+@test "a commented-out theme line isn't the user's own" {
+  vscode_app
+  mkdir -p "$(dirname "$SETTINGS")"
+  printf '{\n  // "workbench.colorTheme": "Default Dark+",\n  "editor.fontSize": 14\n}\n' > "$SETTINGS"
+  install dracula
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"Your own VS Code theme"* ]]
+}
+
+@test "omamac picked with a tab before it isn't the user's own either" {
+  vscode_app
+  mkdir -p "$(dirname "$SETTINGS")"
+  printf '{\n\t"workbench.colorTheme":\t"omamac"\n}\n' > "$SETTINGS"
+  install dracula
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"Your own VS Code theme"* ]]
+}
+
+@test "zip fails: the temp folder goes, and the run stops" {
+  vscode_app
+  stub zip 'exit 3'
+  export TMPDIR="$BATS_TEST_TMPDIR/tmp"
+  mkdir -p "$TMPDIR"
+  install dracula
+  [ "$status" -ne 0 ]
+  [ -z "$(ls -A "$TMPDIR")" ]
+  [ ! -e "$EXT" ]
 }
 
 @test "VS Code fails to install: a clear message, and the run stops" {
