@@ -1,6 +1,6 @@
 # shellcheck shell=bash disable=SC2034 # OMAMAC_STEP is read by the caller's ERR trap
 # The theme files in ~/.config/omamac. Sourced after lib/herdr.sh, lib/ghostty.sh
-# and lib/neovim.sh, before lib/apply.sh (it uses apply_put). theme_run needs lib/vscode.sh. Needs lib/choices.sh:
+# and lib/neovim.sh, before lib/apply.sh (it uses apply_put). Needs lib/vscode.sh, lib/clis.sh and lib/choices.sh:
 # the theme is CHOICES[theme]. Every file is omamac's, written compare-then-move.
 
 # theme_herdr_name <id>: the theme name herdr knows. herdr follows Ghostty's colours with "terminal".
@@ -37,6 +37,21 @@ theme_btop_user_config() {
 # theme_btop_conf <id> <out>
 theme_btop_conf() { printf 'color_theme = "%s"\n' "$1" > "$2"; }
 
+# theme_reaches: what the theme reaches, joined with commas and "and": every
+# tool whose own config the user didn't keep instead. VS Code counts once it is
+# installed; on a first run it is said later, by its own step.
+theme_reaches() {
+  local to=(Ghostty) last
+  herdr_user_config || to+=(herdr)
+  theme_btop_user_config || to+=(btop)
+  theme_starship_user_config || to+=("the prompt")
+  [ -e "$OMAMAC_NVIM_MARKER" ] || { [ ! -e "$OMAMAC_NVIM_DIR" ] && [ ! -L "$OMAMAC_NVIM_DIR" ]; } && to+=(neovim)
+  if [ -x "$(vscode_code)" ] && ! vscode_user_theme; then to+=("VS Code"); fi
+  last=${to[-1]}
+  unset 'to[-1]'
+  if [ "${#to[@]}" -eq 0 ]; then echo "$last"; else echo "$(clis_join "${to[@]}") and $last"; fi
+}
+
 # theme_apply: the six theme files, from CHOICES[theme].
 theme_apply() {
   local id=${CHOICES[theme]:-} f
@@ -64,7 +79,7 @@ theme_apply() {
   if [ ! -e "$OMAMAC_NVIM_MARKER" ] && { [ -e "$OMAMAC_NVIM_DIR" ] || [ -L "$OMAMAC_NVIM_DIR" ]; }; then
     ui_info "Your own neovim config is kept, so the theme doesn't reach neovim."
   fi
-  ui_ok "Theme files are in place"
+  ui_ok "Theme: $(question_label theme "$id"), in $(theme_reaches)"
 }
 
 # theme_reload: tell what is running to read its new files. Each is a no-op when
@@ -99,5 +114,5 @@ theme_run() {
   vscode_theme_install
   local later='neovim the next time it opens'
   [ ! -x "$(vscode_code)" ] || later='neovim and VS Code the next time they open'
-  ui_ok "Theme: $(question_label theme "$id"). What's running shows it now; $later."
+  ui_ok "What's running shows it now; $later."
 }

@@ -147,14 +147,14 @@ doctor_check_theme_files() {
   fi
 }
 
-# doctor_check_vscode: one line when VS Code is installed.
+# doctor_check_vscode: a line only when VS Code is installed and something is
+# off: the user's own theme (ℹ), or omamac's theme missing (✗). When all is
+# well, "Theme files" covers it.
 doctor_check_vscode() {
   [ -x "$(vscode_code)" ] || return 0
   if vscode_user_theme; then
     doctor_report info "VS Code theme" "your own VS Code theme is kept, so themes don't reach VS Code"
-  elif vscode_has_theme; then
-    doctor_report ok "VS Code theme"
-  else
+  elif ! vscode_has_theme; then
     doctor_report fail "VS Code theme" "VS Code doesn't have omamac's theme" "omamac update"
   fi
 }

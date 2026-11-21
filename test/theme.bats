@@ -14,11 +14,14 @@ in_lib() {
     OMAMAC_CHECKOUT='$REPO_ROOT'
     source '$REPO_ROOT/lib/paths.sh'
     source '$REPO_ROOT/lib/ui.sh'
+    source '$REPO_ROOT/lib/questions.sh'
     source '$REPO_ROOT/lib/choices.sh'
     source '$REPO_ROOT/lib/herdr.sh'
     source '$REPO_ROOT/lib/ghostty.sh'
     source '$REPO_ROOT/lib/neovim.sh'
     source '$REPO_ROOT/lib/theme.sh'
+    source '$REPO_ROOT/lib/vscode.sh'
+    source '$REPO_ROOT/lib/clis.sh'
     source '$REPO_ROOT/lib/apply.sh'
     $1"
   [ "$status" -eq 0 ] || { echo "$output"; return 1; }
@@ -53,7 +56,7 @@ stamp() { (cd "$OM" && find ghostty.conf herdr.toml starship.toml btop.conf btop
   [ "$(ls "$OM/btop-themes")" = dracula.theme ]
   cmp "$OM/btop-themes/dracula.theme" "$REPO_ROOT/themes/dracula/btop.theme"
   cmp "$OM/neovim.lua" "$REPO_ROOT/themes/dracula/neovim.lua"
-  [[ "$output" == *"Theme files are in place"* ]]
+  [[ "$output" == *"✓ Theme: Dracula, in Ghostty, herdr, btop, the prompt and neovim"* ]]
 }
 
 @test "rose-pine: herdr gets rose-pine-dawn; ristretto: terminal" {

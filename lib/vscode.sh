@@ -76,11 +76,9 @@ vscode_knows_folder() {
 # keeps a list without omamac's extension does omamac use VS Code's own
 # command; the app has been opened on this Mac by then.
 vscode_theme_install() {
-  local code tmp
+  local code tmp wrote=''
   code=$(vscode_code)
   [ -x "$code" ] || return 0
-  ui_step "VS Code's theme"
-  local shows=''
   if ! vscode_has_theme; then
     OMAMAC_STEP="writing omamac's theme for VS Code"
     if vscode_knows_folder; then
@@ -102,12 +100,12 @@ vscode_theme_install() {
       fi
       rm -rf "$tmp"
     fi
-    shows=' It shows the next time VS Code opens.'
+    wrote=1
   fi
+  # The theme step's line names VS Code already; only a change is said here.
   if vscode_user_theme; then
     ui_info "Your own VS Code theme is kept, so the theme doesn't reach VS Code."
-    ui_ok "omamac's theme is in VS Code"
-  else
-    ui_ok "VS Code has the theme.$shows"
+  elif [ -n "$wrote" ]; then
+    ui_ok "VS Code has the theme too."
   fi
 }
