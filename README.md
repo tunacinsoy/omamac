@@ -81,6 +81,13 @@ It updates omamac and what omamac installed, nothing else:
 
 `omamac install` adds the apps, languages, cloud CLIs and coding agents you didn't pick before. It also asks again any macOS setting you answered no, and the Docker question if you answered No Docker.
 
+To skip the questions you don't need:
+
+- `omamac install languages` asks only that section's question. The sections are `apps`, `languages`, `cloud-clis`, `coding-agents`, `docker` and `macos` (the four macOS settings).
+- `omamac install go rust` asks nothing but "Install?". It takes the same names as `omamac uninstall`: `go`, `docker-desktop`, `vscode`, `dock-autohide` and the rest. A name you already picked is skipped, and Docker takes one choice: to switch from Docker Desktop to colima, uninstall it first.
+
+Sections and names can be mixed: `omamac install cloud-clis go`.
+
 `omamac doctor` checks that everything is healthy. For each problem it says why it matters and how to fix it, and it offers to reinstall a pick that is gone.
 
 ## Themes

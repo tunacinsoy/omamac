@@ -86,7 +86,9 @@ omamac_usage() {
   cat <<'USAGE'
 Usage: omamac <command>
 
-  install     Add tools and apps
+  install     Add tools and apps: all questions, one section
+              (apps, languages, cloud-clis, coding-agents, docker,
+              macos), or what you name, such as: install go rust
   update      Update omamac and what it installed
   theme       Switch the theme everywhere
   doctor      Check that everything is healthy
@@ -127,14 +129,11 @@ omamac_main() {
       ;;
     update) omamac_update ;;
     install)
-      if [ "$#" -gt 1 ]; then
-        omamac_usage >&2
-        return 2
-      fi
       OMAMAC_CMD=install
       trap omamac_failed ERR
       omamac_choices
-      add_run
+      shift
+      add_run "$@"
       ;;
     uninstall)
       if [ "$#" -gt 2 ]; then

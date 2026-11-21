@@ -199,14 +199,6 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   [[ "$output" != *"omamac update"* ]]
 }
 
-@test "extra arguments: usage, exit 2" {
-  gum_answers "" ""
-  run --separate-stderr omamac_install go
-  [ "$status" -eq 2 ]
-  [[ "$stderr" == *"Usage: omamac <command>"* ]]
-  [ -z "$(prompts)" ]
-}
-
 @test "desktops no: asked again; yes applies" {
   choose desktops no
   gum_answers "" "" yes yes
@@ -459,4 +451,103 @@ by_hand() { # <cask> <App.app>
   gum_answers "" ""
   run omamac_install
   [[ "$(prompts)" != *"Hide the Dock"* ]]
+}
+
+@test "install languages: asks only that section, only the unpicked" {
+  choose languages node
+  gum_answers go yes
+  run omamac_install languages
+  [ "$status" -eq 0 ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
+  [[ "$(prompts | sed -n 1p)" == *"--label-delimiter=: Ruby on Rails:ruby Go:go Python:python Elixir:elixir Rust:rust Java:java" ]]
+  [[ "$(prompts | sed -n 2p)" == "gum confirm --default=false Install?" ]]
+  grep -qx 'languages=node go' "$CHOICES_FILE"
+}
+
+@test "install go rust: no questions but Install?, then both are installed" {
+  gum_answers yes
+  run omamac_install go rust
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "gum confirm --default=false Install?" ]
+  [[ "$output" == *"Languages: Go, Rust"* ]]
+  grep -qx 'languages=go rust' "$CHOICES_FILE"
+  grep -qx 'go = "latest"' "$HOME/.config/mise/conf.d/omamac.toml"
+  grep -qx 'rust = "latest"' "$HOME/.config/mise/conf.d/omamac.toml"
+}
+
+@test "install an id already picked: says so, asks nothing, changes nothing" {
+  choose languages go
+  before=$(choices_stamp)
+  gum_answers
+  run omamac_install go
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Go is already installed."* ]]
+  [[ "$output" == *"Nothing picked, so nothing changed."* ]]
+  [ -z "$(prompts)" ]
+  [ "$(choices_stamp)" = "$before" ]
+}
+
+@test "install an unknown name: names the sections, asks nothing, changes nothing" {
+  before=$(choices_stamp)
+  gum_answers
+  run omamac_install go nope
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"omamac doesn't know 'nope'. Name a section (apps, languages, cloud-clis, coding-agents, docker, macos) or what to install, such as go, docker-desktop, vscode."* ]]
+  [ -z "$(prompts)" ]
+  [ "$(choices_stamp)" = "$before" ]
+}
+
+@test "install colima with Docker Desktop picked: says to uninstall it first" {
+  before=$(choices_stamp)
+  gum_answers
+  run omamac_install colima
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"Docker is already Docker Desktop. To switch, uninstall it first: omamac uninstall docker-desktop."* ]]
+  [ "$(choices_stamp)" = "$before" ]
+}
+
+@test "install colima with no Docker: picked" {
+  choose docker none
+  gum_answers yes
+  run omamac_install colima
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Docker: colima"* ]]
+  grep -qx 'docker=colima' "$CHOICES_FILE"
+}
+
+@test "install dock-autohide: a macOS setting by its uninstall name" {
+  choose dock_autohide no
+  gum_answers yes
+  run omamac_install dock-autohide
+  [ "$status" -eq 0 ]
+  grep -qx 'dock_autohide=yes' "$CHOICES_FILE"
+}
+
+@test "install a section and an id together: one question, one Install?" {
+  gum_answers aws yes
+  run omamac_install cloud-clis go
+  [ "$status" -eq 0 ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
+  [[ "$(prompts | sed -n 1p)" == *"Cloud command-line tools"* ]]
+  grep -qx 'cloud_clis=aws' "$CHOICES_FILE"
+  grep -qx 'languages=go' "$CHOICES_FILE"
+}
+
+@test "install vlc installed by hand: Homebrew is offered to take it over" {
+  choose apps_media spotify
+  rm -r "$OMAMAC_TEST_BREW_PREFIX/Caskroom/vlc"
+  gum_answers yes yes
+  run omamac_install vlc
+  [ "$status" -eq 0 ]
+  grep -q '^gum confirm .*Let Homebrew take over VLC?' "$STUB_LOG"
+  grep -qx 'apps_media=spotify vlc' "$CHOICES_FILE"
+  grep -q '^brew install --cask --adopt .*vlc' "$STUB_LOG"
+}
+
+@test "no section name is also a name to install" {
+  run "$BASH5" -c "OMAMAC_CHECKOUT='$REPO_ROOT'
+    for lib in paths ui questions choices log core apps clis ask add; do source '$REPO_ROOT/lib/'\$lib.sh; done
+    for s in \"\${ADD_SECTIONS[@]}\"; do add_section \"\$s\" >/dev/null || echo \"not a section: \$s\"; ! add_id_key \"\$s\" || echo \"also a name: \$s\"; done"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }
