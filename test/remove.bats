@@ -81,7 +81,7 @@ snapshot() {
   gum_answers
   run --separate-stderr omamac_uninstall php
   [ "$status" -eq 2 ]
-  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, claude-code, antigravity-cli, opencode, brave, chrome, firefox, whatsapp, telegram, signal, discord, slack, zoom, spotify, vlc, cap, dropbox, google-drive, vscode, claude, chatgpt, gemini, copilot, antigravity, raycast, obsidian, wispr-flow, desktops, window-margins, colima, docker-desktop, dock, dock-autohide."* ]]
+  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, claude-code, antigravity-cli, opencode, brave, chrome, firefox, whatsapp, telegram, signal, discord, slack, zoom, spotify, vlc, cap, dropbox, google-drive, vscode, claude, chatgpt, copilot, antigravity, raycast, obsidian, wispr-flow, desktops, window-margins, colima, docker-desktop, dock, dock-autohide."* ]]
   [ -z "$(prompts)" ]
 }
 

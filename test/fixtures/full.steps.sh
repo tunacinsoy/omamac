@@ -17,7 +17,7 @@ checkout=~/.local/share/omamac
 mise=/opt/homebrew/bin/mise
 # The catalog in catalog order (lib/questions.sh), then Wispr Flow.
 ids=(brave chrome firefox whatsapp telegram signal discord slack zoom spotify vlc cap dropbox google-drive vscode
-  claude chatgpt gemini copilot antigravity raycast obsidian wispr-flow)
+  claude chatgpt copilot antigravity raycast obsidian wispr-flow)
 # Each coding agent as <id>:<its command>.
 agents=(claude-code:claude antigravity-cli:agy opencode:opencode)
 

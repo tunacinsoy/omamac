@@ -159,7 +159,7 @@ Because omamac runs natively on the host, it can install real desktop apps as Ho
 | Screen recording | Cap (`cap` cask) |
 | Storage and sync | Dropbox, Google Drive |
 | Developer | VS Code |
-| AI apps | Claude, ChatGPT (includes Codex), Gemini, GitHub Copilot, Antigravity |
+| AI apps | Claude, ChatGPT (includes Codex), GitHub Copilot, Antigravity |
 | Productivity | Raycast, Obsidian |
 | Voice dictation | Wispr Flow |
 
@@ -293,9 +293,9 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - Everything omamac prints is polished and visual, and as short as possible.
 - Ghostty's built-in font; no font installed or set.
 - Languages and cloud CLIs as omawsl offers them, except PHP for now; Terraform from HashiCorp's official tap; `gh` with the cloud CLIs.
-- Coding agents as their own question (Claude Code, Antigravity CLI, opencode), and their desktop apps as the AI apps group (Claude, ChatGPT with Codex, Gemini, GitHub Copilot, Antigravity).
+- Coding agents as their own question (Claude Code, Antigravity CLI, opencode), and their desktop apps as the AI apps group (Claude, ChatGPT with Codex, GitHub Copilot, Antigravity).
 - A tool with one config file and no include (herdr, starship, btop) uses omamac's file only when the user has none; a user's own is left alone and doctor explains. The user's own mise pins win.
-- The v1 app catalog is the 22 apps in the table plus Wispr Flow; an app that isn't a clean cask is dropped.
+- The v1 app catalog is the 21 apps in the table plus Wispr Flow; an app that isn't a clean cask is dropped.
 - Gatekeeper and permission prompts stay with the user, one line each in the summary, built from each app's catalog file.
 - First-run question order: theme, desktop apps, Wispr Flow, desktops, window margins, Dock, Dock auto-hide, languages, cloud CLIs, coding agents, Docker; adoption questions come after the questions at the first run, right after each app question in `omamac install`, before the summary; one summary and "Install?" at the end.
 - An existing `~/.config/nvim` is left alone with no extra files; doctor explains (ℹ) why themes don't reach neovim and what to do.
@@ -444,4 +444,4 @@ One line per decision: date, question, answer, who decided. Move the item out of
 - 2026-11-19 — Password — Docker Desktop's cask: Homebrew resets sudo and asks once more; omamac runs that step right after "Install?", in the open, and never bypasses the reset — Tuna
 - 2026-11-19 — Zoom and Google Drive — kept in the catalog; with Docker Desktop they share one Homebrew step right after "Install?", so Homebrew asks for the password once more, once for all of them — Tuna
 - 2026-11-19 — Upgrading apps — no `--greedy`; an app is upgraded only when Homebrew lists it as outdated, since apps update themselves; `--greedy` stays for the cloud CLI casks — Tuna
-- 2026-11-21 — AI tools in v1, before Gate B — coding agents as their own terminal question (Claude Code, Antigravity CLI, opencode), and an AI apps group of desktop apps (Claude, ChatGPT, Gemini, GitHub Copilot, Antigravity), for parity with omawsl. Gemini CLI is deprecated in Homebrew (disabled 2026-12-18), so Antigravity CLI, its successor, takes its place; the Codex app is now part of ChatGPT's. Codex CLI's and Copilot CLI's casks run their binary during `brew install`, which waits on macOS's first-launch check, so they are left out (Backlog); Copilot comes as GitHub's desktop app. Languages stay with mise and everything else with Homebrew, so no npm route — Tuna
+- 2026-11-21 — AI tools in v1, before Gate B — coding agents as their own terminal question (Claude Code, Antigravity CLI, opencode), and an AI apps group of desktop apps (Claude, ChatGPT, GitHub Copilot, Antigravity), for parity with omawsl. Gemini CLI is deprecated in Homebrew (disabled 2026-12-18), so Antigravity CLI, its successor, takes its place; the Codex app is now part of ChatGPT's. Codex CLI's and Copilot CLI's casks run their binary during `brew install`, which waits on macOS's first-launch check, so they are left out (Backlog); Copilot comes as GitHub's desktop app. Languages stay with mise and everything else with Homebrew, so no npm route. Google's one AI app is Antigravity, its coding tool; the Gemini chat app is left out — Tuna

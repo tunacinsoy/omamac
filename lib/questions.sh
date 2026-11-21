@@ -37,7 +37,7 @@ question apps_screen_recording multi "Screen recording" "Screen recording" Cap:c
 question apps_storage multi "Storage and sync" "Storage and sync" Dropbox:dropbox "Google Drive:google-drive"
 question apps_developer multi Developer Developer "VS Code:vscode"
 question apps_ai multi "AI apps" "AI desktop apps" \
-  Claude:claude "ChatGPT and Codex:chatgpt" Gemini:gemini "GitHub Copilot:copilot" Antigravity:antigravity
+  Claude:claude "ChatGPT and Codex:chatgpt" "GitHub Copilot:copilot" Antigravity:antigravity
 question_help apps_ai "These are desktop apps. ChatGPT's includes Codex. The terminal tools come later, under Coding agents."
 question apps_productivity multi Productivity Productivity Raycast:raycast Obsidian:obsidian
 question wispr_flow yesno "Wispr Flow" "Install Wispr Flow for voice dictation?"
