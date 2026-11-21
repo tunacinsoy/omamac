@@ -130,8 +130,8 @@ the azure-cli cask" ]
   [ "$status" -eq 0 ]
   [ "$(installs)" = "brew install gh opencode
 brew install --cask claude-code antigravity-cli" ]
-  [[ "$output" == *"Installing GitHub CLI, opencode"* ]]
-  [[ "$output" == *"Installing Claude Code, Antigravity CLI"* ]]
+  [[ "$output" == *"Installing GitHub CLI, opencode CLI"* ]]
+  [[ "$output" == *"Installing Claude Code CLI, Antigravity CLI"* ]]
   [[ "$output" == *"✓ Your CLIs are installed"* ]]
 }
 

@@ -76,7 +76,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   [ "$status" -eq 0 ]
   [ "$(prompts | wc -l | tr -d ' ')" = 3 ]
   [[ "$(prompts | sed -n 1p)" == *"Terraform:terraform" ]]
-  [[ "$(prompts | sed -n 2p)" == *"--label-delimiter=: Antigravity CLI:antigravity-cli opencode:opencode" ]]
+  [[ "$(prompts | sed -n 2p)" == *"--label-delimiter=: Antigravity CLI:antigravity-cli opencode CLI:opencode" ]]
   grep -qx 'coding_agents=claude-code opencode' "$CHOICES_FILE"
 }
 

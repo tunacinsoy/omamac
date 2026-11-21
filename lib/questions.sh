@@ -36,9 +36,9 @@ question apps_media multi Media Media Spotify:spotify VLC:vlc
 question apps_screen_recording multi "Screen recording" "Screen recording" Cap:cap
 question apps_storage multi "Storage and sync" "Storage and sync" Dropbox:dropbox "Google Drive:google-drive"
 question apps_developer multi Developer Developer "VS Code:vscode"
-question apps_ai multi "AI apps" "AI apps" \
-  Claude:claude ChatGPT:chatgpt Gemini:gemini "GitHub Copilot:copilot" Antigravity:antigravity
-question_help apps_ai "ChatGPT's app includes Codex. Coding agents for the terminal come later."
+question apps_ai multi "AI apps" "AI desktop apps" \
+  Claude:claude "ChatGPT and Codex:chatgpt" Gemini:gemini "GitHub Copilot:copilot" Antigravity:antigravity
+question_help apps_ai "These are desktop apps. ChatGPT's includes Codex. The terminal tools come later, under Coding agents."
 question apps_productivity multi Productivity Productivity Raycast:raycast Obsidian:obsidian
 question wispr_flow yesno "Wispr Flow" "Install Wispr Flow for voice dictation?"
 question_help wispr_flow "Wispr Flow turns your speech into text in the cloud."
@@ -53,7 +53,7 @@ question languages multi Languages "Programming languages" \
 question cloud_clis multi "Cloud CLIs" "Cloud command-line tools" \
   "Azure CLI:azure" "AWS CLI:aws" "Google Cloud CLI:gcloud" "GitHub CLI:gh" Terraform:terraform
 question coding_agents multi "Coding agents" "Coding agents for the terminal" \
-  "Claude Code:claude-code" "Antigravity CLI:antigravity-cli" opencode:opencode
+  "Claude Code CLI:claude-code" "Antigravity CLI:antigravity-cli" "opencode CLI:opencode"
 question_help coding_agents "They run in the terminal, in herdr. Each asks you to sign in the first time."
 # "No Docker" comes first: Enter picks the option under the cursor, and Enter
 # alone must never opt in to anything.
