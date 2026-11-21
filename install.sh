@@ -117,8 +117,8 @@ install_summary() {
     "Installed: Homebrew, bash, gum, omamac, Ghostty and the core tools,"
     "and $list and ${chosen[-1]} you chose."
     ""
-    "omamac sets three Ghostty settings: its colours, command"
-    "(starts herdr) and macos-option-as-alt."
+    "omamac sets four Ghostty settings: its colours, command (starts"
+    "herdr), macos-option-as-alt, and Option ←/→, which go to herdr."
   )
   if [ "${#apps[@]}" -eq 0 ]; then
     lines+=("The first time you open Ghostty, macOS asks you to confirm;" "click Open.")

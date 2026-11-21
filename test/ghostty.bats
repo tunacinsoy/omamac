@@ -30,6 +30,8 @@ in_lib() {
   in_lib "ghostty_render '$BATS_TEST_TMPDIR/out'"
   grep -qxF "command = direct:$HOME/.local/share/omamac/bin/omamac-terminal" "$BATS_TEST_TMPDIR/out"
   grep -qxF 'macos-option-as-alt = left' "$BATS_TEST_TMPDIR/out"
+  grep -qxF 'keybind = alt+arrow_left=unbind' "$BATS_TEST_TMPDIR/out"
+  grep -qxF 'keybind = alt+arrow_right=unbind' "$BATS_TEST_TMPDIR/out"
   ! grep -q '@' "$BATS_TEST_TMPDIR/out"
   # The theme's colours come last, so they win over the template.
   tail -n 20 "$BATS_TEST_TMPDIR/out" | grep -qxF "$(grep '^background = ' "$REPO_ROOT/themes/tokyo-night/ghostty.conf")"
