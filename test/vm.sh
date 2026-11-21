@@ -128,6 +128,10 @@ trap finish EXIT
 # 2. Clone and boot.
 info "Booting $vm_name"
 tart clone "$IMAGE" "$vm_name"
+# The full fixture installs every option at once, which with Homebrew's
+# downloads fills the image's 80 GB. The guest grows into the bigger disk on
+# its own (as in test/image.sh); the disk file grows only as it's written.
+tart set "$vm_name" --disk-size 120
 tart run --no-graphics "$vm_name" &
 ip=$(tart ip --wait 120 "$vm_name")
 # The IP shows up before SSH listens.
@@ -136,6 +140,8 @@ for _ in $(seq 60); do
   sleep 5
 done
 OMAMAC_VM_TIMEOUT=30 vm true
+# The free space at the start, for the log, so a run that fills the disk shows how much it had.
+OMAMAC_VM_TIMEOUT=30 vm 'df -h /'
 
 # 3. The fixture, where install.sh reads it.
 step=fixture
