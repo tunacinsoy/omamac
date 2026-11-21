@@ -8,6 +8,12 @@
 declare -gA LANGUAGE_TOOLS=(
   [ruby]=ruby [node]=node [go]=go [python]=python [elixir]='erlang elixir' [rust]=rust [java]=java
 )
+# The commands each language brings, for the summary: there is no rust command, for one.
+# shellcheck disable=SC2034 # read by lib/add.sh
+declare -gA LANGUAGE_COMMANDS=(
+  [ruby]='ruby, gem and rails' [node]='node, npm and npx' [go]=go [python]='python and pip'
+  [elixir]='elixir, iex and mix' [rust]='rustc and cargo' [java]='java and javac'
+)
 
 # languages_mise <args…>: mise from HOME, so a project's mise.toml in the
 # current folder is never installed or trusted. ui_run can't run a function,
