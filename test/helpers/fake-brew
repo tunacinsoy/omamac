@@ -24,6 +24,11 @@ fake_cask() {
   mkdir -p "$prefix/Caskroom/$1"
   app=$(fake_cask_app "$1")
   [ -z "$app" ] || mkdir -p "${OMAMAC_TEST_APPLICATIONS:?fake-brew needs OMAMAC_TEST_APPLICATIONS}/$app"
+  # VS Code's code command is in the app.
+  if [ "$1" = visual-studio-code ]; then
+    mkdir -p "$OMAMAC_TEST_APPLICATIONS/$app/Contents/Resources/app/bin"
+    ln -sf "$REPO_ROOT/test/helpers/fake-code" "$OMAMAC_TEST_APPLICATIONS/$app/Contents/Resources/app/bin/code"
+  fi
 }
 
 case "${1:-}" in

@@ -2,7 +2,8 @@
 # Runs in the VM after the two runs (test/vm.sh, step 9), in zsh with -eux.
 fp() { curl -fsSL "https://raw.githubusercontent.com/tunacinsoy/omamac/$(git -C ~/.local/share/omamac rev-parse HEAD)/test/fingerprint.sh" | /bin/bash; }
 # The apps are in Applications, Homebrew lists their casks, and VS Code's link
-# points into the app. No app's binary runs: it would wait on macOS's first-open check.
+# points into the app. No app's binary runs here: it would wait on macOS's
+# first-open check. (omamac ran VS Code's code command, to install its theme.)
 for app in VLC.app Cap.app zoom.us.app 'Visual Studio Code.app' Claude.app ChatGPT.app 'GitHub Copilot.app' Antigravity.app 'Wispr Flow.app'; do
   [[ -d /Applications/$app ]]
 done
@@ -12,6 +13,10 @@ for c in vlc cap zoom visual-studio-code claude chatgpt github-copilot-app antig
 done
 code=$(brew --prefix)/bin/code
 [[ -L $code && $(readlink "$code") == /Applications/Visual\ Studio\ Code.app/* ]]
+# VS Code has omamac's theme extension with the chosen theme, and no settings.json.
+ext=~/.vscode/extensions/omamac.omamac-theme-1.0.0
+cmp $ext/themes/omamac.json ~/.local/share/omamac/themes/tokyo-night/vscode.json
+[[ ! -e ~/Library/Application\ Support/Code/User/settings.json ]]
 # Updating again changes nothing.
 omamac update
 before=$(fp)
@@ -21,6 +26,9 @@ if [[ $before != "$after" ]]; then
   diff <(print -r -- "$before") <(print -r -- "$after")
   exit 1
 fi
+# A theme switch reaches VS Code.
+omamac theme nord
+cmp $ext/themes/omamac.json ~/.local/share/omamac/themes/nord/vscode.json
 # A yes to the data question takes VLC's settings too.
 defaults write org.videolan.vlc omamac-test -bool true
 [[ -f ~/Library/Preferences/org.videolan.vlc.plist ]]

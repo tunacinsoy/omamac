@@ -101,8 +101,9 @@ snapshot() {
   for f in "${mine[@]}"; do after+="$(shasum < "$HOME/$f") $(stat -f %m "$HOME/$f");"; done
   [ "$after" = "$before" ]
   run grep -rnE '/etc/|/Library/' "$REPO_ROOT/install.sh" "$REPO_ROOT/lib"
-  # Only comment lines may match, and Ghostty's own folder under $HOME.
-  [ -z "$(grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' <<< "$output" | grep -vF '$HOME/Library/Application Support/com.mitchellh.ghostty')" ]
+  # Only comment lines may match, Ghostty's own folder under $HOME, and VS Code's
+  # settings under $HOME, which omamac only reads.
+  [ -z "$(grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' <<< "$output" | grep -vF -e '$HOME/Library/Application Support/com.mitchellh.ghostty' -e 'OMAMAC_VSCODE_SETTINGS="$HOME/Library/Application Support/Code/User/settings.json"')" ]
 }
 
 @test "never-touch: colima leaves ~/.docker/config.json alone" {

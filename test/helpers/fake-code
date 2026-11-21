@@ -1,0 +1,20 @@
+#!/bin/bash
+# Test double for VS Code's code command. Bash 3.2 safe. Logs each call to
+# $STUB_LOG. --install-extension <vsix> logs the zip's entries, then does what
+# VS Code does: unpacks extension/ into ~/.vscode/extensions/<publisher>.<name>-<version>
+# and adds its own __metadata to package.json. T_CODE_FAIL=1 makes it fail.
+[ -z "${STUB_LOG:-}" ] || echo "code $*" >> "$STUB_LOG"
+[ "${T_CODE_FAIL:-0}" != 1 ] || { echo "fake-code: Failed Installing Extensions" >&2; exit 1; }
+if [ "${1:-}" = --install-extension ]; then
+  [ -z "${STUB_LOG:-}" ] || echo "vsix $(unzip -Z1 "$2" | grep -v '/$' | sort | paste -sd' ' -)" >> "$STUB_LOG"
+  tmp=$(mktemp -d)
+  unzip -q "$2" -d "$tmp"
+  id=$(jq -r '"\(.publisher).\(.name)-\(.version)"' "$tmp/extension/package.json")
+  dest="$HOME/.vscode/extensions/$id"
+  rm -rf "$dest"
+  mkdir -p "$HOME/.vscode/extensions"
+  mv "$tmp/extension" "$dest"
+  jq '. + {__metadata: {installedTimestamp: 1}}' "$dest/package.json" > "$tmp/package.json"
+  mv "$tmp/package.json" "$dest/package.json"
+  rm -rf "$tmp"
+fi

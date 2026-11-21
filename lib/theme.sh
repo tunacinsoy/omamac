@@ -1,6 +1,6 @@
 # shellcheck shell=bash disable=SC2034 # OMAMAC_STEP is read by the caller's ERR trap
 # The theme files in ~/.config/omamac. Sourced after lib/herdr.sh, lib/ghostty.sh
-# and lib/neovim.sh, before lib/apply.sh (it uses apply_put). Needs lib/choices.sh:
+# and lib/neovim.sh, before lib/apply.sh (it uses apply_put). theme_run needs lib/vscode.sh. Needs lib/choices.sh:
 # the theme is CHOICES[theme]. Every file is omamac's, written compare-then-move.
 
 # theme_herdr_name <id>: the theme name herdr knows. herdr follows Ghostty's colours with "terminal".
@@ -96,5 +96,6 @@ theme_run() {
   choices_save "$OMAMAC_CHOICES_FILE"
   theme_apply
   theme_reload
-  ui_ok "Theme: $(question_label theme "$id"). What's running shows it now; neovim the next time it opens."
+  vscode_theme_install
+  ui_ok "Theme: $(question_label theme "$id"). What's running shows it now; neovim and VS Code the next time they open."
 }
