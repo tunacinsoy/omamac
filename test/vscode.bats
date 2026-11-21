@@ -49,7 +49,7 @@ used_vscode() {
   [ "$(jq -r '.contributes.themes[0] | "\(.id) \(.label) \(.uiTheme) \(.path)"' "$EXT/package.json")" = 'omamac omamac vs-dark ./themes/omamac.json' ]
   [ "$(cd "$EXT" && find . -type f | sort | paste -sd' ' -)" = './package.json ./themes/omamac.json' ]
   [ ! -s "$STUB_LOG" ]
-  [[ "$output" == *"VS Code has the theme. It shows the next time VS Code opens."* ]]
+  [ "$output" = "✓ VS Code has the theme too." ]
   # The user's settings and VS Code's list are never written.
   [ ! -e "$SETTINGS" ]
   [ ! -e "$HOME/.vscode/extensions/extensions.json" ]
@@ -63,7 +63,7 @@ used_vscode() {
   cmp "$EXT/themes/omamac.json" "$REPO_ROOT/themes/dracula/vscode.json"
   grep -qx "code --install-extension .*/omamac-theme.vsix --force" "$STUB_LOG"
   grep -qx 'vsix extension/package.json extension/themes/omamac.json' "$STUB_LOG"
-  [[ "$output" == *"VS Code has the theme. It shows the next time VS Code opens."* ]]
+  [ "$output" = "✓ VS Code has the theme too." ]
 }
 
 @test "VS Code that lists omamac's extension: the files are rewritten in place" {
@@ -87,8 +87,8 @@ used_vscode() {
   [ "$status" -eq 0 ]
   [ "$(stat -f %m "$EXT/package.json" "$EXT/themes/omamac.json")" = "$before" ]
   [ ! -s "$STUB_LOG" ]
-  [[ "$output" == *"VS Code has the theme"* ]]
-  [[ "$output" != *"It shows the next time"* ]]
+  # Nothing changed, so nothing is said: the theme step's line names VS Code.
+  [ -z "$output" ]
 }
 
 @test "another theme replaces the colours" {
@@ -114,8 +114,7 @@ used_vscode() {
   install dracula
   [ "$status" -eq 0 ]
   [[ "$output" == *"Your own VS Code theme is kept, so the theme doesn't reach VS Code."* ]]
-  [[ "$output" == *"omamac's theme is in VS Code"* ]]
-  [[ "$output" != *"It shows the next time"* ]]
+  [[ "$output" != *"VS Code has the theme"* ]]
   cmp "$SETTINGS" "$BATS_TEST_TMPDIR/before"
 }
 
@@ -126,7 +125,7 @@ used_vscode() {
   install dracula
   [ "$status" -eq 0 ]
   [[ "$output" != *"Your own VS Code theme"* ]]
-  [[ "$output" == *"VS Code has the theme"* ]]
+  [[ "$output" == *"VS Code has the theme too."* ]]
 }
 
 @test "a commented-out theme line isn't the user's own" {

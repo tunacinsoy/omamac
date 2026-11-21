@@ -18,11 +18,14 @@ in_lib() {
     OMAMAC_CHECKOUT='$CHECKOUT'
     source '$REPO_ROOT/lib/paths.sh'
     source '$REPO_ROOT/lib/ui.sh'
+    source '$REPO_ROOT/lib/questions.sh'
     source '$REPO_ROOT/lib/choices.sh'
     source '$REPO_ROOT/lib/herdr.sh'
     source '$REPO_ROOT/lib/ghostty.sh'
     source '$REPO_ROOT/lib/neovim.sh'
     source '$REPO_ROOT/lib/theme.sh'
+    source '$REPO_ROOT/lib/vscode.sh'
+    source '$REPO_ROOT/lib/clis.sh'
     source '$REPO_ROOT/lib/apply.sh'
     CHOICES[theme]=tokyo-night
     $1"
@@ -31,7 +34,7 @@ in_lib() {
 # says <line>: the output closes with the theme step's line; the herdr ℹ line
 # is there only when the user's own config is kept.
 says() {
-  [[ "$output" == *"✓ Theme files are in place"* ]]
+  [[ "$output" == *"✓ Theme: "* ]]
   if [[ "$1" == ℹ* ]]; then
     [[ "$output" == *"$1"* ]]
   else
@@ -65,7 +68,7 @@ rendered() { in_lib "herdr_render '$BATS_TEST_TMPDIR/rendered.toml'"; [ "$status
 @test "fresh: writes the file" {
   in_lib theme_apply
   [ "$status" -eq 0 ]
-  says "✓ Theme files are in place"
+  says "✓ Theme: "
   rendered
   cmp "$FILE" "$BATS_TEST_TMPDIR/rendered.toml"
   grep -qF "command = \"$HOME/.local/share/omamac/bin/omamac-herdr-mode pane\"" "$FILE"
@@ -107,7 +110,7 @@ rendered() { in_lib "herdr_render '$BATS_TEST_TMPDIR/rendered.toml'"; [ "$status
   mv "$FILE.new" "$FILE"
   in_lib theme_apply
   [ "$status" -eq 0 ]
-  says "✓ Theme files are in place"
+  says "✓ Theme: "
   rendered
   cmp "$FILE" "$BATS_TEST_TMPDIR/rendered.toml"
 }
@@ -120,6 +123,8 @@ rendered() { in_lib "herdr_render '$BATS_TEST_TMPDIR/rendered.toml'"; [ "$status
   in_lib theme_apply
   [ "$status" -eq 0 ]
   says "ℹ Your own herdr config is kept."
+  # The theme line doesn't name herdr.
+  [[ "$output" == *"✓ Theme: Tokyo Night, in Ghostty, btop, the prompt and neovim"* ]]
   [ "$(shasum < "$HOME/.config/herdr/config.toml") $(stat -f %m "$HOME/.config/herdr/config.toml")" = "$before" ]
   # omamac's file is still kept up to date.
   rendered
@@ -142,7 +147,7 @@ rendered() { in_lib "herdr_render '$BATS_TEST_TMPDIR/rendered.toml'"; [ "$status
   printf 'onboarding = false\n' > "$HOME/.config/herdr/config.toml"
   in_lib theme_apply
   [ "$status" -eq 0 ]
-  says "✓ Theme files are in place"
+  says "✓ Theme: "
   [ "$(<"$HOME/.config/herdr/config.toml")" = 'onboarding = false' ]
 }
 
@@ -158,7 +163,7 @@ rendered() { in_lib "herdr_render '$BATS_TEST_TMPDIR/rendered.toml'"; [ "$status
   export HERDR_CONFIG_PATH="$HOME/.config/omamac/herdr.toml"
   in_lib theme_apply
   [ "$status" -eq 0 ]
-  says "✓ Theme files are in place"
+  says "✓ Theme: "
 }
 
 @test "herdr config check accepts the rendered file" {

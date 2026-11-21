@@ -49,7 +49,7 @@ stamp() { (cd "$OM" && find . -type f -exec stat -f '%N %m' {} + | sort); }
   grep -qx 'pkill -USR2 -x ghostty' "$STUB_LOG"
   grep -qx 'herdr server reload-config' "$STUB_LOG"
   grep -qx 'pkill -USR2 -x btop' "$STUB_LOG"
-  [[ "$output" == *"Theme: Dracula."* ]]
+  [[ "$output" == *"✓ Theme: Dracula, in "* ]]
 }
 
 @test "own starship config: kept, said so, summary is honest" {
@@ -58,7 +58,8 @@ stamp() { (cd "$OM" && find . -type f -exec stat -f '%N %m' {} + | sort); }
   run omamac_theme dracula
   [ "$status" -eq 0 ]
   [[ "$output" == *"Your own starship config is kept, so the theme doesn't reach the prompt."* ]]
-  [[ "$output" == *"Theme: Dracula. What's running shows it now; neovim the next time it opens."* ]]
+  [[ "$output" == *"✓ Theme: Dracula, in Ghostty, herdr, btop and neovim"* ]]
+  [[ "$output" == *"What's running shows it now; neovim the next time it opens."* ]]
 }
 
 @test "own btop and neovim configs: said so" {
@@ -87,7 +88,7 @@ stamp() { (cd "$OM" && find . -type f -exec stat -f '%N %m' {} + | sort); }
   stub herdr 'echo "no server" >&2; exit 1'
   run omamac_theme dracula
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Theme: Dracula."* ]]
+  [[ "$output" == *"✓ Theme: Dracula, in "* ]]
   [[ "$output" != *"no server"* ]]
 }
 
@@ -96,7 +97,7 @@ stamp() { (cd "$OM" && find . -type f -exec stat -f '%N %m' {} + | sort); }
   run omamac_theme
   [ "$status" -eq 0 ]
   grep -qx 'theme=nord' "$CHOICES_FILE"
-  [[ "$output" == *"Theme: Nord."* ]]
+  [[ "$output" == *"✓ Theme: Nord, in "* ]]
   grep -q '^gum choose --header Which theme?' "$STUB_LOG"
 }
 

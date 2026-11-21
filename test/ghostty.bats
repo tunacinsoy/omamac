@@ -15,11 +15,14 @@ in_lib() {
     source '$REPO_ROOT/lib/paths.sh'
     source '$REPO_ROOT/lib/ui.sh'
     source '$REPO_ROOT/lib/lines.sh'
+    source '$REPO_ROOT/lib/questions.sh'
     source '$REPO_ROOT/lib/choices.sh'
     source '$REPO_ROOT/lib/herdr.sh'
     source '$REPO_ROOT/lib/ghostty.sh'
     source '$REPO_ROOT/lib/neovim.sh'
     source '$REPO_ROOT/lib/theme.sh'
+    source '$REPO_ROOT/lib/vscode.sh'
+    source '$REPO_ROOT/lib/clis.sh'
     source '$REPO_ROOT/lib/apply.sh'
     CHOICES[theme]=tokyo-night
     $1"

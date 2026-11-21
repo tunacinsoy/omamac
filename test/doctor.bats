@@ -249,7 +249,9 @@ vscode_app() {
   omamac_lib vscode_theme_install
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"✓ VS Code theme"* ]]
+  # "Theme files" covers it: no line of its own.
+  [[ "$output" == *"✓ Theme files"* ]]
+  [[ "$output" != *"VS Code theme"* ]]
 }
 
 @test "VS Code without omamac's theme is a fail" {
