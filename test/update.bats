@@ -187,15 +187,15 @@ choose() { sed -i '' "s/^$1=.*/$1=$2/" "$CHOICES_FILE"; }
 
 @test "coding agents: formulas upgraded by name, casks in the greedy call" {
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gh opencode
-  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask gcloud-cli claude-code copilot-cli
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask gcloud-cli claude-code antigravity-cli
   choose cloud_clis 'gcloud gh'
-  choose coding_agents 'claude-code opencode copilot-cli'
+  choose coding_agents 'claude-code opencode antigravity-cli'
   : > "$STUB_LOG"
   run update
   [ "$status" -eq 0 ]
   [ "$(grep '^brew upgrade' "$STUB_LOG" | grep -v -- --cask)" = "brew upgrade $OMAMAC_FORMULAS gh opencode" ]
   [ "$(grep -c '^brew upgrade --cask' "$STUB_LOG")" -eq 1 ]
-  grep -qx 'brew upgrade --cask --greedy gcloud-cli claude-code copilot-cli' "$STUB_LOG"
+  grep -qx 'brew upgrade --cask --greedy gcloud-cli claude-code antigravity-cli' "$STUB_LOG"
 }
 
 @test "no gcloud: no cask upgrade" {

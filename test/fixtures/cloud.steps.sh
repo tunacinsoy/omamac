@@ -20,7 +20,7 @@ gh --version
 terraform version
 # Every coding agent's command is Homebrew's. None runs: a cask's binary may
 # wait on macOS's first-open check, and each wants a sign-in.
-for cmd in claude codex copilot agy opencode; do [[ -x /opt/homebrew/bin/$cmd ]]; done
+for cmd in claude agy opencode; do [[ -x /opt/homebrew/bin/$cmd ]]; done
 # Uninstall terraform and gcloud, each twice: Homebrew no longer has it, and the second run changes nothing.
 omamac uninstall terraform
 if /opt/homebrew/bin/brew list --formula hashicorp/tap/terraform >/dev/null 2>&1; then exit 1; fi
@@ -40,12 +40,12 @@ if [[ $before != "$after" ]]; then
   diff <(print -r -- "$before") <(print -r -- "$after")
   exit 1
 fi
-# One coding agent of each kind: codex is a cask, opencode a formula.
-omamac uninstall codex
-[[ ! -e /opt/homebrew/bin/codex ]]
-if /opt/homebrew/bin/brew list --cask codex >/dev/null 2>&1; then exit 1; fi
+# One coding agent of each kind: antigravity-cli is a cask, opencode a formula.
+omamac uninstall antigravity-cli
+[[ ! -e /opt/homebrew/bin/agy ]]
+if /opt/homebrew/bin/brew list --cask antigravity-cli >/dev/null 2>&1; then exit 1; fi
 omamac uninstall opencode
 [[ ! -e /opt/homebrew/bin/opencode ]]
 choices=$(< ~/.local/state/omamac/choices.env)
-[[ $'\n'$choices$'\n' == *$'\n'"coding_agents=claude-code copilot-cli antigravity-cli"$'\n'* ]]
+[[ $'\n'$choices$'\n' == *$'\n'"coding_agents=claude-code"$'\n'* ]]
 omamac doctor

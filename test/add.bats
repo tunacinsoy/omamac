@@ -9,7 +9,7 @@ OMAMAC_FORMULAS='starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd l
 ALL_BROWSERS='brave chrome firefox'
 ALL_COMMUNICATION='whatsapp telegram signal discord slack zoom'
 ALL_CASKS='brave-browser google-chrome firefox whatsapp telegram signal discord slack zoom spotify vlc cap dropbox google-drive visual-studio-code claude chatgpt google-gemini antigravity raycast obsidian wispr-flow'
-ALL_AGENTS='claude-code codex copilot-cli antigravity-cli opencode'
+ALL_AGENTS='claude-code antigravity-cli opencode'
 
 setup() {
   setup_sandbox
@@ -34,7 +34,7 @@ setup() {
   # Every coding agent picked and installed too: the tests below ask about languages and cloud CLIs.
   choose coding_agents "$ALL_AGENTS"
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install opencode
-  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask claude-code codex copilot-cli antigravity-cli
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask claude-code antigravity-cli
   # Only the run's own calls.
   : > "$STUB_LOG"
 }
@@ -70,14 +70,14 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
 
 @test "install offers the unpicked coding agents after the cloud CLIs" {
   choose languages 'ruby node go python elixir rust java'
-  choose coding_agents 'claude-code codex'
+  choose coding_agents claude-code
   gum_answers "" opencode yes
   run omamac_install
   [ "$status" -eq 0 ]
   [ "$(prompts | wc -l | tr -d ' ')" = 3 ]
   [[ "$(prompts | sed -n 1p)" == *"Terraform:terraform" ]]
-  [[ "$(prompts | sed -n 2p)" == *"--label-delimiter=: Copilot:copilot-cli Antigravity CLI:antigravity-cli opencode:opencode" ]]
-  grep -qx 'coding_agents=claude-code codex opencode' "$CHOICES_FILE"
+  [[ "$(prompts | sed -n 2p)" == *"--label-delimiter=: Antigravity CLI:antigravity-cli opencode:opencode" ]]
+  grep -qx 'coding_agents=claude-code opencode' "$CHOICES_FILE"
 }
 
 @test "nothing left: says so, asks nothing" {

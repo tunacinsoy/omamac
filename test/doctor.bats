@@ -511,14 +511,14 @@ settings_set() {
 @test "a chosen coding agent gone: ✗, and dropping it changes only its own answer" {
   healthy_mac
   choose cloud_clis gh
-  choose coding_agents 'codex opencode'
+  choose coding_agents 'antigravity-cli opencode'
   mkdir -p "$OMAMAC_TEST_BREW_PREFIX/Cellar/gh" "$OMAMAC_TEST_BREW_PREFIX/Cellar/opencode"
   gum_answers drop
   run doctor
   [ "$status" -eq 1 ]
-  [[ "$output" == *"Codex — you chose it, but Homebrew no longer has it"* ]]
-  [[ "$output" == *"omamac uninstall codex drops it"* ]]
-  [[ "$output" == *"✓ Codex is dropped from your answers"* ]]
+  [[ "$output" == *"Antigravity CLI — you chose it, but Homebrew no longer has it"* ]]
+  [[ "$output" == *"omamac uninstall antigravity-cli drops it"* ]]
+  [[ "$output" == *"✓ Antigravity CLI is dropped from your answers"* ]]
   grep -qx 'coding_agents=opencode' "$CHOICES_FILE"
   grep -qx 'cloud_clis=gh' "$CHOICES_FILE"
 }

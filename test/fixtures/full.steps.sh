@@ -19,7 +19,7 @@ mise=/opt/homebrew/bin/mise
 ids=(brave chrome firefox whatsapp telegram signal discord slack zoom spotify vlc cap dropbox google-drive vscode
   claude chatgpt gemini antigravity raycast obsidian wispr-flow)
 # Each coding agent as <id>:<its command>.
-agents=(claude-code:claude codex:codex copilot-cli:copilot antigravity-cli:agy opencode:opencode)
+agents=(claude-code:claude antigravity-cli:agy opencode:opencode)
 
 # 1. Every app is in Applications and Homebrew lists its cask. No app's
 # binary runs: it would wait on macOS's first-open check.

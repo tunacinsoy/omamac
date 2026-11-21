@@ -126,33 +126,31 @@ the azure-cli cask" ]
 }
 
 @test "coding agents: formulas and casks install beside the cloud CLIs, in one call each" {
-  in_lib gh 'CHOICES[coding_agents]="claude-code opencode codex copilot-cli antigravity-cli"; clis_install'
+  in_lib gh 'CHOICES[coding_agents]="claude-code opencode antigravity-cli"; clis_install'
   [ "$status" -eq 0 ]
   [ "$(installs)" = "brew install gh opencode
-brew install --cask claude-code codex copilot-cli antigravity-cli" ]
+brew install --cask claude-code antigravity-cli" ]
   [[ "$output" == *"Installing GitHub CLI, opencode"* ]]
-  [[ "$output" == *"Installing Claude Code, Codex, Copilot, Antigravity CLI"* ]]
+  [[ "$output" == *"Installing Claude Code, Antigravity CLI"* ]]
   [[ "$output" == *"✓ Your CLIs are installed"* ]]
 }
 
 @test "clis_chosen, clis_key and clis_label cover both CLI questions" {
-  in_lib 'gh aws' 'CHOICES[coding_agents]="codex"
-    echo $(clis_chosen); clis_key codex; clis_key gh; clis_label copilot-cli; clis_label gcloud
+  in_lib 'gh aws' 'CHOICES[coding_agents]="opencode"
+    echo $(clis_chosen); clis_key opencode; clis_key gh; clis_label antigravity-cli; clis_label gcloud
     clis_key vlc || echo "vlc: $?"'
   [ "$status" -eq 0 ]
-  [ "$output" = "gh aws codex
+  [ "$output" = "gh aws opencode
 coding_agents
 cloud_clis
-Copilot
+Antigravity CLI
 Google Cloud CLI
 vlc: 1" ]
 }
 
 @test "clis_what names each coding agent's formula or cask" {
-  in_lib '' 'for id in claude-code codex copilot-cli antigravity-cli opencode; do clis_what "$id"; done'
+  in_lib '' 'for id in claude-code antigravity-cli opencode; do clis_what "$id"; done'
   [ "$output" = "the claude-code cask
-the codex cask
-the copilot-cli cask
 the antigravity-cli cask
 opencode" ]
 }
