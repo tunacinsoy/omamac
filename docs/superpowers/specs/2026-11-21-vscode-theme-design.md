@@ -18,6 +18,9 @@ Checked on 2026-11-21 with VS Code 1.147 in throwaway `--user-data-dir` and `--e
 - A `workbench.colorTheme` the user set, in a `settings.json` with comments, wins at once.
 - VS Code copies the theme file as it is (`cmp` equal), but rewrites its own copy of `package.json`.
 - A reinstall takes under a second.
+- A folder put in `--extensions-dir` with no `extensions.json` is registered at VS Code's first start, and its theme shows. With an `extensions.json` that doesn't name it, VS Code ignores it and marks it obsolete.
+- After a `code --install-extension`, rewriting the folder's two files (VS Code's own `package.json` included) shows the new theme on the next start, and the extension stays listed.
+- In the `apps` VM run, `code --install-extension` right after `brew install --cask visual-studio-code` never returned: the app is quarantined, and macOS's first-open check waits.
 
 ## Approach
 
@@ -25,7 +28,8 @@ Checked on 2026-11-21 with VS Code 1.147 in throwaway `--user-data-dir` and `--e
 | --- | --- | --- |
 | How the colours reach VS Code | omamac's own extension, which sets the default theme | No write to the user's `settings.json`, so no JSON-with-comments editing, and a theme the user picked wins by itself. Dropped: omawsl's merge into `settings.json` (a lot of careful code; a broken file breaks the editor), and marketplace theme extensions (someone else's colours and code). |
 | Where the colours come from | `themes/<id>/vscode.json`, rendered once from omawsl's `vscode-theme.json.tpl` (Omarchy's, MIT) and its `vscode-palette.json` | The same way each `ghostty.conf` was converted once. The 13 backgrounds equal the Ghostty ones (a test checks this). Dropped: rendering at run time (more code; the result never changes between runs). |
-| When it is installed | After the apps, on every run and every `omamac theme`, only when VS Code is installed | `code` is in the app (`Visual Studio Code.app/Contents/Resources/app/bin/code`), so it works for a VS Code omamac didn't install too. |
+| When it is installed | After the apps, on every run and every `omamac theme`, only when VS Code is installed (`Visual Studio Code.app/Contents/Resources/app/bin/code` exists) | Works for a VS Code omamac didn't install too. |
+| How it is installed | omamac writes the extension's folder in `~/.vscode/extensions` itself, unless VS Code keeps a list (`extensions.json`) that doesn't name it; then once with `code --install-extension --force` | Running `code` on an app Homebrew just installed waits on macOS's first-open check, with nobody there to answer: the `apps` VM run stopped there for good. With no `extensions.json`, VS Code hasn't run, and its first start registers the folder; once it lists the extension, rewriting the files in place shows on the next start. A list without it means VS Code has run, so its app was opened and `code` runs. Dropped: always `code` (the hang), and adding to `extensions.json` (VS Code's own file). |
 | A second run | Skipped when the installed `themes/omamac.json` equals the chosen theme's file | Runs stay idempotent. `package.json` can't be compared, because VS Code rewrites it. |
 | Light or dark | `uiTheme` is `vs` for a light theme (`"type": "light"`), else `vs-dark` | VS Code bases the colours omamac's file doesn't set on it. rose-pine is the one light theme. |
 | The user's own theme | Kept; omamac says so, as for starship and btop | `"workbench.colorTheme"` in `~/Library/Application Support/Code/User/settings.json` |
