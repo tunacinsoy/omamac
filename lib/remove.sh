@@ -1,13 +1,13 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2034 # OMAMAC_STEP is read by bin/omamac's ERR trap
 # shellcheck disable=SC2004 # CHOICES is associative (lib/choices.sh), so $key is needed
-# omamac uninstall: remove one language, cloud CLI, setting, Docker or app.
+# omamac uninstall: remove one language, cloud CLI, coding agent, setting, Docker or app.
 # Sourced after lib/ask.sh, lib/log.sh, lib/core.sh, lib/apps.sh,
 # lib/languages.sh, lib/clis.sh, lib/docker.sh, lib/appmanagement.sh,
 # lib/settings.sh and lib/dock.sh.
 
 # The questions whose picks omamac uninstall can remove.
-REMOVE_KEYS=(languages cloud_clis)
+REMOVE_KEYS=(languages cloud_clis coding_agents)
 
 # remove_setting <name>: put a desktop, window-margin or Dock auto-hide
 # setting back. The answer is saved no last, so a failure leaves it yes and

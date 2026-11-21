@@ -151,10 +151,10 @@ snapshot() {
   fresh_answers yes
   run install
   [ "$status" -eq 0 ]
-  [ "$(prompts | wc -l | tr -d ' ')" = 17 ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 19 ]
   grep -qx 'apps_browsers=brave firefox' "$CHOICES_FILE"
   grep -qx 'docker=none' "$CHOICES_FILE"
-  [ "$(grep -c '=' "$CHOICES_FILE")" = 16 ]
+  [ "$(grep -c '=' "$CHOICES_FILE")" = 18 ]
   [ -e "$HOME/.config/omamac/zshrc" ]
   [[ "$output" == *"Theme: Tokyo Night"* ]]
 }
@@ -227,7 +227,7 @@ snapshot() {
   [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
   grep -qx 'docker=docker-desktop' "$CHOICES_FILE"
   grep -qx 'apps_media=vlc' "$CHOICES_FILE"
-  [ "$(grep -c '=' "$CHOICES_FILE")" = 16 ]
+  [ "$(grep -c '=' "$CHOICES_FILE")" = 18 ]
 }
 
 @test "no on a re-run keeps the saved answers and says nothing about asking again" {
@@ -252,7 +252,7 @@ snapshot() {
   [ "$(grep -c '^brew install .*starship' "$STUB_LOG")" = 1 ]
   [ -f "$HOME/.config/nvim/lua/plugins/omamac.lua" ]
   [[ "$output" == *"Installed: Homebrew, bash, gum, omamac, Ghostty and the core tools"* ]]
-  [[ "$output" == *"and the languages and cloud CLIs you chose."* ]]
+  [[ "$output" == *"and the languages, cloud CLIs and coding agents you chose."* ]]
 }
 
 @test "summary names Reduce motion only when macOS refused it" {
@@ -282,7 +282,7 @@ snapshot() {
   run install
   [ "$status" -eq 0 ]
   grep -qx 'brew install gh' "$STUB_LOG"
-  [[ "$output" == *"✓ Cloud CLIs are installed"* ]]
+  [[ "$output" == *"✓ Your CLIs are installed"* ]]
 }
 
 @test "Install? no: no brew install, no nvim" {
@@ -354,7 +354,7 @@ answer() { sed -i '' "s/^$1=.*/$1=$2/" "$CHOICES_FILE"; }
   answer wispr_flow yes
   run install
   [ "$status" -eq 0 ]
-  [[ "$output" == *"and the languages, cloud CLIs and apps you chose."* ]]
+  [[ "$output" == *"and the languages, cloud CLIs, coding agents and apps you chose."* ]]
   [[ "$output" == *"The first time you open Ghostty and each app, macOS asks you"$'\n'"to confirm; click Open."$'\n'"Cap: allow Screen Recording, and Camera and Microphone if you use them."$'\n'"Wispr Flow: allow Microphone and Accessibility."$'\n'* ]]
   [[ "$output" != *"Zoom: allow"* ]]
 }
@@ -364,7 +364,7 @@ answer() { sed -i '' "s/^$1=.*/$1=$2/" "$CHOICES_FILE"; }
   answer docker colima
   run install
   [ "$status" -eq 0 ]
-  [[ "$output" == *"and the languages, cloud CLIs, apps and Docker you chose."* ]]
+  [[ "$output" == *"and the languages, cloud CLIs, coding agents, apps and Docker you chose."* ]]
 }
 
 @test "no apps: the summary's Ghostty lines are today's" {

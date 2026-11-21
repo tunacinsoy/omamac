@@ -82,8 +82,8 @@ unopenable_tty() {
 }
 
 # shellcheck disable=SC2034 # used by the .bats files
-# The 16 answers bats uses for a fresh run, in table order.
-FRESH_ANSWERS=(tokyo-night "firefox brave" "" "" cap "" "" "" no yes no no yes "node python" gh none)
+# The 18 answers bats uses for a fresh run, in table order.
+FRESH_ANSWERS=(tokyo-night "firefox brave" "" "" cap "" "" "" "" no yes no no yes "node python" gh "" none)
 
 install_fake_brew() {
   mkdir -p "$OMAMAC_TEST_BREW_PREFIX/bin"

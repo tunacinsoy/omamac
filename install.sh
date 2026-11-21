@@ -107,7 +107,7 @@ install_lines() {
 install_summary() {
   OMAMAC_STEP='printing the summary'
   # Short lines, so the box fits an 80-column terminal.
-  local apps=() allow=() chosen=("the languages" "cloud CLIs") list
+  local apps=() allow=() chosen=("the languages" "cloud CLIs" "coding agents") list
   mapfile -t apps < <(apps_chosen)
   [ "${#apps[@]}" -eq 0 ] || chosen+=(apps)
   [ "${CHOICES[docker]:-none}" = none ] || chosen+=(Docker)

@@ -377,13 +377,13 @@ own_nvim() {
   healthy_mac
   echo 'colour=red' >> "$CHOICES_FILE"
   expect_fail "Saved answers" "Delete that line"
-  [[ "$output" == *"line 18"* ]]
+  [[ "$output" == *"line 20"* ]]
 }
 
 @test "saved answers incomplete" {
   healthy_mac
   sed -i '' '/^docker=/d' "$CHOICES_FILE"
-  expect_fail "Saved answers" "it asks only that one"
+  expect_fail "Saved answers" "it asks only those"
 }
 
 @test "git status takes no lock" {
@@ -506,6 +506,21 @@ settings_set() {
   gum_answers leave
   expect_fail "GitHub CLI — you chose it, but Homebrew no longer has it" \
     "omamac update puts it back; omamac uninstall gh drops it"
+}
+
+@test "a chosen coding agent gone: ✗, and dropping it changes only its own answer" {
+  healthy_mac
+  choose cloud_clis gh
+  choose coding_agents 'antigravity-cli opencode'
+  mkdir -p "$OMAMAC_TEST_BREW_PREFIX/Cellar/gh" "$OMAMAC_TEST_BREW_PREFIX/Cellar/opencode"
+  gum_answers drop
+  run doctor
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Antigravity CLI — you chose it, but Homebrew no longer has it"* ]]
+  [[ "$output" == *"omamac uninstall antigravity-cli drops it"* ]]
+  [[ "$output" == *"✓ Antigravity CLI is dropped from your answers"* ]]
+  grep -qx 'coding_agents=opencode' "$CHOICES_FILE"
+  grep -qx 'cloud_clis=gh' "$CHOICES_FILE"
 }
 
 @test "chosen tools there: ✓ and no prompt" {

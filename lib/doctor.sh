@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2088 # the ~ in messages is shown to the user, not expanded
 # omamac doctor. Sourced after the libraries it checks. It reports, then offers
-# fixes as questions: only for a chosen language, cloud CLI, colima, Docker Desktop or app that is gone.
+# fixes as questions: only for a chosen language, cloud CLI, coding agent, colima, Docker Desktop or app that is gone.
 
 # doctor_report <ok|fail|info> <what> [<why>] [<fix>]. Returns 1 for fail so callers can count it.
 doctor_report() {
@@ -215,7 +215,7 @@ doctor_check_choices() {
     message=$(choices_load "$OMAMAC_CHOICES_FILE" 2>&1) || true
     doctor_report fail "$what" "${message%%. Fix: *}" "${message#*. Fix: }"
   elif [ -n "$(choices_missing)" ]; then
-    doctor_report fail "$what" "a question has no answer yet" "Run the one-liner; it asks only that one"
+    doctor_report fail "$what" "some questions have no answer yet" "Run the one-liner; it asks only those"
   else
     DOCTOR_HAS_CHOICES=1
     doctor_report ok "$what"
@@ -271,7 +271,7 @@ doctor_key() {
   elif apps_key "$1" 2>/dev/null; then
     :
   else
-    echo cloud_clis
+    clis_key "$1"
   fi
 }
 
@@ -295,7 +295,7 @@ doctor_check_chosen() {
     return 0
   fi
   read -ra langs <<< "${CHOICES[languages]:-}"
-  read -ra clis <<< "${CHOICES[cloud_clis]:-}"
+  mapfile -t clis < <(clis_chosen)
   # A language is gone when any of its tools is. A missing or failing mise
   # skips them all; the core check names a missing mise.
   for id in "${langs[@]}"; do

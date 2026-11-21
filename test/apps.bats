@@ -16,7 +16,7 @@ in_apps() {
 
 all_ids() {
   local k
-  for k in apps_browsers apps_communication apps_media apps_screen_recording apps_storage apps_developer apps_productivity; do
+  for k in apps_browsers apps_communication apps_media apps_screen_recording apps_storage apps_developer apps_ai apps_productivity; do
     "$BASH5" -c "source '$REPO_ROOT/lib/questions.sh'; question_values $k"
   done
   echo wispr-flow
@@ -53,6 +53,10 @@ cap|cap|Cap.app||Cap: allow Screen Recording, and Camera and Microphone if you u
 dropbox|dropbox|Dropbox.app||
 google-drive|google-drive|Google Drive.app|yes|
 vscode|visual-studio-code|Visual Studio Code.app||
+claude|claude|Claude.app||
+chatgpt|chatgpt|ChatGPT.app||
+copilot|github-copilot-app|GitHub Copilot.app||
+antigravity|antigravity|Antigravity.app||
 raycast|raycast|Raycast.app||
 obsidian|obsidian|Obsidian.app||
 wispr-flow|wispr-flow|Wispr Flow.app||Wispr Flow: allow Microphone and Accessibility." ]

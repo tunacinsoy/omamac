@@ -1,10 +1,41 @@
 # shellcheck shell=bash
-# The cloud CLIs, through Homebrew. Sourced after lib/paths.sh, lib/ui.sh and
-# lib/questions.sh, before lib/apply.sh.
+# The cloud CLIs and coding agents, through Homebrew. Sourced after lib/paths.sh,
+# lib/ui.sh and lib/questions.sh, before lib/apply.sh.
+
+# The questions whose picks are CLIs. Their ids never repeat across them.
+CLI_KEYS=(cloud_clis coding_agents)
 
 # Each CLI id's Homebrew formula (full name) or cask.
-declare -gA CLI_FORMULA=([aws]=awscli [gh]=gh [terraform]=hashicorp/tap/terraform)
-declare -gA CLI_CASK=([azure]=azure-cli [gcloud]=gcloud-cli)
+declare -gA CLI_FORMULA=([aws]=awscli [gh]=gh [terraform]=hashicorp/tap/terraform
+  [opencode]=opencode)
+declare -gA CLI_CASK=([azure]=azure-cli [gcloud]=gcloud-cli
+  [claude-code]=claude-code [codex]=codex [copilot-cli]=copilot-cli [antigravity-cli]=antigravity-cli)
+
+# clis_chosen: the picked CLI ids of every CLI question, in question order, one per line.
+clis_chosen() {
+  local key id
+  local -a ids
+  for key in "${CLI_KEYS[@]}"; do
+    read -ra ids <<< "${CHOICES[$key]:-}"
+    for id in "${ids[@]}"; do echo "$id"; done
+  done
+}
+
+# clis_key <id>: the question that offers the id. Returns 1 for an unknown id.
+clis_key() {
+  local key
+  for key in "${CLI_KEYS[@]}"; do
+    if question_has "$key" "$1"; then echo "$key"; return; fi
+  done
+  return 1
+}
+
+# clis_label <id>: the name shown to the user.
+clis_label() {
+  local key
+  key=$(clis_key "$1") || return
+  question_label "$key" "$1"
+}
 
 # clis_where <installed|missing> <id>…: the ids in that state, one per line, in
 # the given order. One brew list for the formulas and one for the casks.
@@ -40,21 +71,21 @@ clis_what() {
 # clis_join <label>…: "A, B".
 clis_join() { local IFS=,; local out="$*"; echo "${out//,/, }"; }
 
-# clis_install [<id>…]: the given CLIs, or the chosen ones. Only what's missing
+# clis_install [<id>…]: the given CLIs, or the chosen ones of every CLI question. Only what's missing
 # is installed: formulas in one brew call, casks in another.
 clis_install() {
   local ids=("$@") list taps id missing=() formulas=() casks=() flabels=() clabels=() brew
   brew="$OMAMAC_BREW_PREFIX/bin/brew"
-  [ "$#" -gt 0 ] || read -ra ids <<< "${CHOICES[cloud_clis]:-}"
+  [ "$#" -gt 0 ] || mapfile -t ids < <(clis_chosen)
   [ "${#ids[@]}" -gt 0 ] || return 0
   # Not mapfile < <(…): that would hide a failed brew list and install nothing.
   list=$(clis_where missing "${ids[@]}") || return
   [ -z "$list" ] || mapfile -t missing <<< "$list"
   for id in "${missing[@]}"; do
     if [ -n "${CLI_FORMULA[$id]:-}" ]; then
-      formulas+=("${CLI_FORMULA[$id]}"); flabels+=("$(question_label cloud_clis "$id")")
+      formulas+=("${CLI_FORMULA[$id]}"); flabels+=("$(clis_label "$id")")
     else
-      casks+=("${CLI_CASK[$id]}"); clabels+=("$(question_label cloud_clis "$id")")
+      casks+=("${CLI_CASK[$id]}"); clabels+=("$(clis_label "$id")")
     fi
   done
   # Homebrew refuses a formula whose name another tap's formula already has.
@@ -75,5 +106,5 @@ clis_install() {
   if [ "${#casks[@]}" -gt 0 ]; then
     ui_run "Installing $(clis_join "${clabels[@]}")" "$brew" install --cask "${casks[@]}" || return
   fi
-  ui_ok "Cloud CLIs are installed"
+  ui_ok "Your CLIs are installed"
 }

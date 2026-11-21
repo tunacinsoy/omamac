@@ -62,7 +62,7 @@ What that means in practice:
 1. The user opens Terminal.app and pastes one line from the README.
 2. omamac explains in a few lines what it is about to do and asks for the admin password once. It keeps sudo valid until the run ends (the password is never stored), so it is not asked again partway through. One exception: Homebrew resets sudo before a cask step that needs it, so if the user picked Docker Desktop, Zoom or Google Drive, Homebrew asks once more, once for all of them; omamac runs that step right after "Install?", in the open, and says so before "Install?". Nothing after it needs sudo.
 3. It installs its own prerequisites without asking: Apple's Command Line Tools and git (via Homebrew's installer), Homebrew itself (put on the PATH for them), a modern bash, and `gum`, which draws omamac's questions, progress and summaries.
-4. It asks all its first-run questions before installing anything, so the rest of the run needs nobody at the keyboard. Questions are short, grouped, nothing pre-selected, from the most visible to the most technical: theme, desktop apps (one multi-select per group), Wispr Flow, desktops, window margins, Dock, Dock auto-hide, languages, cloud CLIs, Docker. If a chosen app is already installed by hand, the "let Homebrew take it over?" question comes right then, too. It ends with one summary of every answer and "Install? (y/n)" before anything changes. There is no multiplexer question: Ghostty and herdr are the terminal pair every omamac user gets.
+4. It asks all its first-run questions before installing anything, so the rest of the run needs nobody at the keyboard. Questions are short, grouped, nothing pre-selected, from the most visible to the most technical: theme, desktop apps (one multi-select per group, AI apps among them), Wispr Flow, desktops, window margins, Dock, Dock auto-hide, languages, cloud CLIs, coding agents, Docker. If a chosen app is already installed by hand, the "let Homebrew take it over?" question comes right then, too. It ends with one summary of every answer and "Install? (y/n)" before anything changes. There is no multiplexer question: Ghostty and herdr are the terminal pair every omamac user gets.
 5. It installs and configures everything chosen, with clear progress output, and ends with a short summary: what was installed, anything that needs one manual click (for example a macOS permission prompt, such as allowing the microphone for Wispr Flow or screen recording for Cap, or App Management for Ghostty), and how to open Ghostty. Each click is one line, never a block of text, plus one line: "The first time you open each app, macOS asks you to confirm; click Open." The README's "After install" lists the same clicks.
 6. The user opens Ghostty and is already in herdr, with nothing to start or set up: their prompt, their editor, their aliases, and the theme they picked (for example Tokyo Night), visible at once.
 
@@ -140,6 +140,7 @@ omamac configures tools whose config files the user may already have written, on
 - Multiplexer: **herdr only** (`brew install herdr`), with omawsl's herdr config and key bindings. zellij is not offered: one multiplexer means one config, one set of bindings and no question to ask.
 - Languages via mise, at the latest version when chosen: Ruby on Rails, Node.js, Go, Python, Elixir, Rust, Java. PHP is left out for now (see "Backlog").
 - Cloud CLIs via Homebrew: Azure CLI, AWS CLI, Google Cloud CLI, GitHub CLI (`gh`), and Terraform from HashiCorp's official tap (`hashicorp/tap/terraform`), since it's no longer in Homebrew's main repository.
+- Coding agents via Homebrew, their own question after the cloud CLIs: Claude Code, Codex CLI, GitHub Copilot CLI, Antigravity CLI (Google's successor to Gemini CLI) and opencode. Codex CLI and Copilot CLI are the one exception to "proven in the VM": their casks run the binary during `brew install`, which a fresh VM's first-launch check never lets finish, while a real Mac installs them in seconds; Gate B proves them instead. They run in the terminal, in herdr. omamac installs, updates and uninstalls them like the cloud CLIs; signing in stays with the user. The same tools as desktop apps are the "AI apps" group of the app catalog, so someone who prefers a window and someone who prefers the terminal each pick their own.
 - Docker: one choice, nothing pre-selected: colima, Docker Desktop or none. colima runs as a background service that starts at login.
 
 **Terminal and look**
@@ -158,6 +159,7 @@ Because omamac runs natively on the host, it can install real desktop apps as Ho
 | Screen recording | Cap (`cap` cask) |
 | Storage and sync | Dropbox, Google Drive |
 | Developer | VS Code |
+| AI apps | Claude, ChatGPT (includes Codex), GitHub Copilot, Antigravity |
 | Productivity | Raycast, Obsidian |
 | Voice dictation | Wispr Flow |
 
@@ -286,15 +288,16 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - The Wispr Flow question doesn't mention macOS's built-in Dictation.
 - The VM loop runs on Tuna's Mac via a script; bats runs in GitHub Actions. Each PR's VM run covers only what it touches (about 30 minutes); the full run happens before release. Test VMs are deleted after every run.
 - Window margins and Dock auto-hide are in v1, each as its own yes/no question; the macOS settings are four questions: desktops, window margins, Dock, Dock auto-hide.
-- `omamac update` follows omawsl's model: `git pull --ff-only` on `main`, timestamped migrations, regenerate configs, `brew upgrade` and `mise upgrade` for the user's choices only. Cloud CLI casks are upgraded with `--greedy`; apps (Ghostty, Docker Desktop, the catalog) update themselves and are upgraded only when Homebrew lists them as outdated.
+- `omamac update` follows omawsl's model: `git pull --ff-only` on `main`, timestamped migrations, regenerate configs, `brew upgrade` and `mise upgrade` for the user's choices only. Cloud CLI and coding agent casks are upgraded with `--greedy`; apps (Ghostty, Docker Desktop, the catalog) update themselves and are upgraded only when Homebrew lists them as outdated.
 - `omamac doctor` is a doctor, not an alarm: ✓, ✗ or ℹ per check, each with why and the one fix; it only reports.
 - Everything omamac prints is polished and visual, and as short as possible.
 - Ghostty's built-in font; no font installed or set.
 - Languages and cloud CLIs as omawsl offers them, except PHP for now; Terraform from HashiCorp's official tap; `gh` with the cloud CLIs.
+- Coding agents as their own question (Claude Code, Codex CLI, GitHub Copilot CLI, Antigravity CLI, opencode), and their desktop apps as the AI apps group (Claude, ChatGPT with Codex, GitHub Copilot, Antigravity).
 - A tool with one config file and no include (herdr, starship, btop) uses omamac's file only when the user has none; a user's own is left alone and doctor explains. The user's own mise pins win.
-- The v1 app catalog is the 17 apps in the table plus Wispr Flow; an app that isn't a clean cask is dropped.
+- The v1 app catalog is the 21 apps in the table plus Wispr Flow; an app that isn't a clean cask is dropped.
 - Gatekeeper and permission prompts stay with the user, one line each in the summary, built from each app's catalog file.
-- First-run question order: theme, desktop apps, Wispr Flow, desktops, window margins, Dock, Dock auto-hide, languages, cloud CLIs, Docker; adoption questions come after the questions at the first run, right after each app question in `omamac install`, before the summary; one summary and "Install?" at the end.
+- First-run question order: theme, desktop apps, Wispr Flow, desktops, window margins, Dock, Dock auto-hide, languages, cloud CLIs, coding agents, Docker; adoption questions come after the questions at the first run, right after each app question in `omamac install`, before the summary; one summary and "Install?" at the end.
 - An existing `~/.config/nvim` is left alone with no extra files; doctor explains (ℹ) why themes don't reach neovim and what to do.
 - Homebrew in `/usr/local` on Apple Silicon stops the run with a pointer to Homebrew's instructions.
 - One clean Tart image (from `macos-*-vanilla`) stays on disk; test VMs are deleted after each run; the image is replaced, never doubled.
@@ -439,3 +442,4 @@ One line per decision: date, question, answer, who decided. Move the item out of
 - 2026-11-19 — Password — Docker Desktop's cask: Homebrew resets sudo and asks once more; omamac runs that step right after "Install?", in the open, and never bypasses the reset — Tuna
 - 2026-11-19 — Zoom and Google Drive — kept in the catalog; with Docker Desktop they share one Homebrew step right after "Install?", so Homebrew asks for the password once more, once for all of them — Tuna
 - 2026-11-19 — Upgrading apps — no `--greedy`; an app is upgraded only when Homebrew lists it as outdated, since apps update themselves; `--greedy` stays for the cloud CLI casks — Tuna
+- 2026-11-21 — AI tools in v1, before Gate B — coding agents as their own terminal question (Claude Code, Codex CLI, GitHub Copilot CLI, Antigravity CLI, opencode), and an AI apps group of desktop apps (Claude, ChatGPT, GitHub Copilot, Antigravity), for parity with omawsl. Gemini CLI is deprecated in Homebrew (disabled 2026-12-18), so Antigravity CLI, its successor, takes its place; the Codex app is now part of ChatGPT's. Codex CLI and Copilot CLI are proven on a real Mac, not in the VM, whose first-launch check never lets their casks finish. Languages stay with mise and everything else with Homebrew. Google's one AI app is Antigravity, its coding tool; the Gemini chat app is left out — Tuna

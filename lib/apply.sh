@@ -49,7 +49,7 @@ apply_all() {
   neovim_setup
   OMAMAC_STEP='installing your languages'
   languages_install
-  OMAMAC_STEP='installing your cloud CLIs'
+  OMAMAC_STEP='installing your cloud CLIs and coding agents'
   clis_install
   apps_install
   settings_apply

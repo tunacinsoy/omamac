@@ -31,9 +31,9 @@ expect_bad() {
   [[ "$output" == *"Fix: Delete that line"* ]]
 }
 
-@test "the table has the 16 keys in the vision's order" {
+@test "the table has the 18 keys in the vision's order" {
   in_lib 'echo "${QUESTION_KEYS[*]}"'
-  [ "$output" = "theme apps_browsers apps_communication apps_media apps_screen_recording apps_storage apps_developer apps_productivity wispr_flow desktops window_margins dock dock_autohide languages cloud_clis docker" ]
+  [ "$output" = "theme apps_browsers apps_communication apps_media apps_screen_recording apps_storage apps_developer apps_ai apps_productivity wispr_flow desktops window_margins dock dock_autohide languages cloud_clis coding_agents docker" ]
 }
 
 @test "every key has a kind, a text and a title" {
@@ -51,11 +51,11 @@ expect_bad() {
   [ "$output" = "No Docker" ]
 }
 
-@test "13 themes, 17 apps" {
+@test "13 themes, 21 apps" {
   in_lib 'question_values theme | wc -l'
   [ "${output// /}" = 13 ]
   in_lib 'for k in "${QUESTION_KEYS[@]}"; do [[ $k == apps_* ]] && question_values "$k"; done | wc -l'
-  [ "${output// /}" = 17 ]
+  [ "${output// /}" = 21 ]
 }
 
 @test "languages has no php" {
@@ -73,7 +73,7 @@ no" ]
 @test "a missing file has no answers" {
   in_lib 'choices_load "$FILE"; choices_missing | wc -l'
   [ "$status" -eq 0 ]
-  [ "${output// /}" = 16 ]
+  [ "${output// /}" = 18 ]
 }
 
 @test "reads a full file" {

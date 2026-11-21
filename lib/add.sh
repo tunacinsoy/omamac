@@ -1,11 +1,11 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2034 # OMAMAC_STEP is read by bin/omamac's ERR trap
 # shellcheck disable=SC2004 # CHOICES is associative (lib/choices.sh), so $key is needed
-# omamac install: add apps, languages, cloud CLIs and more to the saved
+# omamac install: add apps, languages, CLIs and more to the saved
 # answers, then apply. Sourced after lib/ask.sh, lib/log.sh, lib/apps.sh and lib/apply.sh.
 
 # The questions omamac install asks again, with only their unpicked options.
-ADD_KEYS=("${APPS_KEYS[@]}" wispr_flow languages cloud_clis desktops window_margins dock dock_autohide docker)
+ADD_KEYS=("${APPS_KEYS[@]}" wispr_flow languages cloud_clis coding_agents desktops window_margins dock dock_autohide docker)
 
 # add_run: CHOICES is loaded (bin/omamac did that). Ask, show the additions,
 # and save and apply them only after "Install?" is yes, so a no changes nothing.
