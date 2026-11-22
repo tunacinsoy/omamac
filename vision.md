@@ -346,6 +346,8 @@ Ideas Tuna wants kept in view but not built yet. Nothing here is a commitment; e
 
 **More dictation apps.** Superwhisper, VoiceInk and the like could join Wispr Flow (the question then becomes single choice). No criteria yet; decide when someone actually asks.
 
+**One output design for every command.** Settled, not built yet: [#46](https://github.com/tunacinsoy/omamac/issues/46). Every command's output is built from six blocks: a row, a heading, a sheet, a titled box, a count line, and gum's questions. Doctor becomes a sheet of checks with a "To fix" box and a "What you have" sheet. The one-liner, install and update show your answers as a sheet, then counted progress rows, then a Done box. Uninstall shows what it removes, and a failed run stops in a box with the log's last lines. Tuna's picks are 1B 2B 3B 4B 5B 6A 7B 8A 9A, and the issue holds every detail, so building it needs no more design talk. It comes after Gate B, so Gate B proves today's output first.
+
 **Removing omamac itself.** v1 uninstalls one thing at a time and can't remove omamac. A later `omamac uninstall omamac` could remove the core tools, omamac's include lines, its generated files, its state and the checkout, leaving the user's optional picks as ordinary Homebrew and mise installs. This closes the v1 gap against "uninstall restores the previous state".
 
 ## Out of scope for v1
@@ -447,3 +449,4 @@ One line per decision: date, question, answer, who decided. Move the item out of
 - 2026-11-21 — VS Code follows the theme, before Gate B, as in omawsl — Tuna. How (Claude's call): omamac's own extension holds the theme and makes it VS Code's default, so omamac never writes `settings.json` and a theme the user set wins; omawsl's merge into `settings.json` was dropped as too much careful code for a file that breaks the editor when broken.
 - 2026-11-21 — Ghostty's keys — Cmd D and Cmd Shift D do nothing (a Ghostty split showed the same herdr session twice; herdr splits with Alt n); Ghostty's tab keys stay Ghostty's, since herdr has its own (Ctrl g t, Option ←/→) — Tuna
 - 2026-11-21 — `omamac install` targets — a section (`omamac install languages`) or names (`omamac install go rust`), as omawsl's `install <category> <item>`, so adding one thing doesn't walk every question; the names are `omamac uninstall`'s; "Install?" still comes last — Tuna (how: Claude)
+- 2026-11-22 — Output design — one kit of six blocks for every command, settled in #46 (1B 2B 3B 4B 5B 6A 7B 8A 9A); built after Gate B — Tuna
