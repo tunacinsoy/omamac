@@ -600,3 +600,66 @@ app_installed() {
   [ "$status" -eq 0 ]
   run ! grep -q 'outdated.*vlc' "$STUB_LOG"
 }
+
+# The terminal look (#46): counted progress rows, omamac's pull first, then a
+# green Done box with Upgraded and Log.
+
+# shown: $output without its colour codes.
+shown() { printf '%s\n' "$output" | uncoloured; }
+
+@test "terminal look: the pull's row first, every stage counted, then Done" {
+  echo '# new' >> "$ORIGIN/config/zshrc"
+  commit_all "$ORIGIN" one
+  echo '# newer' >> "$ORIGIN/config/zshrc"
+  commit_all "$ORIGIN" two
+  echo herdr > "$OMAMAC_TEST_BREW_PREFIX/outdated"
+  terminal_look
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(shown | grep -E '^[0-9]/[0-9] ')" = "1/7 ✓ omamac          pulled 2 commits
+2/7 ✓ Shell and theme Tokyo Night
+3/7 ✓ Core tools      15 installed
+4/7 ✓ neovim          LazyVim
+5/7 ✓ macOS           nothing chosen
+6/7 ✓ Tool upgrades   herdr
+7/7 ✓ App upgrades    nothing outdated" ]
+  [[ "$output" == *$'╭ \e[32mDone\e[0m'* ]]
+  [[ "$(shown)" == *"│ Upgraded  herdr "*"│ Log       ~/.local/state/omamac/logs/"* ]]
+  [ "$(shown | widest)" -le 80 ]
+  # The upgrade itself is the same call.
+  grep -q '^brew upgrade starship ' "$STUB_LOG"
+}
+
+@test "terminal look: nothing new to pull, and the languages get their stage" {
+  choose languages go
+  terminal_look
+  run update
+  [ "$status" -eq 0 ]
+  shown | grep -qxF '1/9 ✓ omamac          already up to date'
+  shown | grep -qxF '9/9 ✓ Language upgrades Go'
+  [[ "$(shown)" == *"│ Upgraded  nothing outdated "* ]]
+}
+
+@test "terminal look: an app macOS won't let update stays named in a To fix box, exit 1" {
+  ghostty_app
+  ghostty_outdated
+  deny_app_management
+  stub open
+  terminal_look
+  run update
+  [ "$status" -eq 1 ]
+  [[ "$(shown)" == *"✗ Ghostty has an update, but macOS won't let your terminal change apps."* ]]
+  [[ "$(shown)" == *"╭ To fix"*"│ Not upgraded  Ghostty "*"│ Upgraded      nothing outdated "* ]]
+  [[ "$output" != *"Done"* ]]
+}
+
+@test "terminal look: a failed pull stops in the Stopped box with its fix" {
+  echo '# theirs' >> "$ORIGIN/config/zshrc"
+  commit_all "$ORIGIN" theirs
+  echo '# mine' >> "$CHECKOUT/config/zshrc"
+  commit_all "$CHECKOUT" mine
+  terminal_look
+  run update
+  [ "$status" -eq 1 ]
+  [[ "$(shown)" == *"╭ Stopped"*"│ While  updating omamac's code "*"│ Fix    check your internet connection, or run git -C "*"├"* ]]
+}

@@ -110,6 +110,46 @@ add_pick_ids() {
   done
 }
 
+# add_sheet <line>…: the terminal look's Adds sheet, from the plain box's
+# lines ("Title: labels", or a yes/no question's title alone).
+add_sheet() {
+  local line rows=()
+  for line in "$@"; do
+    if [[ $line == *': '* ]]; then rows+=("${line%%: *}"$'\t'"${line#*: }"); else rows+=("$line"$'\t'yes); fi
+  done
+  ui_heading Adds
+  ui_sheet_labels "${rows[@]}"
+}
+
+# add_done: the terminal look's summary, from add_run's names, apps and picks:
+# a green Done box, each new language's commands in it, then a sheet of the
+# permissions the new apps ask for.
+add_done() {
+  local joined v line rows=() perms=() allow=() langs=()
+  if [ "${#names[@]}" -gt 0 ]; then
+    printf -v joined '%s, ' "${names[@]}"
+    rows+=("Installed"$'\t'"${joined%, }")
+  fi
+  [ "${#apps[@]}" -eq 0 ] || rows+=("First open"$'\t'"macOS asks you to confirm each app; click Open.")
+  [ "${#DOCKER_NOTES[@]}" -eq 0 ] || rows+=("Docker"$'\t'"${DOCKER_NOTES[*]}")
+  read -ra langs <<< "${picks[languages]:-}"
+  for v in ${langs[@]+"${langs[@]}"}; do rows+=("$(question_label languages "$v")"$'\t'"${LANGUAGE_COMMANDS[$v]}"); done
+  # mise sets the PATH before each prompt, so a shell already open needs no restart.
+  [ "${#langs[@]}" -eq 0 ] || rows+=("Shells"$'\t'"they work in every shell; one already open needs one Enter first.")
+  rows+=("Log"$'\t'"${OMAMAC_LOG/#"$HOME"/\~}")
+  ui_titled ok Done "${rows[@]}"
+  [ "${#apps[@]}" -gt 0 ] || return 0
+  mapfile -t allow < <(apps_allow "${apps[@]}")
+  [ "${#allow[@]}" -gt 0 ] || return 0
+  # "Zoom: allow Camera and Microphone, …" becomes Zoom and "Camera and Microphone, …".
+  for line in "${allow[@]}"; do
+    v=${line#*: }
+    v=${v#allow }
+    perms+=("${line%%: *}"$'\t'"${v^}")
+  done
+  ui_sheet $'App\tAllow, the first time it asks' "${perms[@]}"
+}
+
 # add_run [<section or id>…]: CHOICES is loaded (bin/omamac did that). Ask
 # every question, only the sections named, or nothing for the ids named; show
 # the additions, and save and apply them only after "Install?" is yes, so a no
@@ -204,7 +244,7 @@ add_run() {
     ui_info "Nothing picked, so nothing changed."
     exit 0
   fi
-  ui_box "${lines[@]}"
+  if ui_term; then add_sheet "${lines[@]}"; else ui_box "${lines[@]}"; fi
   apps_password_ahead
   if ! ask_yes "Install?"; then
     ui_info "Stopped. Nothing else was changed."
@@ -215,8 +255,10 @@ add_run() {
   # bin/omamac's ERR trap: from here, a failure is finished by omamac update.
   ADD_SAVED=1
   log_start
+  if ui_term; then ui_stages "$(apply_stage_count)"; fi
   apply_all
   OMAMAC_STEP='printing the summary'
+  if ui_term; then add_done; return; fi
   lines=()
   if [ "${#names[@]}" -gt 0 ]; then
     printf -v joined '%s, ' "${names[@]}"

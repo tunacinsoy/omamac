@@ -572,3 +572,49 @@ by_hand() { # <cask> <App.app>
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+# The terminal look (#46): an Adds sheet of only the additions, the same
+# Install?, counted stages, and a Done box with each new language's commands.
+
+# shown: $output without its colour codes.
+shown() { printf '%s\n' "$output" | uncoloured; }
+
+@test "terminal look: install go rust shows Adds, Install?, the stages and Done" {
+  gum_answers yes
+  terminal_look
+  run omamac_install go rust
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "gum confirm --default=false Install?" ]
+  [ "$(shown | sed -n 1,4p)" = "Adds
+╭───────────┬──────────╮
+│ Languages │ Go, Rust │
+╰───────────┴──────────╯" ]
+  [[ "$output" == *$'\e[1mAdds\e[0m'* ]]
+  # Every stage of the run is counted, the new languages among them.
+  local n
+  n=$(shown | grep -cE '^[0-9]/[0-9] ✓ ')
+  shown | grep -qxF "$n/$n ✓ VS Code theme   Tokyo Night"
+  shown | grep -qE "^[0-9]/$n ✓ Languages       Go, Rust$"
+  [ "$(shown | sed -n '/Done/,/╰/p' | sed 's/ *│$//')" = "╭ Done ────────────────────────────────────────────────────────────────────────╮
+│ Installed  Go, Rust
+│ Go         go
+│ Rust       rustc and cargo
+│ Shells     they work in every shell; one already open needs one Enter first.
+│ Log        ~/.local/state/omamac/logs/$(basename "$HOME"/.local/state/omamac/logs/*.log)
+╰──────────────────────────────────────────────────────────────────────────────╯" ]
+  shown | grep -qE "^[0-9]/$n ✓ Apps            22 installed$"
+  [ "$(shown | widest)" -le 80 ]
+  grep -qx 'languages=go rust' "$CHOICES_FILE"
+}
+
+@test "terminal look: a new app's permissions get their sheet" {
+  choose apps_communication whatsapp
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" uninstall --cask zoom
+  : > "$STUB_LOG"
+  gum_answers yes
+  terminal_look
+  run omamac_install zoom
+  [ "$status" -eq 0 ]
+  [[ "$(shown)" == *"│ First open  macOS asks you to confirm each app; click Open."* ]]
+  [[ "$(shown)" == *"│ App  │ Allow, the first time it asks "*"│ Zoom │ Camera and Microphone, and Screen Recording to share."* ]]
+}
