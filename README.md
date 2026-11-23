@@ -28,7 +28,7 @@ Open Terminal and paste:
 curl -fsSL https://raw.githubusercontent.com/tunacinsoy/omamac/main/boot.sh | bash
 ```
 
-omamac asks for your password once and never stores it. Then it asks a few questions: theme, apps, macOS settings, languages and Docker. Arrows move, x or Tab picks in a list, y or n answers a yes/no question, and Enter goes on. It shows your answers and asks "Install?"; after that it runs on its own.
+omamac asks for your password once and never stores it. Then it asks a few questions: theme, apps, macOS settings, languages and Docker. Arrows move, x or Tab picks in a list, y or n answers a yes/no question, and Enter goes on. Esc at a list stops omamac, like Ctrl-C; at a yes/no question Esc is no. It shows your answers and asks "Install?"; after that it runs on its own.
 
 The exception: if you chose Zoom, Google Drive or Docker Desktop, Homebrew asks for your password once more, right after "Install?", once for all of them. It asks once they are downloaded, so stay at the keyboard until it has asked.
 

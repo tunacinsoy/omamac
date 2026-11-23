@@ -101,6 +101,33 @@ prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
   [[ "$output" == *"Stopped. Nothing else was changed."* ]]
 }
 
+# gum 2.0.2 exits 1 on Esc at a pick list (#48).
+@test "Esc at a pick list stops like Ctrl-C, single and multi" {
+  gum_answers "exit 1"
+  in_ask 'ask_missing'
+  [ "$status" -eq 130 ]
+  [[ "$output" == *"Stopped. Nothing else was changed."* ]]
+  [[ "$output" != *"couldn't ask"* ]]
+  : > "$STUB_LOG"
+  gum_answers tokyo-night "exit 1"
+  in_ask 'ask_missing'
+  [ "$status" -eq 130 ]
+  [[ "$(prompts | sed -n 2p)" == *"--no-limit"* ]]
+  [[ "$output" == *"Stopped. Nothing else was changed."* ]]
+  [[ "$output" != *"couldn't ask"* ]]
+}
+
+@test "Esc at a yes/no question is still no" {
+  gum_answers "exit 1"
+  in_ask 'choices_load "$REPO_ROOT/test/fixtures/bare.env"; unset "CHOICES[desktop_widgets]"; ask_missing; echo "desktop_widgets=${CHOICES[desktop_widgets]}"'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"desktop_widgets=no"* ]]
+  gum_answers "exit 1"
+  in_ask 'ask_yes "Install?"'
+  [ "$status" -eq 1 ]
+  [[ "$output" != *Stopped* ]]
+}
+
 @test "Ctrl-C at a yes/no question exits 130" {
   gum_answers "${FRESH_ANSWERS[@]:0:8}" "exit 130"
   in_ask 'ask_missing'
@@ -174,6 +201,18 @@ prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
   [ "$status" -eq 130 ]
   [[ "$output" == *"Stopped. Nothing else was changed."* ]]
   [[ "$output" != *after* ]]
+}
+
+@test "ask_choose: Esc stops like Ctrl-C; another failure still says couldn't ask" {
+  gum_answers "exit 1"
+  in_ask 'ask_choose "Remove which?" Go:go Rust:rust; echo "after"'
+  [ "$status" -eq 130 ]
+  [[ "$output" == *"Stopped. Nothing else was changed."* ]]
+  [[ "$output" != *after* ]]
+  gum_answers "exit 2"
+  in_ask 'ask_choose "Remove which?" Go:go Rust:rust; echo "after"'
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"omamac couldn't ask about Remove which?"* ]]
 }
 
 @test "the help line comes before its question" {
