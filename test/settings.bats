@@ -1,4 +1,5 @@
 load helpers/common
+load helpers/hotkeys
 
 setup() {
   setup_sandbox
@@ -52,6 +53,7 @@ value() { defaults read "$1" "$2" 2> /dev/null || echo absent; }
   [ "$(value com.apple.Accessibility ReduceMotionEnabled)" = 1 ]
   [ "$(cat "$REC")" = "com.apple.dock${TAB}mru-spaces${TAB}absent
 NSGlobalDomain${TAB}AppleSpacesSwitchOnActivate${TAB}absent
+$(hotkey_lines)
 com.apple.universalaccess${TAB}reduceMotion${TAB}absent
 com.apple.Accessibility${TAB}ReduceMotionEnabled${TAB}integer${TAB}0" ]
   [ "$(grep -c '^killall Dock' "$STUB_LOG")" -eq 1 ]
@@ -237,7 +239,7 @@ com.apple.Accessibility${TAB}ReduceMotionEnabled${TAB}integer${TAB}0" ]
   [ "$status" -eq 0 ]
   [ "$(value com.apple.WindowManager EnableTiledWindowMargins)" = absent ]
   [ "$(value com.apple.dock mru-spaces)" = 0 ]
-  [ "$(grep -c . "$REC")" -eq 4 ]
+  [ "$(grep -c . "$REC")" -eq 10 ]
 }
 
 @test "restore with Reduce motion refused" {
@@ -310,4 +312,96 @@ com.apple.Accessibility${TAB}ReduceMotionEnabled${TAB}integer${TAB}0" ]
   defaults export com.apple.dock "$BATS_TEST_TMPDIR/a.plist"
   T_DEFAULTS_FAIL=com.apple.dock:import run defaults import com.apple.dock "$BATS_TEST_TMPDIR/a.plist"
   [ "$status" -ne 0 ]
+}
+
+@test "Ctrl 1–6 on a clean Mac: on, reloaded once, a second run changes nothing" {
+  local i
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  for i in "${!HOTKEY_IDS[@]}"; do
+    [ "$(hotkey_xml "${HOTKEY_IDS[$i]}")" = "$(hotkey_on "${HOTKEY_CODES[$i]}")" ]
+  done
+  [ "$(grep -c '^activateSettings -u$' "$STUB_LOG")" -eq 1 ]
+  : > "$STUB_LOG"
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [[ "$(stub_calls)" != *"defaults import"* ]]
+  [[ "$(stub_calls)" != *activateSettings* ]]
+}
+
+@test "Ctrl 1–6: other shortcuts in the domain are left alone" {
+  local before
+  hotkey_seed 64 '{"enabled":false,"value":{"parameters":[32,49,1048576],"type":"standard"}}'
+  before=$(hotkey_xml 64)
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [ "$(hotkey_xml 64)" = "$before" ]
+}
+
+@test "Ctrl 1–6: a shortcut that was off is recorded as it was and put back exactly" {
+  local before118 before119
+  hotkey_seed 118 '{"enabled":false,"value":{"parameters":[65535,18,262144],"type":"standard"}}'
+  hotkey_seed 119 '{"enabled":1,"value":{"parameters":[65535,19,262144],"type":"standard"}}'
+  before118=$(hotkey_xml 118)
+  before119=$(hotkey_xml 119)
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [ "$(hotkey_xml 118)" = "$(hotkey_on 18)" ]
+  # enabled 1 is not what omamac writes, so it is written over and recorded too.
+  [ "$(hotkey_xml 119)" = "$(hotkey_on 19)" ]
+  grep -q "^com.apple.symbolichotkeys${TAB}AppleSymbolicHotKeys.118${TAB}json${TAB}{" "$REC"
+  : > "$STUB_LOG"
+  in_lib 'settings_uninstall desktops'
+  [ "$status" -eq 0 ]
+  [ "$(hotkey_xml 118)" = "$before118" ]
+  [ "$(hotkey_xml 119)" = "$before119" ]
+  [ "$(hotkey_xml 120)" = absent ]
+  [ "$(hotkey_xml 123)" = absent ]
+  [ "$(grep -c '^activateSettings -u$' "$STUB_LOG")" -eq 1 ]
+  [ ! -e "$REC" ]
+}
+
+@test "Ctrl 1–6 already on: not written, not recorded" {
+  local i
+  for i in "${!HOTKEY_IDS[@]}"; do
+    hotkey_seed "${HOTKEY_IDS[$i]}" '{"enabled":true,"value":{"parameters":[65535,'"${HOTKEY_CODES[$i]}"',262144],"type":"standard"}}'
+  done
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [[ "$(stub_calls)" != *"defaults import com.apple.symbolichotkeys"* ]]
+  [[ "$(cat "$REC")" != *AppleSymbolicHotKeys* ]]
+  [[ "$(stub_calls)" != *activateSettings* ]]
+}
+
+@test "Ctrl 1–6 changed by the user: put back, the record kept" {
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  cp "$REC" "$BATS_TEST_TMPDIR/rec.before"
+  hotkey_seed 120 '{"enabled":false,"value":{"parameters":[65535,20,262144],"type":"standard"}}'
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Put back: Ctrl 1–6"* ]]
+  [ "$(hotkey_xml 120)" = "$(hotkey_on 20)" ]
+  cmp "$REC" "$BATS_TEST_TMPDIR/rec.before"
+}
+
+@test "Ctrl 1–6: no activateSettings, or a failing one, is only logged" {
+  export OMAMAC_TEST_ACTIVATE_SETTINGS="$BATS_TEST_TMPDIR/none"
+  in_lib 'OMAMAC_LOG="$HOME/log"; CHOICES[desktops]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  grep -q 'the shortcuts work after the next login' "$HOME/log"
+  in_lib 'settings_uninstall desktops'
+  export OMAMAC_TEST_ACTIVATE_SETTINGS="$STUB_DIR/activateSettings"
+  stub activateSettings 'exit 1'
+  in_lib 'OMAMAC_LOG="$HOME/log"; CHOICES[desktops]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  grep -q 'activateSettings -u failed' "$HOME/log"
+}
+
+@test "Ctrl 1–6: a failing import stops the run, nothing recorded" {
+  export T_DEFAULTS_FAIL=com.apple.symbolichotkeys:import
+  in_lib 'CHOICES[desktops]=yes; settings_apply'
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"FAILED: setting AppleSymbolicHotKeys.118 in com.apple.symbolichotkeys"* ]]
+  [[ "$(cat "$REC")" != *AppleSymbolicHotKeys* ]]
+  [ "$(hotkey_xml 118)" = absent ]
 }

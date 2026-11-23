@@ -23,3 +23,8 @@ com.apple.WindowManager EnableTiledWindowMargins
 com.apple.dock show-recents
 com.apple.dock autohide
 KEYS
+# The Ctrl 1–6 shortcuts' entries, nested in one dictionary, so saved apart.
+defaults export com.apple.symbolichotkeys - > ~/hotkeys.plist
+for id in 118 119 120 121 122 123; do
+  plutil -extract "AppleSymbolicHotKeys.$id" xml1 -o - ~/hotkeys.plist 2>/dev/null || print absent
+done > ~/hotkeys-before

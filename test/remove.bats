@@ -271,12 +271,15 @@ REC() { echo "$HOME/.local/state/omamac/macos-settings.tsv"; }
   gum_answers yes
   run omamac_uninstall desktops
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Desktops as workspaces: your earlier Spaces, app-switching and Reduce motion settings"* ]]
+  [[ "$output" == *"Desktops as workspaces: your earlier Spaces, app-switching, Ctrl 1–6 and Reduce motion settings"* ]]
   grep -qx 'gum confirm --default=false Remove Desktops as workspaces?' "$STUB_LOG"
   grep -qx 'desktops=no' "$CHOICES_FILE"
   [ ! -e "$(REC)" ]
   run defaults read com.apple.dock mru-spaces
   [ "$status" -ne 0 ]
+  # The clean Mac had no Ctrl 1–6 entries; none is left, and macOS reloads.
+  [ "$(plutil -extract AppleSymbolicHotKeys raw "$T_DEFAULTS_DIR/com.apple.symbolichotkeys.plist")" = "" ]
+  grep -qx 'activateSettings -u' "$STUB_LOG"
   [ "$(defaults read com.apple.Accessibility ReduceMotionEnabled)" = 0 ]
 }
 

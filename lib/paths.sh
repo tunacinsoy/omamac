@@ -47,3 +47,5 @@ OMAMAC_COLIMA_MARKER=$OMAMAC_STATE_DIR/colima-service
 # VS Code's extensions folder and the user's own settings, which omamac only reads (lib/vscode.sh).
 OMAMAC_VSCODE_EXTENSIONS=$HOME/.vscode/extensions
 OMAMAC_VSCODE_SETTINGS="$HOME/Library/Application Support/Code/User/settings.json"
+# Makes changed keyboard shortcuts take effect without a logout (lib/settings.sh).
+OMAMAC_ACTIVATE_SETTINGS=${OMAMAC_TEST_ACTIVATE_SETTINGS:-/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings}

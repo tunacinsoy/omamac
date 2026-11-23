@@ -43,7 +43,7 @@ question apps_productivity multi Productivity Productivity Raycast:raycast Obsid
 question wispr_flow yesno "Wispr Flow" "Install Wispr Flow for voice dictation?"
 question_help wispr_flow "Wispr Flow turns your speech into text in the cloud."
 question desktops yesno "Desktops as workspaces" "Make desktops behave like workspaces?"
-question_help desktops "Desktops keep their order, switching to an app goes to its desktop, and Reduce motion turns on, which shortens animations everywhere."
+question_help desktops "Desktops keep their order, switching to an app goes to its desktop, Ctrl 1–6 jump to desktops 1 to 6, and Reduce motion turns on, which shortens animations everywhere."
 question window_margins yesno "Window margins" "Add margins between tiled windows?"
 question dock yesno "Dock cleanup" "Clean up the Dock?"
 question_help dock "Apple's apps and Downloads leave the Dock (not your Mac), and the apps omamac installs take their place."

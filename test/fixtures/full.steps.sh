@@ -13,6 +13,12 @@ settings_now() {
     print -r -- "$domain $key $now"
   done < ~/settings-before
 }
+hotkeys_now() {
+  defaults export com.apple.symbolichotkeys - > ~/hotkeys.plist
+  for id in 118 119 120 121 122 123; do
+    plutil -extract "AppleSymbolicHotKeys.$id" xml1 -o - ~/hotkeys.plist 2>/dev/null || print absent
+  done
+}
 checkout=~/.local/share/omamac
 mise=/opt/homebrew/bin/mise
 # The catalog in catalog order (lib/questions.sh), then Wispr Flow.
@@ -114,6 +120,7 @@ done
 [[ $(dock_urls persistent-apps) == "$(< ~/dock-before-apps)" ]]
 [[ $(dock_urls persistent-others) == "$(< ~/dock-before-others)" ]]
 diff ~/settings-before <(settings_now)
+diff ~/hotkeys-before <(hotkeys_now)
 
 # 7. Uninstalling again changes nothing and asks nothing.
 before=$(fp)
