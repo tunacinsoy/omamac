@@ -252,7 +252,7 @@ doctor_check_settings() {
     doctor_report info "$what" "skipped, your saved answers can't be read"
     return 0
   fi
-  for answer in desktops window_margins dock dock_autohide; do
+  for answer in desktops window_margins desktop_widgets dock dock_autohide; do
     [ "${CHOICES[$answer]:-}" = yes ] || continue
     title=${QUESTION_TITLE[$answer]}
     # Without the record, update never cleaned the Dock, so there is nothing to check.

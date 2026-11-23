@@ -46,7 +46,7 @@ used_vscode() {
   cmp "$EXT/themes/omamac.json" "$REPO_ROOT/themes/dracula/vscode.json"
   [ "$(jq -r '"\(.publisher).\(.name) \(.version)"' "$EXT/package.json")" = 'omamac.omamac-theme 1.0.0' ]
   [ "$(jq -r '.contributes.configurationDefaults["workbench.colorTheme"]' "$EXT/package.json")" = omamac ]
-  [ "$(jq -r '.contributes.themes[0] | "\(.id) \(.label) \(.uiTheme) \(.path)"' "$EXT/package.json")" = 'omamac omamac vs-dark ./themes/omamac.json' ]
+  [ "$(jq -r '.contributes.themes[0] | "\(.id) \(.label) \(.uiTheme) \(.path) \(._watch)"' "$EXT/package.json")" = 'omamac omamac vs-dark ./themes/omamac.json true' ]
   [ "$(cd "$EXT" && find . -type f | sort | paste -sd' ' -)" = './package.json ./themes/omamac.json' ]
   [ ! -s "$STUB_LOG" ]
   [ "$output" = "✓ VS Code has the theme too." ]
@@ -61,6 +61,8 @@ used_vscode() {
   install dracula
   [ "$status" -eq 0 ]
   cmp "$EXT/themes/omamac.json" "$REPO_ROOT/themes/dracula/vscode.json"
+  # The fake adds metadata to package.json, as VS Code does; the watch stays.
+  [ "$(jq -r '.contributes.themes[0]._watch' "$EXT/package.json")" = true ]
   grep -qx "code --install-extension .*/omamac-theme.vsix --force" "$STUB_LOG"
   grep -qx 'vsix extension/package.json extension/themes/omamac.json' "$STUB_LOG"
   [ "$output" = "✓ VS Code has the theme too." ]
@@ -89,6 +91,21 @@ used_vscode() {
   [ ! -s "$STUB_LOG" ]
   # Nothing changed, so nothing is said: the theme step's line names VS Code.
   [ -z "$output" ]
+}
+
+@test "an extension from before the watch is written again, with it" {
+  vscode_app
+  used_vscode
+  install dracula
+  jq 'del(.contributes.themes[0]._watch)' "$EXT/package.json" > "$BATS_TEST_TMPDIR/old.json"
+  mv "$BATS_TEST_TMPDIR/old.json" "$EXT/package.json"
+  : > "$STUB_LOG"
+  install dracula
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.contributes.themes[0]._watch' "$EXT/package.json")" = true ]
+  # VS Code lists it, so the files are rewritten in place.
+  [ ! -s "$STUB_LOG" ]
+  [ "$output" = "✓ VS Code has the theme too." ]
 }
 
 @test "another theme replaces the colours" {

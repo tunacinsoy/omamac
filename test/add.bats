@@ -23,7 +23,7 @@ setup() {
   cp "$REPO_ROOT/test/fixtures/bare.env" "$CHOICES_FILE"
   # Answered yes, so install doesn't ask about them (tests below ask on purpose).
   # Docker Desktop is already installed, so its step does nothing.
-  sed -i '' -e 's/^dock=.*/dock=yes/' -e 's/^dock_autohide=.*/dock_autohide=yes/' -e 's/^desktops=.*/desktops=yes/' -e 's/^window_margins=.*/window_margins=yes/' -e 's/^docker=.*/docker=docker-desktop/' "$CHOICES_FILE"
+  sed -i '' -e 's/^dock=.*/dock=yes/' -e 's/^dock_autohide=.*/dock_autohide=yes/' -e 's/^desktops=.*/desktops=yes/' -e 's/^window_margins=.*/window_margins=yes/' -e 's/^desktop_widgets=.*/desktop_widgets=yes/' -e 's/^docker=.*/docker=docker-desktop/' "$CHOICES_FILE"
   # Every app picked and installed, so install doesn't ask about them either.
   sed -i '' -e "s/^apps_browsers=.*/apps_browsers=$ALL_BROWSERS/" -e "s/^apps_communication=.*/apps_communication=$ALL_COMMUNICATION/" \
     -e 's/^apps_media=.*/apps_media=spotify vlc/' -e 's/^apps_screen_recording=.*/apps_screen_recording=cap/' \
@@ -180,7 +180,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   gum_answers "" ""
   run omamac_install
   [ "$status" -eq 1 ]
-  [[ "$output" == *"line 20: omamac has no question 'colour'"* ]]
+  [[ "$output" == *"line 21: omamac has no question 'colour'"* ]]
   [ -z "$(prompts)" ]
 }
 
@@ -524,6 +524,16 @@ by_hand() { # <cask> <App.app>
   run omamac_install dock-autohide
   [ "$status" -eq 0 ]
   grep -qx 'dock_autohide=yes' "$CHOICES_FILE"
+}
+
+@test "install desktop-widgets: hides them" {
+  choose desktop_widgets no
+  gum_answers yes
+  run omamac_install desktop-widgets
+  [ "$status" -eq 0 ]
+  grep -qx 'desktop_widgets=yes' "$CHOICES_FILE"
+  [ "$(defaults read com.apple.WindowManager StandardHideWidgets)" = 1 ]
+  [ "$(defaults read com.apple.WindowManager StageManagerHideWidgets)" = 1 ]
 }
 
 @test "install a section and an id together: one question, one Install?" {

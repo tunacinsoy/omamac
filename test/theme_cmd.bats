@@ -11,7 +11,7 @@ setup() {
   CHOICES_FILE="$HOME/.local/state/omamac/choices.env"
   mkdir -p "$(dirname "$CHOICES_FILE")"
   cp "$REPO_ROOT/test/fixtures/bare.env" "$CHOICES_FILE"
-  stub pkill
+  stub ps
   stub herdr
 }
 
@@ -36,7 +36,18 @@ stamp() { (cd "$OM" && find . -type f -exec stat -f '%N %m' {} + | sort); }
   run omamac_theme nord
   [ "$status" -eq 0 ]
   cmp "$HOME/.vscode/extensions/omamac.omamac-theme-1.0.0/themes/omamac.json" "$REPO_ROOT/themes/nord/vscode.json"
-  [[ "$output" == *"neovim and VS Code the next time they open"* ]]
+  [[ "$output" == *"What's running shows it now, an open VS Code too; neovim the next time it opens."* ]]
+}
+
+@test "theme with the user's own VS Code theme doesn't promise VS Code" {
+  local bin="$OMAMAC_TEST_APPLICATIONS/Visual Studio Code.app/Contents/Resources/app/bin"
+  mkdir -p "$bin"
+  ln -sf "$HELPERS_DIR/fake-code" "$bin/code"
+  mkdir -p "$HOME/Library/Application Support/Code/User"
+  echo '{ "workbench.colorTheme": "Solarized Light" }' > "$HOME/Library/Application Support/Code/User/settings.json"
+  run omamac_theme nord
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"What's running shows it now; neovim the next time it opens."* ]]
 }
 
 @test "theme dracula: saved, applied, reloaded, summary" {
@@ -46,10 +57,30 @@ stamp() { (cd "$OM" && find . -type f -exec stat -f '%N %m' {} + | sort); }
   cmp "$OM/starship.toml" "$REPO_ROOT/themes/dracula/starship.toml"
   [ "$(<"$OM/btop.conf")" = 'color_theme = "dracula"' ]
   cmp "$OM/neovim.lua" "$REPO_ROOT/themes/dracula/neovim.lua"
-  grep -qx 'pkill -USR2 -x ghostty' "$STUB_LOG"
   grep -qx 'herdr server reload-config' "$STUB_LOG"
-  grep -qx 'pkill -USR2 -x btop' "$STUB_LOG"
   [[ "$output" == *"✓ Theme: Dracula, in "* ]]
+}
+
+# listener <file>: a process that writes "reloaded" to <file> on SIGUSR2; prints its pid.
+listener() {
+  bash -c 'trap "echo reloaded > \"$1\"; exit 0" USR2; while :; do sleep 0.1; done' _ "$1" > /dev/null 2>&1 &
+  echo $!
+}
+
+@test "theme reloads Ghostty and btop by their program name, as ps lists them" {
+  local g b other
+  g=$(listener "$BATS_TEST_TMPDIR/ghostty")
+  b=$(listener "$BATS_TEST_TMPDIR/btop")
+  other=$(listener "$BATS_TEST_TMPDIR/other")
+  stub ps "printf '%s\\n' '  $g /Applications/Ghostty.app/Contents/MacOS/ghostty' '  $b /opt/homebrew/bin/btop' '  $other /usr/bin/ghostty-helper'"
+  run omamac_theme dracula
+  [ "$status" -eq 0 ]
+  local i
+  for i in $(seq 50); do [ -e "$BATS_TEST_TMPDIR/ghostty" ] && [ -e "$BATS_TEST_TMPDIR/btop" ] && break; sleep 0.1; done
+  kill "$other" 2> /dev/null || true
+  [ "$(cat "$BATS_TEST_TMPDIR/ghostty")" = reloaded ]
+  [ "$(cat "$BATS_TEST_TMPDIR/btop")" = reloaded ]
+  [ ! -e "$BATS_TEST_TMPDIR/other" ]
 }
 
 @test "own starship config: kept, said so, summary is honest" {
@@ -84,7 +115,7 @@ stamp() { (cd "$OM" && find . -type f -exec stat -f '%N %m' {} + | sort); }
 }
 
 @test "nothing running: still exit 0" {
-  stub pkill 'exit 1'
+  stub ps 'exit 1'
   stub herdr 'echo "no server" >&2; exit 1'
   run omamac_theme dracula
   [ "$status" -eq 0 ]

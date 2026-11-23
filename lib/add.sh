@@ -5,7 +5,7 @@
 # answers, then apply. Sourced after lib/ask.sh, lib/log.sh, lib/apps.sh and lib/apply.sh.
 
 # The questions omamac install asks again, with only their unpicked options.
-ADD_KEYS=("${APPS_KEYS[@]}" wispr_flow languages cloud_clis coding_agents desktops window_margins dock dock_autohide docker)
+ADD_KEYS=("${APPS_KEYS[@]}" wispr_flow languages cloud_clis coding_agents desktops window_margins desktop_widgets dock dock_autohide docker)
 ADD_SECTIONS=(apps languages cloud-clis coding-agents docker macos)
 
 # add_section <name>: the questions of one section of omamac install, one per line.
@@ -17,7 +17,7 @@ add_section() {
     cloud-clis) echo cloud_clis ;;
     coding-agents) echo coding_agents ;;
     docker) echo docker ;;
-    macos) printf '%s\n' desktops window_margins dock dock_autohide ;;
+    macos) printf '%s\n' desktops window_margins desktop_widgets dock dock_autohide ;;
     *) return 1 ;;
   esac
 }

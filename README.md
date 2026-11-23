@@ -9,7 +9,7 @@ Every Mac gets:
 - neovim with LazyVim, btop, mise, eza, bat, zoxide, ripgrep, fd, lazygit, tree-sitter-cli and jq;
 - one theme for Ghostty, herdr, btop, the prompt, neovim and VS Code, switched with `omamac theme`.
 
-It asks first, and installs only what you pick: desktop apps (AI apps among them), Wispr Flow, languages, cloud CLIs, coding agents for the terminal, Docker (colima or Docker Desktop), and four macOS settings (desktops as workspaces, window margins, Dock cleanup, Dock auto-hide). Nothing is picked for you. Tools and apps come from Homebrew; languages come from mise.
+It asks first, and installs only what you pick: desktop apps (AI apps among them), Wispr Flow, languages, cloud CLIs, coding agents for the terminal, Docker (colima or Docker Desktop), and five macOS settings (desktops as workspaces, window margins, desktop widgets, Dock cleanup, Dock auto-hide). Nothing is picked for you. Tools and apps come from Homebrew; languages come from mise.
 
 ## Before you begin
 
@@ -40,30 +40,29 @@ Each run writes a log to `~/.local/state/omamac/logs/`. The newest 10 are kept.
 
 ## After install
 
-Open Ghostty. It starts herdr. The first time, macOS asks you to confirm; click Open. `nvim` downloads its plugins the first time it opens.
+A few clicks are left that macOS doesn't let a script make. Do each once, top to bottom; skip a line that names something you didn't choose.
 
-The first time you open each app, macOS asks you to confirm; click Open. Some apps need a permission, in System Settings → Privacy & Security:
+- [ ] Open Ghostty. It starts herdr. The first time, macOS asks you to confirm; click Open.
+- [ ] Open each app once. macOS asks you to confirm; click Open.
+- [ ] Some apps need a permission, in System Settings → Privacy & Security:
+  - [ ] Cap: allow Screen Recording, and Camera and Microphone if you use them.
+  - [ ] Wispr Flow: allow Microphone and Accessibility.
+  - [ ] Zoom: allow Camera and Microphone, and Screen Recording to share.
+- [ ] Allow App Management for Ghostty (System Settings → Privacy & Security → App Management), so `omamac update` can upgrade Ghostty, Docker Desktop and your apps, and `omamac uninstall` can remove them. Zoom and Google Drive don't need it: Homebrew changes them with your password.
+- [ ] Docker Desktop: open it once to finish its setup.
+- [ ] Sign in to each coding agent and AI app the first time you use it: run `claude`, `codex`, `copilot`, `agy` or `opencode` in Ghostty, or open the app. ChatGPT's app includes Codex; Antigravity CLI is Google's successor to Gemini CLI. omamac stores no keys or logins.
+- [ ] Desktops as workspaces: make six desktops. Open Mission Control (Ctrl ↑) and click + at the top right until there are six. Ctrl 1 to Ctrl 6 then jump straight to each.
+- [ ] Give each desktop one purpose, and each app its desktop: right-click the app's Dock icon, then Options, then Assign To. A layout to start from: 1 browser and chat, 2 code and terminal, 3 documents and PDFs, 4 notes, 5 music, 6 monitoring (btop, Activity Monitor). This is an opinion, the one omakub and Omarchy share: a desktop per purpose, always in the same place.
+- [ ] Reduce motion: if omamac said macOS refused it, search for Reduce motion in System Settings and turn it on.
+- [ ] Open `nvim` once; it downloads its plugins.
+- [ ] Set up git, SSH and GitHub sign-in; omamac doesn't touch them:
 
-- Cap: allow Screen Recording, and Camera and Microphone if you use them.
-- Wispr Flow: allow Microphone and Accessibility.
-- Zoom: allow Camera and Microphone, and Screen Recording to share.
-
-To let `omamac update` upgrade Ghostty, Docker Desktop and your apps, and `omamac uninstall` remove them, allow App Management for your terminal (Ghostty): System Settings → Privacy & Security → App Management. Zoom and Google Drive don't need it: Homebrew changes them with your password.
-
-If you chose Docker Desktop, open it once to finish its setup.
-
-Each coding agent and AI app asks you to sign in the first time you use it: run `claude`, `codex`, `copilot`, `agy` or `opencode` in Ghostty, or open the app. ChatGPT's app includes Codex; Antigravity CLI is Google's successor to Gemini CLI. omamac stores no keys or logins.
-
-If you chose desktops as workspaces, give an app its own desktop: right-click its Dock icon, then Options, then Assign To. macOS can refuse Reduce motion; omamac then says so. Search for Reduce motion in System Settings and turn it on.
-
-omamac doesn't set up git, SSH keys or GitHub sign-in. To do it yourself:
-
-```
-git config --global user.name "Your Name"
-git config --global user.email you@example.com
-ssh-keygen -t ed25519
-gh auth login   # if you chose the GitHub CLI
-```
+  ```
+  git config --global user.name "Your Name"
+  git config --global user.email you@example.com
+  ssh-keygen -t ed25519
+  gh auth login   # if you chose the GitHub CLI
+  ```
 
 ## Keeping it up to date
 
@@ -92,11 +91,11 @@ Sections and names can be mixed: `omamac install cloud-clis go`.
 
 ## Themes
 
-`omamac theme [<theme>]` saves a theme, applies it to Ghostty, herdr, btop, the prompt, neovim and VS Code, and reloads Ghostty, herdr and btop if they are running. neovim and VS Code show it the next time they open. Without a name it asks. The themes are `catppuccin`, `dracula`, `everforest`, `gruvbox`, `kanagawa`, `matte-black`, `nord`, `one-dark`, `osaka-jade`, `ristretto`, `rose-pine`, `solarized` and `tokyo-night`.
+`omamac theme [<theme>]` saves a theme, applies it to Ghostty, herdr, btop, the prompt, neovim and VS Code, and reloads Ghostty, herdr and btop if they are running. An open VS Code switches too; neovim shows it the next time it opens. Without a name it asks. The themes are `catppuccin`, `dracula`, `everforest`, `gruvbox`, `kanagawa`, `matte-black`, `nord`, `one-dark`, `osaka-jade`, `ristretto`, `rose-pine`, `solarized` and `tokyo-night`.
 
 btop: settings you save from btop's menu go into omamac's `btop.conf` and don't last, because omamac writes it again. Running `/opt/homebrew/bin/btop` without the alias makes btop write its own config in `~/.config/btop`, which then takes over from omamac's.
 
-VS Code: omamac installs a small extension of its own, `omamac.omamac-theme`, that holds the theme as one colour theme named "omamac" and makes it VS Code's default. omamac never writes your `settings.json`. If you set `workbench.colorTheme` there (or pick a theme in VS Code, which writes it), yours wins, and omamac says so. To follow omamac's theme again, pick "omamac" in VS Code's theme list, or remove that line. omamac only reads your default profile's settings, and VS Code's "auto detect color scheme" setting picks its own themes, so omamac's doesn't show while it is on.
+VS Code: omamac installs a small extension of its own, `omamac.omamac-theme`, that holds the theme as one colour theme named "omamac" and makes it VS Code's default. The extension asks VS Code to watch its theme file, so an open window switches when `omamac theme` rewrites it; between rose-pine, the light theme, and a dark one, the few colours the theme leaves to VS Code follow the next time VS Code opens. omamac never writes your `settings.json`. If you set `workbench.colorTheme` there (or pick a theme in VS Code, which writes it), yours wins, and omamac says so. To follow omamac's theme again, pick "omamac" in VS Code's theme list, or remove that line. omamac only reads your default profile's settings, and VS Code's "auto detect color scheme" setting picks its own themes, so omamac's doesn't show while it is on.
 
 neovim: if you have your own `~/.config/nvim`, omamac leaves it alone, and `omamac doctor` offers to move it aside to `~/.config/nvim.bak-<date>` so LazyVim and the theme can be set up.
 
@@ -112,7 +111,7 @@ Ghostty starts it for you; or run `herdr`. Ctrl g is the prefix, then `p` pane, 
 
 - **Apps:** `brave`, `chrome`, `firefox`, `whatsapp`, `telegram`, `signal`, `discord`, `slack`, `zoom`, `spotify`, `vlc`, `cap`, `dropbox`, `google-drive`, `vscode`, `claude`, `chatgpt`, `copilot`, `antigravity`, `raycast`, `obsidian` and `wispr-flow`. omamac first asks whether to remove the app's settings and data too; Enter alone is no, and yes lets Homebrew delete what the app keeps in `~/Library`. Homebrew may ask for your password. An app Homebrew took over is removed like the others; one still installed by hand stays, and omamac only forgets your pick. With Dock cleanup on, the app's tile leaves the Dock; an app you installed by hand keeps its tile.
 - **Languages:** `ruby` (with Rails), `node`, `go`, `python`, `elixir`, `rust` and `java`. **Cloud CLIs:** `azure`, `aws`, `gcloud`, `gh` and `terraform`. **Coding agents:** `claude-code`, `codex`, `copilot-cli`, `antigravity-cli` and `opencode`. A version another mise config uses stays, and Homebrew taps stay.
-- **macOS settings:** `omamac uninstall desktops`, `window-margins` and `dock-autohide` put the earlier values back and turn the answer to no. `omamac uninstall dock` puts the Dock back to how it was before the cleanup; changes you made to it since are undone, and suggested and recent apps come back.
+- **macOS settings:** `omamac uninstall desktops`, `window-margins`, `desktop-widgets` and `dock-autohide` put the earlier values back and turn the answer to no. `omamac uninstall dock` puts the Dock back to how it was before the cleanup; changes you made to it since are undone, and suggested and recent apps come back.
 - **Docker:** `omamac uninstall colima` removes colima, its tools, links and service; your Docker data stays in `~/.colima`. `omamac uninstall docker-desktop` removes the Docker Desktop app and lazydocker (a hand-installed app stays); your images, containers and volumes stay unless you say yes to removing its settings and data, which also deletes `~/.docker`.
 
 To change an earlier answer, for example colima to Docker Desktop, uninstall one and install the other with `omamac install`.
@@ -149,7 +148,7 @@ To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/ins
 - `~/.local/state/omamac`: logs, your saved answers (`choices.env`), `macos-settings.tsv` (the earlier value of each macOS setting omamac changed), `colima-service` (tells omamac it already started colima's service), `dock-before.plist` (the Dock from before the cleanup) and `dock-added` (the apps omamac has put in, or found in, the Dock: it never adds them again, so a tile you remove stays gone).
 - If you chose colima: `colima docker docker-compose docker-buildx lazydocker`, installed with Homebrew; two links in `~/.docker/cli-plugins`, `docker-compose` and `docker-buildx`, to Homebrew's plugins, so `docker compose` and `docker buildx` work (a file of yours there is kept; a link of yours that points at nothing, such as one Docker Desktop left, is kept too, and omamac says to remove it); and colima's login service, started once with `brew services start colima`. To stop colima starting at login: `brew services stop colima`. omamac won't start it again.
 - If you chose Docker Desktop: the `docker-desktop` cask and `lazydocker`, installed with Homebrew. Homebrew asks for your password for the cask's links in `/usr/local`; omamac says so first.
-- macOS settings, only for the answers you chose, written with `defaults` and the Dock restarted once. Desktops as workspaces: `com.apple.dock mru-spaces` (off, so Spaces keep their order), `NSGlobalDomain AppleSpacesSwitchOnActivate` (on, so switching to an app goes to its desktop), and Reduce motion (`com.apple.universalaccess reduceMotion` and `com.apple.Accessibility ReduceMotionEnabled`, both on). Window margins: `com.apple.WindowManager EnableTiledWindowMargins` (on). macOS may refuse Reduce motion; omamac then leaves it alone and tells you to turn it on in System Settings. Dock auto-hide: `com.apple.dock autohide` (on). `omamac update` sets them again if you changed them; the first earlier value stays in `macos-settings.tsv`.
+- macOS settings, only for the answers you chose, written with `defaults` and the Dock restarted once. Desktops as workspaces: `com.apple.dock mru-spaces` (off, so Spaces keep their order), `NSGlobalDomain AppleSpacesSwitchOnActivate` (on, so switching to an app goes to its desktop), Mission Control's "Switch to Desktop 1" to "6" shortcuts set to Ctrl 1 to Ctrl 6 (`com.apple.symbolichotkeys AppleSymbolicHotKeys` 118 to 123, made to take effect without a logout; they work for the desktops you have), and Reduce motion (`com.apple.universalaccess reduceMotion` and `com.apple.Accessibility ReduceMotionEnabled`, both on). Window margins: `com.apple.WindowManager EnableTiledWindowMargins` (on). Desktop widgets: `com.apple.WindowManager StandardHideWidgets` and `StageManagerHideWidgets` (both on, so widgets are hidden on the desktop and in Stage Manager). macOS may refuse Reduce motion; omamac then leaves it alone and tells you to turn it on in System Settings. Dock auto-hide: `com.apple.dock autohide` (on). `omamac update` sets them again if you changed them; the first earlier value stays in `macos-settings.tsv`.
 - Dock cleanup, if you chose it: once, Apple's apps and Downloads leave the Dock; your own items stay. omamac's apps are added after them, and so is any app omamac installs later, but never one you took out. Suggested and recent apps turn off (`com.apple.dock show-recents`). The Dock from before is kept in `~/.local/state/omamac/dock-before.plist`.
 
 ## Testing a branch

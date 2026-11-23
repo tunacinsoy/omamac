@@ -1,19 +1,34 @@
 # shellcheck shell=bash disable=SC2034 # OMAMAC_STEP is read by the caller's ERR trap; SETTINGS_REFUSED by install_summary
 # The macOS settings behind the yes/no answers `desktops`, `window_margins`,
-# `dock` and `dock_autohide`.
+# `desktop_widgets`, `dock` and `dock_autohide`.
 # Sourced after lib/ui.sh, lib/questions.sh and lib/choices.sh, before lib/dock.sh
 # (settings_apply calls its dock_apply) and lib/apply.sh.
 # Each key is "domain key type value"; the type is the word `defaults read-type`
 # gives (boolean or integer).
+# The Ctrl 1–6 shortcuts are entries of one nested dictionary, so their key is
+# a plutil key path, read and written through an exported copy as lib/dock.sh
+# does the Dock. Type `hotkey` is the shortcut on, its value the key code (1 to
+# 6 are 18, 19, 20, 21, 23, 22). Any other entry reads as `json` and its plutil
+# JSON, so uninstall puts it back exactly.
 
 SETTINGS_KEYS_desktops=(
   "com.apple.dock mru-spaces boolean false"
   "NSGlobalDomain AppleSpacesSwitchOnActivate boolean true"
   "com.apple.universalaccess reduceMotion boolean true"
   "com.apple.Accessibility ReduceMotionEnabled integer 1"
+  "com.apple.symbolichotkeys AppleSymbolicHotKeys.118 hotkey 18"
+  "com.apple.symbolichotkeys AppleSymbolicHotKeys.119 hotkey 19"
+  "com.apple.symbolichotkeys AppleSymbolicHotKeys.120 hotkey 20"
+  "com.apple.symbolichotkeys AppleSymbolicHotKeys.121 hotkey 21"
+  "com.apple.symbolichotkeys AppleSymbolicHotKeys.122 hotkey 23"
+  "com.apple.symbolichotkeys AppleSymbolicHotKeys.123 hotkey 22"
 )
 SETTINGS_KEYS_window_margins=(
   "com.apple.WindowManager EnableTiledWindowMargins boolean true"
+)
+SETTINGS_KEYS_desktop_widgets=(
+  "com.apple.WindowManager StandardHideWidgets boolean true"
+  "com.apple.WindowManager StageManagerHideWidgets boolean true"
 )
 SETTINGS_KEYS_dock=(
   "com.apple.dock show-recents boolean false"
@@ -23,6 +38,7 @@ SETTINGS_KEYS_dock_autohide=(
 )
 SETTINGS_REFUSED=0
 SETTINGS_DOCK=0
+SETTINGS_HOTKEYS=0
 SETTINGS_UNMET=()
 SETTINGS_PUT_BACK=' '
 
@@ -36,6 +52,7 @@ settings_keys() {
 # the domain refuses to be read, 1 on any other error.
 settings_read() {
   local out type
+  [ "$1" != com.apple.symbolichotkeys ] || { settings_hotkey_read "$1" "$2"; return; }
   if ! out=$(defaults read "$1" "$2" 2>&1); then
     case $out in
       *'Could not write domain'*) return 3 ;;
@@ -56,6 +73,10 @@ settings_read() {
 # protected, 1 on any other error.
 settings_write() {
   local out flag=-int
+  case $3 in
+    hotkey) settings_hotkey_put "$1" "$2" "$(settings_hotkey_json "$4")"; return ;;
+    json) settings_hotkey_put "$1" "$2" "$4"; return ;;
+  esac
   [ "$3" != boolean ] || flag=-bool
   if ! out=$(defaults write "$1" "$2" "$flag" "$4" 2>&1); then
     case $out in
@@ -65,13 +86,71 @@ settings_write() {
   fi
 }
 
+# settings_hotkey_json <key code>: a shortcut that is on: Ctrl (262144) and
+# the key, with no character (65535).
+settings_hotkey_json() {
+  echo '{"enabled":true,"value":{"parameters":[65535,'"$1"',262144],"type":"standard"}}'
+}
+
+# settings_hotkey_get <copy> <domain> <key path>: settings_read for one
+# entry, on a temp file the caller removes.
+settings_hotkey_get() {
+  local f=$1 xml json code
+  defaults export "$2" "$f" || return 1
+  xml=$(plutil -extract "$3" xml1 -o - "$f" 2> /dev/null) || { echo absent; return 0; }
+  json=$(plutil -extract "$3" json -o - "$f") || return 1
+  # On only when the entry is exactly what omamac writes, compared as XML:
+  # plutil's JSON has no fixed key order. Writing it over the copy is safe,
+  # the copy is never imported.
+  code=$(plutil -extract "$3.value.parameters.1" raw "$f" 2> /dev/null) || code=x
+  if plutil -replace "$3" -json "$(settings_hotkey_json "$code")" "$f" 2> /dev/null &&
+    [ "$(plutil -extract "$3" xml1 -o - "$f")" = "$xml" ]; then
+    echo "hotkey $code"
+  else
+    echo "json $json"
+  fi
+}
+
+settings_hotkey_read() {
+  local copy rc=0
+  copy=$(mktemp) || return 1
+  settings_hotkey_get "$copy" "$1" "$2" || rc=$?
+  rm -f -- "$copy"
+  return "$rc"
+}
+
+# settings_hotkey_set <copy> <domain> <key path> <json>: one import. An
+# empty JSON removes the entry; one already gone counts as done.
+settings_hotkey_set() {
+  local f=$1 parent=${3%.*}
+  defaults export "$2" "$f" || return 1
+  if [ -z "$4" ]; then
+    plutil -extract "$3" raw "$f" > /dev/null 2>&1 || return 0
+    plutil -remove "$3" "$f" || return 1
+  else
+    plutil -extract "$parent" raw "$f" > /dev/null 2>&1 || plutil -insert "$parent" -dictionary "$f" || return 1
+    plutil -replace "$3" -json "$4" "$f" || return 1
+  fi
+  defaults import "$2" "$f"
+}
+
+settings_hotkey_put() {
+  local copy rc=0
+  copy=$(mktemp) || return 1
+  settings_hotkey_set "$copy" "$@" || rc=$?
+  rm -f -- "$copy"
+  return "$rc"
+}
+
 # settings_label <key>: the name shown to the user.
 settings_label() {
   case $1 in
     reduceMotion | ReduceMotionEnabled) echo "Reduce motion" ;;
+    AppleSymbolicHotKeys.*) echo "Ctrl 1–6" ;;
     mru-spaces) echo "Spaces order" ;;
     AppleSpacesSwitchOnActivate) echo "Switching to an app's desktop" ;;
     EnableTiledWindowMargins) echo "Window margins" ;;
+    StandardHideWidgets | StageManagerHideWidgets) echo "Desktop widgets" ;;
     show-recents) echo "Suggested and recent apps" ;;
     autohide) echo "Dock auto-hide" ;;
     *) echo "$1" ;;
@@ -114,9 +193,17 @@ settings_one() {
   [ "$rc" -eq 0 ] || return "$rc"
   [ "$cur" != "$t $v" ] || return 0
   settings_write "$d" "$k" "$t" "$v" || return $?
-  case $d in com.apple.dock | NSGlobalDomain) SETTINGS_DOCK=1 ;; esac
+  settings_changed "$d"
   # No record line, no change: uninstall could not put the value back.
   settings_note "$d" "$k" "$cur" || { settings_restore "$d" "$k" "$cur"; return 1; }
+}
+
+# settings_changed <domain>: note what reloads once the keys are written.
+settings_changed() {
+  case $1 in
+    com.apple.dock | NSGlobalDomain) SETTINGS_DOCK=1 ;;
+    com.apple.symbolichotkeys) SETTINGS_HOTKEYS=1 ;;
+  esac
 }
 
 # settings_restore <domain> <key> <before>: undo one write. A key that is
@@ -124,7 +211,9 @@ settings_one() {
 # any other error.
 settings_restore() {
   local t v out
-  if [ "$3" = absent ]; then
+  if [ "$3" = absent ] && [ "$1" = com.apple.symbolichotkeys ]; then
+    settings_hotkey_put "$1" "$2" ''
+  elif [ "$3" = absent ]; then
     if ! out=$(defaults delete "$1" "$2" 2>&1); then
       case $out in
         *'Could not write domain'*) return 3 ;;
@@ -179,8 +268,9 @@ settings_apply() {
   local answer line d k t v rc unit=()
   SETTINGS_REFUSED=0
   SETTINGS_DOCK=0
+  SETTINGS_HOTKEYS=0
   SETTINGS_PUT_BACK=' '
-  for answer in desktops window_margins dock dock_autohide; do
+  for answer in desktops window_margins desktop_widgets dock dock_autohide; do
     [ "${CHOICES[$answer]:-}" = yes ] || continue
     unit=()
     while IFS= read -r line; do
@@ -188,7 +278,7 @@ settings_apply() {
       case $d in
         com.apple.universalaccess | com.apple.Accessibility) unit+=("$line"); continue ;;
       esac
-      settings_one "$d" "$k" "$t" "$v" || { settings_dock_restart; return 1; }
+      settings_one "$d" "$k" "$t" "$v" || { settings_reload; return 1; }
     done < <(settings_keys "$answer")
     if [ "${#unit[@]}" -gt 0 ]; then
       rc=0
@@ -198,14 +288,31 @@ settings_apply() {
         SETTINGS_REFUSED=1
         ui_info "Turn on Reduce motion: search for Reduce motion in System Settings."
       elif [ "$rc" -ne 0 ]; then
-        settings_dock_restart
+        settings_reload
         return 1
       fi
     fi
-    if [ "$answer" = dock ]; then dock_apply || { settings_dock_restart; return 1; }; fi
+    if [ "$answer" = dock ]; then dock_apply || { settings_reload; return 1; }; fi
     ui_ok "${QUESTION_TITLE[$answer]}"
   done
+  settings_reload
+}
+
+# settings_reload: make what was written take effect, once per run.
+settings_reload() {
+  settings_hotkeys_reload
   settings_dock_restart
+}
+
+settings_hotkeys_reload() {
+  [ "$SETTINGS_HOTKEYS" -eq 1 ] || return 0
+  # Without this, macOS reads the shortcuts only at the next login. It is a
+  # private tool, so its absence or failure is only logged.
+  if [ -x "$OMAMAC_ACTIVATE_SETTINGS" ]; then
+    "$OMAMAC_ACTIVATE_SETTINGS" -u >> "${OMAMAC_LOG:-/dev/null}" 2>&1 || echo "settings: activateSettings -u failed" >> "${OMAMAC_LOG:-/dev/null}"
+  else
+    echo "settings: no $OMAMAC_ACTIVATE_SETTINGS; the shortcuts work after the next login" >> "${OMAMAC_LOG:-/dev/null}"
+  fi
 }
 
 settings_dock_restart() {
@@ -221,7 +328,8 @@ settings_dock_restart() {
 # settings_what <answer-key>: what uninstall puts back, for its box.
 settings_what() {
   case $1 in
-    desktops) echo "your earlier Spaces, app-switching and Reduce motion settings" ;;
+    desktops) echo "your earlier Spaces, app-switching, Ctrl 1–6 and Reduce motion settings" ;;
+    desktop_widgets) echo "your earlier desktop-widget settings" ;;
     dock_autohide) echo "your earlier Dock auto-hide setting" ;;
     *) echo "your earlier window-margin setting" ;;
   esac
@@ -259,6 +367,7 @@ settings_drop() {
 settings_uninstall() {
   local d k t v before rc refused=0 unit_recorded=0
   SETTINGS_DOCK=0
+  SETTINGS_HOTKEYS=0
   while read -r d k t v; do
     before=$(settings_before "$d" "$k") || continue
     case $d in com.apple.universalaccess | com.apple.Accessibility) unit_recorded=1 ;; esac
@@ -274,14 +383,14 @@ settings_uninstall() {
       refused=1
       ui_info "Turn off Reduce motion: search for Reduce motion in System Settings."
     elif [ "$rc" -ne 0 ]; then
-      settings_dock_restart
+      settings_reload
       return 1
     else
-      case $d in com.apple.dock | NSGlobalDomain) SETTINGS_DOCK=1 ;; esac
+      settings_changed "$d"
     fi
     settings_drop "$d" "$k"
   done < <(settings_keys "$1")
-  settings_dock_restart
+  settings_reload
   if [ "$1" = desktops ] && [ "$unit_recorded" -eq 0 ]; then
     ui_info "omamac didn't change Reduce motion; if you turned it on yourself, search for Reduce motion in System Settings."
   fi
