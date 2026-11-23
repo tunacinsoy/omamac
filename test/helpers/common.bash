@@ -65,6 +65,21 @@ stub() {
 
 stub_calls() { cat "$STUB_LOG"; }
 
+# terminal_look: the next omamac draws its terminal look (#46), as when stdout
+# is a terminal, with the real gum drawing the sheets and boxes. Skips when
+# this Mac has no gum (CI installs only bash, bats-core and shellcheck).
+REAL_GUM=/opt/homebrew/bin/gum
+terminal_look() {
+  [ -x "$REAL_GUM" ] || skip "the terminal look needs gum at $REAL_GUM"
+  export OMAMAC_TEST_UI_TERMINAL=1 T_REAL_GUM=$REAL_GUM
+}
+
+# uncoloured: stdin without its colour codes.
+uncoloured() { perl -pe 's/\e\[[0-9;]*m//g'; }
+
+# widest: the widest line of stdin, in columns, colour codes left out.
+widest() { perl -CS -ne 's/\e\[[0-9;]*m//g; chomp; $m = length if length > $m; END { print $m + 0, "\n" }'; }
+
 # gum_answers <line>…: fake-gum's answers, one per prompt, in order. A
 # choose answer is its values separated by spaces ('' for none); a confirm
 # answer is yes or no; "exit <n>" makes that prompt exit with n.

@@ -1006,3 +1006,97 @@ DOCK_RECORD_REL=.local/state/omamac/dock-before.plist
   [ "$(grep '^brew uninstall' "$STUB_LOG")" = "brew uninstall opencode" ]
   grep -qx 'coding_agents=' "$CHOICES_FILE"
 }
+
+# The terminal look (#46): a yellow Removes box, the same questions in the
+# same order, then one result row.
+
+# shown: $output without its colour codes.
+shown() { printf '%s\n' "$output" | uncoloured; }
+
+# vm_exp_safe: nothing but a prompt holds a line test/vm.exp would answer.
+# The fake prompts print nothing, so no line of the output may match.
+vm_exp_safe() {
+  run ! grep -E '(Remove|Let Homebrew take over|Also remove) [^?]*\?|Install\?|[Pp]assword:' <<< "$(shown)"
+}
+
+@test "terminal look: uninstall vlc shows a Removes box, asks the same, says one row" {
+  app_run apps_media vlc vlc
+  gum_answers yes yes
+  terminal_look
+  run omamac_uninstall vlc
+  [ "$status" -eq 0 ]
+  [ "$(grep -E '^gum confirm' "$STUB_LOG")" = "gum confirm --default=false Also remove VLC's settings and data?
+gum confirm --default=false Remove VLC?" ]
+  [ "$(shown)" = "╭ Removes ─────────────────────────────────────────────────────────╮
+│ App       VLC.app                                                │
+│ Homebrew  the vlc cask                                           │
+│ Data      what VLC keeps in ~/Library, only if you say yes below │
+╰──────────────────────────────────────────────────────────────────╯
+  ℹ Homebrew may ask for your password.
+  › Removing VLC
+  ✓ VLC             removed, with its settings and data" ]
+  [[ "$output" == *$'╭ \e[33mRemoves\e[0m'* ]]
+  grep -qx 'brew uninstall --cask --zap vlc' "$STUB_LOG"
+  vm_exp_safe
+}
+
+@test "terminal look: no at Remove? says so on a row" {
+  app_run apps_media vlc vlc
+  gum_answers no no
+  terminal_look
+  run omamac_uninstall vlc
+  [ "$status" -eq 0 ]
+  [ "$(shown | tail -1)" = "  ℹ Nothing was removed." ]
+  no_brew_changes
+}
+
+@test "terminal look: uninstall go, a language" {
+  languages node go
+  gum_answers yes
+  terminal_look
+  run omamac_uninstall go
+  [ "$status" -eq 0 ]
+  [ "$(shown)" = "╭ Removes ─╮
+│ mise  go │
+╰──────────╯
+  ✓ Go              removed" ]
+}
+
+@test "terminal look: uninstall colima keeps its data, and says where" {
+  MARKER=$HOME/$MARKER_REL; colonized
+  gum_answers yes
+  terminal_look
+  run omamac_uninstall colima
+  [ "$status" -eq 0 ]
+  [ "$(shown)" = "╭ Removes ───────────────────────────────────────────────────────────────╮
+│ Homebrew  colima, docker, docker-compose, docker-buildx and lazydocker │
+│ Data      your images, containers and volumes stay in ~/.colima        │
+╰────────────────────────────────────────────────────────────────────────╯
+  ✓ colima          removed" ]
+  vm_exp_safe
+}
+
+@test "terminal look: uninstall docker-desktop asks the same two questions" {
+  dockered
+  gum_answers no yes
+  terminal_look
+  run omamac_uninstall docker-desktop
+  [ "$status" -eq 0 ]
+  [ "$(grep -E '^gum confirm' "$STUB_LOG")" = "gum confirm --default=false Also remove Docker Desktop's settings and data?
+gum confirm --default=false Remove Docker Desktop?" ]
+  [[ "$(shown)" == "╭ Removes "*"│ App       Docker Desktop "*"│ Homebrew  the docker-desktop cask and lazydocker "*"│ Data      Docker Desktop's images, containers and volumes, and ~/.docker "* ]]
+  [ "$(shown | tail -1)" = "  ✓ Docker Desktop  removed" ]
+  [ "$(shown | widest)" -le 80 ]
+  vm_exp_safe
+}
+
+@test "terminal look: uninstall desktops names what it puts back" {
+  desktops_on
+  gum_answers yes
+  terminal_look
+  run omamac_uninstall desktops
+  [ "$status" -eq 0 ]
+  [[ "$(shown)" == "╭ Removes "*"│ Setting    Desktops as workspaces "*"│ Puts back  your earlier Spaces, app-switching, Ctrl 1–6 and Reduce motion "* ]]
+  [ "$(shown | tail -1)" = "  ✓ Desktops as workspaces removed" ]
+  grep -qx 'gum confirm --default=false Remove Desktops as workspaces?' "$STUB_LOG"
+}

@@ -31,6 +31,16 @@ fake_cask() {
   fi
 }
 
+# fake_versions <Cellar|Caskroom>: "name version" per entry, as brew list
+# --versions prints; the version is in the entry's .version file, 1.0 otherwise.
+fake_versions() {
+  local d
+  for d in "$prefix/$1"/*; do
+    [ -e "$d" ] || continue
+    echo "$(basename "$d") $(cat "$d/.version" 2>/dev/null || echo 1.0)"
+  done
+}
+
 case "${1:-}" in
   shellenv)
     echo "export PATH=\"$prefix/bin:\$PATH\""
@@ -53,12 +63,14 @@ case "${1:-}" in
           done
           exit 0
           ;;
+        --versions) fake_versions Cellar; exit 0 ;;
         *) [ -e "$prefix/Cellar/$3" ]; exit ;;
       esac
     elif [ "${2:-}" = "--cask" ]; then
       [ "${T_BREW_LIST_FAIL:-0}" != 1 ] || { echo "Error: brew list failed" >&2; exit 1; }
       case "${3:-}" in
         '' | -1) ;;
+        --versions) fake_versions Caskroom; exit 0 ;;
         *) [ -e "$prefix/Caskroom/$3" ]; exit ;;
       esac
       for d in "$prefix"/Caskroom/*; do
@@ -182,6 +194,15 @@ case "${1:-}" in
     esac
     ;;
   outdated)
+    # --json=v2, doctor's one call: $prefix/outdated.json, or nothing outdated.
+    if [[ " $* " == *" --json=v2 "* ]]; then
+      # So tests can tell Homebrew wasn't asked to update itself first.
+      [ -z "${STUB_LOG:-}" ] || echo "brew-env outdated HOMEBREW_NO_AUTO_UPDATE=${HOMEBREW_NO_AUTO_UPDATE:-}" >> "$STUB_LOG"
+      [ -z "${T_BREW_OUTDATED_SLEEP:-}" ] || sleep "$T_BREW_OUTDATED_SLEEP"
+      [ "${T_BREW_OUTDATED_FAIL:-0}" != 1 ] || { echo "Error: brew outdated failed" >&2; exit 1; }
+      if [ -f "$prefix/outdated.json" ]; then cat "$prefix/outdated.json"; else echo '{"formulae":[],"casks":[]}'; fi
+      exit 0
+    fi
     # Like Homebrew: each named item that is outdated is printed, and the status is 1.
     status=0
     for name in "${@:2}"; do

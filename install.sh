@@ -58,6 +58,10 @@ OMAMAC_STEP='starting'
 install_failed() {
   # With set -E the trap also runs inside ( … ) and $( … ); let only the main shell speak.
   [ "$BASHPID" -eq "$$" ] || exit 1
+  if ui_term; then
+    ui_stopped "run the one-liner again; it picks up where it stopped"
+    exit 1
+  fi
   ui_fail "omamac stopped while $OMAMAC_STEP."
   ui_fail "Fix the problem and run the one-liner again; it picks up where it stopped."
   exit 1
@@ -77,7 +81,7 @@ install_questions() {
   local ids=()
   mapfile -t ids < <(apps_chosen)
   if [ "${#ids[@]}" -gt 0 ]; then apps_ask_adopt "${ids[@]}"; fi
-  ask_summary
+  if ui_term; then install_answers; else ask_summary; fi
   apps_password_ahead
   if ! ask_yes "Install?"; then
     # Saved answers stay: changing one later is uninstalling one thing and
@@ -91,10 +95,25 @@ install_questions() {
   fi
   OMAMAC_STEP='saving your answers'
   choices_save "$OMAMAC_CHOICES_FILE"
-  ui_ok "Your answers are saved"
+  if ui_term; then ui_row ok "Your answers" saved; else ui_ok "Your answers are saved"; fi
+}
+
+# install_answers: the terminal look's summary before "Install?": a sheet of
+# every answer, labels as the questions showed them, a dash for none.
+install_answers() {
+  local key v rows=() words=() labels=()
+  for key in "${QUESTION_KEYS[@]}"; do
+    labels=()
+    read -ra words <<< "${CHOICES[$key]:-}"
+    for v in "${words[@]}"; do labels+=("$(question_label "$key" "$v")"); done
+    rows+=("${QUESTION_TITLE[$key]}"$'\t'"$(clis_join "${labels[@]}")")
+  done
+  ui_heading "Your answers"
+  ui_sheet_labels "${rows[@]}"
 }
 
 install_lines() {
+  ui_stage "Startup files"
   OMAMAC_STEP='adding Homebrew to ~/.zprofile'
   lines_add "$HOME/.zprofile" "$OMAMAC_ZPROFILE_LINE" 'brew shellenv'
   ui_ok "Homebrew is on the PATH"
@@ -104,9 +123,46 @@ install_lines() {
   OMAMAC_STEP="adding omamac's file to Ghostty's config"
   ghostty_line_add
   ui_ok "Ghostty starts herdr"
+  # shellcheck disable=SC2088 # the ~ is shown, not expanded
+  ui_stage_done "~/.zprofile, ~/.zshrc and Ghostty's config"
+}
+
+# install_done: the terminal look's summary. A green Done box (Installed,
+# Ghostty, Next, Log), then a sheet of the permissions to allow, Ghostty first.
+install_done() {
+  local apps=() allow=() chosen=("the languages" "cloud CLIs" "coding agents") list line v rows=() perms=()
+  mapfile -t apps < <(apps_chosen)
+  [ "${#apps[@]}" -eq 0 ] || chosen+=(apps)
+  [ "${CHOICES[docker]:-none}" = none ] || chosen+=(Docker)
+  list=$(clis_join "${chosen[@]:0:${#chosen[@]}-1}")
+  rows=(
+    "Installed"$'\t'"Homebrew, bash, gum, omamac, Ghostty and the core tools, and $list and ${chosen[-1]} you chose."
+    "Ghostty"$'\t'"omamac sets five Ghostty settings: its colours, command (starts herdr), macos-option-as-alt, Option ←/→, which go to herdr, and Cmd D, which does nothing: herdr splits with Alt n."
+  )
+  if [ "${#apps[@]}" -eq 0 ]; then
+    rows+=("First open"$'\t'"macOS asks you to confirm Ghostty; click Open.")
+  else
+    rows+=("First open"$'\t'"macOS asks you to confirm Ghostty and each app; click Open.")
+  fi
+  [ "$SETTINGS_REFUSED" -ne 1 ] || rows+=("Reduce motion"$'\t'"turn it on: search for Reduce motion in System Settings.")
+  [ "${#DOCKER_NOTES[@]}" -eq 0 ] || rows+=("Docker"$'\t'"${DOCKER_NOTES[*]}")
+  rows+=("Next"$'\t'"Open Ghostty (it starts herdr), then run omamac." "Log"$'\t'"${OMAMAC_LOG/#"$HOME"/\~}")
+  ui_titled ok Done "${rows[@]}"
+  perms=("Ghostty"$'\t'"App Management, to let omamac update Ghostty: System Settings → Privacy & Security → App Management → Ghostty")
+  if [ "${#apps[@]}" -gt 0 ]; then
+    mapfile -t allow < <(apps_allow "${apps[@]}")
+    # "Zoom: allow Camera and Microphone, …" becomes Zoom and "Camera and Microphone, …".
+    for line in ${allow[@]+"${allow[@]}"}; do
+      v=${line#*: }
+      v=${v#allow }
+      perms+=("${line%%: *}"$'\t'"${v^}")
+    done
+  fi
+  ui_sheet $'App\tAllow, the first time it asks' "${perms[@]}"
 }
 
 install_summary() {
+  if ui_term; then install_done; return; fi
   OMAMAC_STEP='printing the summary'
   # Short lines, so the box fits an 80-column terminal.
   local apps=() allow=() chosen=("the languages" "cloud CLIs" "coding agents") list
@@ -147,6 +203,8 @@ install_summary() {
 
 install_main() {
   install_questions
+  # apply_all's stages, then the startup files'.
+  if ui_term; then ui_stages $(($(apply_stage_count) + 1)); fi
   apply_all
   install_lines
   install_summary

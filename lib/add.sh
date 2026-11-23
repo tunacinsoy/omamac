@@ -3,6 +3,7 @@
 # shellcheck disable=SC2004 # CHOICES is associative (lib/choices.sh), so $key is needed
 # omamac install: add apps, languages, CLIs and more to the saved
 # answers, then apply. Sourced after lib/ask.sh, lib/log.sh, lib/apps.sh and lib/apply.sh.
+# update.sh sources it with no lib/ask.sh, for add_command only.
 
 # The questions omamac install asks again, with only their unpicked options.
 ADD_KEYS=("${APPS_KEYS[@]}" wispr_flow languages cloud_clis coding_agents desktops window_margins desktop_widgets dock dock_autohide docker)
@@ -20,6 +21,21 @@ add_section() {
     macos) printf '%s\n' desktops window_margins desktop_widgets dock dock_autohide ;;
     *) return 1 ;;
   esac
+}
+
+# add_command <key>: the command that asks that question: a yes/no question
+# by its own name, any other by its section, the theme by omamac theme.
+# Returns 1 for a key neither asks.
+add_command() {
+  local section keys=()
+  [ "$1" != theme ] || { echo "omamac theme"; return 0; }
+  [[ " ${ADD_KEYS[*]} " == *" $1 "* ]] || return 1
+  [ "${QUESTION_KIND[$1]}" != yesno ] || { echo "omamac install ${1//_/-}"; return 0; }
+  for section in "${ADD_SECTIONS[@]}"; do
+    mapfile -t keys < <(add_section "$section")
+    [[ " ${keys[*]} " != *" $1 "* ]] || { echo "omamac install $section"; return 0; }
+  done
+  return 1
 }
 
 # add_id_key <id>: the question an id answers, the same ids omamac uninstall
@@ -110,14 +126,70 @@ add_pick_ids() {
   done
 }
 
+# add_save_unanswered: when some question had no answer at add_run's start,
+# save the answers without the picks: a question asked now has its no (or
+# none), every other answer is the saved one.
+add_save_unanswered() {
+  local key
+  [ -n "$unanswered" ] || return 0
+  CHOICES=()
+  for key in "${!declined[@]}"; do CHOICES[$key]=${declined[$key]}; done
+  OMAMAC_STEP='saving your answers'
+  choices_save "$OMAMAC_CHOICES_FILE"
+}
+
+# add_sheet <line>…: the terminal look's Adds sheet, from the plain box's
+# lines ("Title: labels", or a yes/no question's title alone).
+add_sheet() {
+  local line rows=()
+  for line in "$@"; do
+    if [[ $line == *': '* ]]; then rows+=("${line%%: *}"$'\t'"${line#*: }"); else rows+=("$line"$'\t'yes); fi
+  done
+  ui_heading Adds
+  ui_sheet_labels "${rows[@]}"
+}
+
+# add_done: the terminal look's summary, from add_run's names, apps and picks:
+# a green Done box, each new language's commands in it, then a sheet of the
+# permissions the new apps ask for.
+add_done() {
+  local joined v line rows=() perms=() allow=() langs=()
+  if [ "${#names[@]}" -gt 0 ]; then
+    printf -v joined '%s, ' "${names[@]}"
+    rows+=("Installed"$'\t'"${joined%, }")
+  fi
+  [ "${#apps[@]}" -eq 0 ] || rows+=("First open"$'\t'"macOS asks you to confirm each app; click Open.")
+  [ "${#DOCKER_NOTES[@]}" -eq 0 ] || rows+=("Docker"$'\t'"${DOCKER_NOTES[*]}")
+  read -ra langs <<< "${picks[languages]:-}"
+  for v in ${langs[@]+"${langs[@]}"}; do rows+=("$(question_label languages "$v")"$'\t'"${LANGUAGE_COMMANDS[$v]}"); done
+  # mise sets the PATH before each prompt, so a shell already open needs no restart.
+  [ "${#langs[@]}" -eq 0 ] || rows+=("Shells"$'\t'"they work in every shell; one already open needs one Enter first.")
+  rows+=("Log"$'\t'"${OMAMAC_LOG/#"$HOME"/\~}")
+  ui_titled ok Done "${rows[@]}"
+  [ "${#apps[@]}" -gt 0 ] || return 0
+  mapfile -t allow < <(apps_allow "${apps[@]}")
+  [ "${#allow[@]}" -gt 0 ] || return 0
+  # "Zoom: allow Camera and Microphone, …" becomes Zoom and "Camera and Microphone, …".
+  for line in "${allow[@]}"; do
+    v=${line#*: }
+    v=${v#allow }
+    perms+=("${line%%: *}"$'\t'"${v^}")
+  done
+  ui_sheet $'App\tAllow, the first time it asks' "${perms[@]}"
+}
+
 # add_run [<section or id>…]: CHOICES is loaded (bin/omamac did that). Ask
 # every question, only the sections named, or nothing for the ids named; show
 # the additions, and save and apply them only after "Install?" is yes, so a no
 # changes nothing.
 add_run() {
   local key v had=() new=() left=() lines=() labels=() names=() apps=() allow=() joined asked=''
-  local -A picks=()
-  local ask=("${ADD_KEYS[@]}")
+  local -A picks=() declined=()
+  local ask=("${ADD_KEYS[@]}") unanswered
+  # update names a question added after the first run, and sends the user here.
+  # A no, or a no at Install?, is still its answer, so it is saved, or update
+  # would name the question again every time.
+  unanswered=$(choices_missing)
   if [ "$#" -gt 0 ]; then
     add_targets "$@"
     ask=(${ADD_ASK[@]+"${ADD_ASK[@]}"})
@@ -175,6 +247,8 @@ add_run() {
     ui_info "You've picked everything omamac offers here."
     exit 0
   fi
+  # The answers without the picks, which the loop below merges into CHOICES.
+  for key in "${!CHOICES[@]}"; do declined[$key]=${CHOICES[$key]}; done
   for key in "${ADD_KEYS[@]}"; do
     [ -n "${picks[$key]:-}" ] || continue
     if [ "${QUESTION_KIND[$key]}" = yesno ]; then
@@ -201,12 +275,14 @@ add_run() {
     lines+=("${QUESTION_TITLE[$key]}: ${joined%, }")
   done
   if [ "${#lines[@]}" -eq 0 ]; then
+    add_save_unanswered
     ui_info "Nothing picked, so nothing changed."
     exit 0
   fi
-  ui_box "${lines[@]}"
+  if ui_term; then add_sheet "${lines[@]}"; else ui_box "${lines[@]}"; fi
   apps_password_ahead
   if ! ask_yes "Install?"; then
+    add_save_unanswered
     ui_info "Stopped. Nothing else was changed."
     exit 0
   fi
@@ -215,8 +291,10 @@ add_run() {
   # bin/omamac's ERR trap: from here, a failure is finished by omamac update.
   ADD_SAVED=1
   log_start
+  if ui_term; then ui_stages "$(apply_stage_count)"; fi
   apply_all
   OMAMAC_STEP='printing the summary'
+  if ui_term; then add_done; return; fi
   lines=()
   if [ "${#names[@]}" -gt 0 ]; then
     printf -v joined '%s, ' "${names[@]}"

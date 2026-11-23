@@ -451,3 +451,88 @@ INSTALL_Q="gum confirm --default=false Install?"
   [ "$(prompts)" = "$ADOPT_Q"$'\n'"$INSTALL_Q" ]
   grep -qx 'brew install --cask --adopt vlc' "$STUB_LOG"
 }
+
+# The terminal look (#46): Your answers as a sheet, the same Install?, counted
+# progress rows, a green Done box and the permissions sheet.
+
+# shown: $output without its colour codes.
+shown() { printf '%s\n' "$output" | uncoloured; }
+
+# counts: the stage counts of the progress rows, one per line ("3/10").
+counts() { shown | grep -oE '^ *[0-9]+/[0-9]+ ' | tr -d ' '; }
+
+@test "terminal look: answers, Install?, counted stages, Done and what to allow" {
+  sed -i '' -e 's/^languages=.*/languages=go rust/' -e 's/^apps_communication=.*/apps_communication=zoom/' \
+    -e 's/^docker=.*/docker=colima/' "$CHOICES_FILE"
+  gum_answers yes
+  terminal_look
+  run install
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "$INSTALL_Q" ]
+  [[ "$output" == *$'\e[1mYour answers\e[0m'* ]]
+  shown | grep -qxF '│ Communication          │ Zoom        │'
+  shown | grep -qxF '│ Browsers               │ —           │'
+  shown | grep -qxF '│ Languages              │ Go, Rust    │'
+  shown | grep -qxF '  ℹ Homebrew asks for your password once more, after you confirm, for: Zoom.'
+  # Every stage this run does, counted without a gap.
+  [ "$(counts | paste -sd' ' -)" = "1/9 2/9 3/9 4/9 5/9 6/9 7/9 8/9 9/9" ]
+  [ "$(shown | grep -E '^ *[0-9]+/9 ')" = "1/9 ✓ Password apps   Zoom
+2/9 ✓ Docker          colima
+3/9 ✓ Shell and theme Tokyo Night
+4/9 ✓ Core tools      15 installed
+5/9 ✓ neovim          LazyVim
+6/9 ✓ Languages       Go, Rust
+7/9 ✓ Apps            1 installed
+8/9 ✓ macOS           nothing chosen
+9/9 ✓ Startup files   ~/.zprofile, ~/.zshrc and Ghostty's config" ]
+  [[ "$output" == *$'╭ \e[32mDone\e[0m'* ]]
+  [[ "$(shown)" == *"│ Installed   Homebrew, bash, gum, omamac, Ghostty and the core tools, and the │"* ]]
+  [[ "$(shown)" == *"│ Next        Open Ghostty (it starts herdr), then run omamac."* ]]
+  [[ "$(shown)" == *"│ Docker      colima starts Docker in the background now and at each login."* ]]
+  [[ "$(shown)" == *"│ App     │ Allow, the first time it asks "*"│ Ghostty │ App Management, "*"│ Zoom    │ Camera and Microphone, and Screen Recording to share."* ]]
+  [ "$(shown | widest)" -le 80 ]
+  # test/vm.exp answers the first "Install?" it sees: only the prompt may say it.
+  run ! grep -qE 'Install\?|[Pp]assword:' <<< "$(shown)"
+}
+
+@test "terminal look: a run with no picks counts only its own stages" {
+  gum_answers yes
+  terminal_look
+  run install
+  [ "$status" -eq 0 ]
+  [ "$(counts | paste -sd' ' -)" = "1/5 2/5 3/5 4/5 5/5" ]
+  # No VS Code, no apps: no row for them, and no app in the permissions sheet.
+  [[ "$output" != *"VS Code theme"* ]]
+  [[ "$(shown)" == *"│ First open  macOS asks you to confirm Ghostty; click Open."* ]]
+}
+
+@test "terminal look: VS Code is its theme's own stage" {
+  sed -i '' 's/^apps_developer=.*/apps_developer=vscode/' "$CHOICES_FILE"
+  gum_answers yes
+  terminal_look
+  run install
+  [ "$status" -eq 0 ]
+  shown | grep -qxF '6/7 ✓ VS Code theme   Tokyo Night'
+}
+
+@test "terminal look: a failing step turns red and stops in a box with the log's last lines" {
+  gum_answers yes
+  terminal_look
+  T_BREW_FAIL=1 run install
+  [ "$status" -eq 1 ]
+  [[ "$(shown)" == *"2/5 ✗ Core tools      Installing starship, neovim, "*"didn't finish"* ]]
+  [[ "$output" == *$'╭ \e[31mStopped\e[0m'* ]]
+  [[ "$(shown)" == *"│ While  installing the core tools "*"│ Fix    run the one-liner again; it picks up where it stopped "*"├"*"│ Error: brew install failed "*"╰"* ]]
+  [ "$(shown | widest)" -le 80 ]
+  # The plain text's tail and lines aren't said as well.
+  [[ "$output" != *"omamac stopped while"* ]]
+}
+
+@test "terminal look: Install? no says so on a row, nothing written" {
+  gum_answers no
+  terminal_look
+  run install
+  [ "$status" -eq 0 ]
+  [ "$(shown | tail -1)" = "  ℹ Stopped. Nothing else was changed." ]
+  [ ! -e "$HOME/.config/omamac/zshrc" ]
+}

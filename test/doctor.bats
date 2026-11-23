@@ -6,7 +6,7 @@ bats_require_minimum_version 1.5.0
 
 setup() { setup_sandbox; }
 
-doctor() { "$BASH5" "$REPO_ROOT/bin/omamac" doctor; }
+doctor() { "$BASH5" "$REPO_ROOT/bin/omamac" doctor "$@"; }
 
 # A Mac where every check passes.
 healthy_mac() {
@@ -56,9 +56,16 @@ mise_has() { touch "$OMAMAC_TEST_BREW_PREFIX/mise/$1"; }
 
 snap() { (cd "$HOME" && find . -type f -not -path './.local/share/omamac/.git/*' -exec shasum {} + | sort); }
 
-# expect_fail <what> <fix>: doctor exits 1 and prints a ✗ line with the fix.
+# expect_fail <what> <fix>: doctor exits 1 and prints a ✗ line with the fix,
+# under its area. expect_fail_all: the same with --all, the ✗ line unindented.
 expect_fail() {
   run doctor
+  [ "$status" -eq 1 ]
+  [[ "$output" == *$'\n'"  ✗ $1"* ]]
+  [[ "$output" == *"Fix: "*"$2"* ]]
+}
+expect_fail_all() {
+  run doctor --all
   [ "$status" -eq 1 ]
   [[ "$output" == *"✗ $1"* ]]
   [[ "$output" == *"Fix: "*"$2"* ]]
@@ -66,7 +73,7 @@ expect_fail() {
 
 @test "healthy Mac: every check passes" {
   healthy_mac
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
   [ "$(printf '%s\n' "$output" | grep -c '^✓')" -eq 21 ]
 }
@@ -87,7 +94,7 @@ expect_fail() {
 @test "bash is the old one" {
   healthy_mac
   ln -sf /bin/bash "$OMAMAC_TEST_BREW_PREFIX/bin/bash"
-  expect_fail "bash 5" "brew install bash"
+  expect_fail "bash for omamac" "brew install bash"
 }
 
 @test "gum not installed" {
@@ -106,19 +113,19 @@ expect_fail() {
   healthy_mac
   : > "$HOME/.zprofile"
   rm "$STUB_DIR/gum"
-  PATH=/usr/bin:/bin expect_fail "Homebrew line" "Run the one-liner again"
+  PATH=/usr/bin:/bin expect_fail "Homebrew in your shell" "Run the one-liner again"
 }
 
 @test "checkout missing" {
   healthy_mac
   rm -rf "$HOME/.local/share/omamac"
-  expect_fail "Checkout" "Run the one-liner"
+  expect_fail "omamac's files" "Run the one-liner"
 }
 
 @test "checkout with another origin" {
   healthy_mac
   git -C "$CHECKOUT" remote set-url origin https://example.com/other
-  expect_fail "Checkout" "Run the one-liner"
+  expect_fail "omamac's files" "Run the one-liner"
 }
 
 @test "checkout has local changes" {
@@ -127,21 +134,21 @@ expect_fail() {
   git -C "$CHECKOUT" add tracked
   git -C "$CHECKOUT" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m tracked
   echo b > "$CHECKOUT/tracked"
-  expect_fail "Checkout is clean" "git -C ~/.local/share/omamac status"
+  expect_fail "omamac's files unchanged" "git -C ~/.local/share/omamac status"
 }
 
 @test "an untracked file in the checkout still passes" {
   healthy_mac
   : > "$CHECKOUT/.DS_Store"
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
-  [[ "$output" == *"✓ Checkout is clean"* ]]
+  [[ "$output" == *"✓ omamac's files unchanged"* ]]
 }
 
 @test "Homebrew line missing" {
   healthy_mac
   : > "$HOME/.zprofile"
-  expect_fail "Homebrew line" "Run the one-liner again"
+  expect_fail "Homebrew in your shell" "Run the one-liner again"
 }
 
 @test "user's own brew shellenv line is enough" {
@@ -154,40 +161,40 @@ expect_fail() {
 @test "omamac line missing" {
   healthy_mac
   : > "$HOME/.zshrc"
-  expect_fail "omamac line" "Run the one-liner again"
+  expect_fail "omamac in your shell" "Run the one-liner again"
 }
 
 @test "omamac's zsh file missing" {
   healthy_mac
   rm "$HOME/.config/omamac/zshrc"
-  expect_fail "omamac's zsh file" "Run the one-liner again"
+  expect_fail "omamac's shell settings" "Run the one-liner again"
 }
 
 @test "core formula missing" {
   healthy_mac
   rm -r "$OMAMAC_TEST_BREW_PREFIX/Cellar/eza"
-  expect_fail "Core tools" "brew install eza"
+  expect_fail "Everyday tools" "brew install eza"
 }
 
 @test "core formulas missing are all named" {
   healthy_mac
   rm -r "$OMAMAC_TEST_BREW_PREFIX/Cellar/eza" "$OMAMAC_TEST_BREW_PREFIX/Cellar/bat"
-  expect_fail "Core tools" "brew install eza bat"
+  expect_fail "Everyday tools" "brew install eza bat"
 }
 
 @test "core check is skipped when Homebrew is missing" {
   healthy_mac
   rm "$OMAMAC_TEST_BREW_PREFIX/bin/brew"
-  run doctor
+  run doctor --all
   [ "$status" -eq 1 ]
-  [[ "$output" == *"ℹ Core tools — skipped"* ]]
-  [[ "$output" == *"neovim config"* ]]
+  [[ "$output" == *"ℹ Everyday tools — skipped"* ]]
+  [[ "$output" == *"Code editor (neovim)"* ]]
 }
 
 @test "core check is skipped when brew can't list" {
   healthy_mac
   T_BREW_LIST_FAIL=1 run doctor
-  [[ "$output" == *"ℹ Core tools — skipped"* ]]
+  [[ "$output" == *"ℹ Everyday tools — skipped"* ]]
 }
 
 @test "user's own neovim config is kept" {
@@ -196,7 +203,7 @@ expect_fail() {
   rm "$HOME/.config/nvim/lua/plugins/omamac.lua"
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ neovim config — your own neovim config is kept"* ]]
+  [[ "$output" == *"ℹ Code editor (neovim) — your own neovim config is kept"* ]]
 }
 
 @test "own starship config is info" {
@@ -204,21 +211,21 @@ expect_fail() {
   : > "$HOME/.config/starship.toml"
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ starship config — your own starship config is kept, so themes don't reach the prompt"* ]]
+  [[ "$output" == *"ℹ Prompt colours (starship) — your own starship config is kept, so themes don't reach the prompt"* ]]
 }
 
 @test "own STARSHIP_CONFIG is info" {
   healthy_mac
   STARSHIP_CONFIG="$BATS_TEST_TMPDIR/mine.toml" run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ starship config — your own starship config is kept"* ]]
+  [[ "$output" == *"ℹ Prompt colours (starship) — your own starship config is kept"* ]]
 }
 
 @test "STARSHIP_CONFIG naming omamac's file is ok" {
   healthy_mac
-  STARSHIP_CONFIG="$HOME/.config/omamac/starship.toml" run doctor
+  STARSHIP_CONFIG="$HOME/.config/omamac/starship.toml" run doctor --all
   [ "$status" -eq 0 ]
-  [[ "$output" == *"✓ starship config"* ]]
+  [[ "$output" == *"✓ Prompt colours (starship)"* ]]
 }
 
 @test "own btop config is info" {
@@ -227,7 +234,7 @@ expect_fail() {
   : > "$HOME/.config/btop/btop.conf"
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ btop config — your own btop config is kept, so themes don't reach btop"* ]]
+  [[ "$output" == *"ℹ System monitor colours (btop) — your own btop config is kept, so themes don't reach btop"* ]]
 }
 
 # vscode_app: VS Code is installed, with the fake code command in it.
@@ -239,26 +246,24 @@ vscode_app() {
 
 @test "no VS Code: no VS Code line" {
   healthy_mac
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
-  [[ "$output" != *"VS Code theme"* ]]
+  [[ "$output" != *"VS Code"* ]]
 }
 
 @test "VS Code with omamac's theme is ok" {
   healthy_mac
   vscode_app
   omamac_lib vscode_theme_install
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
-  # "Theme files" covers it: no line of its own.
-  [[ "$output" == *"✓ Theme files"* ]]
-  [[ "$output" != *"VS Code theme"* ]]
+  [[ "$output" == *"✓ VS Code colours — VS Code follows your theme"* ]]
 }
 
 @test "VS Code without omamac's theme is a fail" {
   healthy_mac
   vscode_app
-  expect_fail "VS Code theme" "omamac update"
+  expect_fail "VS Code colours" "omamac update"
   [[ "$output" == *"VS Code doesn't have omamac's theme"* ]]
 }
 
@@ -269,7 +274,7 @@ vscode_app() {
   local pkg="$HOME/.vscode/extensions/omamac.omamac-theme-1.0.0/package.json"
   jq 'del(.contributes.themes[0]._watch)' "$pkg" > "$BATS_TEST_TMPDIR/old.json"
   mv "$BATS_TEST_TMPDIR/old.json" "$pkg"
-  expect_fail "VS Code theme" "omamac update"
+  expect_fail "VS Code colours" "omamac update"
 }
 
 @test "own VS Code theme is info" {
@@ -279,13 +284,13 @@ vscode_app() {
   echo '{ "workbench.colorTheme": "Solarized Light" }' > "$HOME/Library/Application Support/Code/User/settings.json"
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ VS Code theme — your own VS Code theme is kept, so themes don't reach VS Code"* ]]
+  [[ "$output" == *"ℹ VS Code colours — your own VS Code theme is kept, so themes don't reach VS Code"* ]]
 }
 
 @test "a missing theme file is a fail" {
   healthy_mac
   rm "$HOME/.config/omamac/starship.toml"
-  expect_fail "Theme files" "omamac update"
+  expect_fail "Theme colours" "omamac update"
 }
 
 @test "own nvim: info says themes don't reach neovim" {
@@ -294,7 +299,7 @@ vscode_app() {
   rm "$HOME/.config/nvim/lua/plugins/omamac.lua"
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ neovim config — your own neovim config is kept, so themes don't reach neovim"* ]]
+  [[ "$output" == *"ℹ Code editor (neovim) — your own neovim config is kept, so themes don't reach neovim"* ]]
 }
 
 # own_nvim: the user's neovim config, without omamac's marker.
@@ -361,20 +366,20 @@ own_nvim() {
   ln -s "$BATS_TEST_TMPDIR/nowhere" "$HOME/.config/nvim"
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ neovim config"* ]]
+  [[ "$output" == *"ℹ Code editor (neovim)"* ]]
 }
 
 @test "neovim config missing" {
   healthy_mac
   rm -r "$HOME/.config/nvim"
-  expect_fail "neovim config" "Run the one-liner again"
+  expect_fail "Code editor (neovim)" "Run the one-liner again"
 }
 
 @test "herdr: omamac's config" {
   healthy_mac
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
-  [[ "$output" == *"✓ herdr config"* ]]
+  [[ "$output" == *"✓ herdr settings"* ]]
 }
 
 @test "herdr: the user's own config" {
@@ -383,30 +388,30 @@ own_nvim() {
   echo mine > "$HOME/.config/herdr/config.toml"
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ herdr config — your own herdr config is kept, so omamac's key bindings and themes don't reach herdr"* ]]
+  [[ "$output" == *"ℹ herdr settings — your own herdr config is kept, so omamac's key bindings and themes don't reach herdr"* ]]
 }
 
 @test "herdr: herdr's own onboarding file is not the user's" {
   healthy_mac
   mkdir -p "$HOME/.config/herdr"
   printf 'onboarding = false\n' > "$HOME/.config/herdr/config.toml"
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
-  [[ "$output" == *"✓ herdr config"* ]]
+  [[ "$output" == *"✓ herdr settings"* ]]
 }
 
 @test "herdr: changed in herdr is still omamac's" {
   healthy_mac
   echo '# changed' >> "$HOME/.config/omamac/herdr.toml"
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
-  [[ "$output" == *"✓ herdr config"* ]]
+  [[ "$output" == *"✓ herdr settings"* ]]
 }
 
 @test "herdr: omamac's file missing" {
   healthy_mac
   rm "$HOME/.config/omamac/herdr.toml"
-  expect_fail "herdr config" "omamac update"
+  expect_fail "herdr settings" "omamac update"
   [[ "$output" == *"~/.config/omamac/herdr.toml is missing"* ]]
 }
 
@@ -423,20 +428,28 @@ own_nvim() {
 @test "saved answers missing" {
   healthy_mac
   rm "$CHOICES_FILE"
-  expect_fail "Saved answers" "Run the one-liner"
+  expect_fail "Your answers" "Run the one-liner"
 }
 
 @test "saved answers invalid" {
   healthy_mac
   echo 'colour=red' >> "$CHOICES_FILE"
-  expect_fail "Saved answers" "Delete that line"
+  expect_fail "Your answers" "Delete that line"
   [[ "$output" == *"line 21"* ]]
 }
 
 @test "saved answers incomplete" {
   healthy_mac
   sed -i '' '/^docker=/d' "$CHOICES_FILE"
-  expect_fail "Saved answers" "it asks only those"
+  expect_fail "Your answers" "Run omamac install docker"
+}
+
+@test "saved answers incomplete: one omamac install for every name, the theme apart" {
+  healthy_mac
+  sed -i '' -e '/^theme=/d' -e '/^apps_media=/d' -e '/^apps_ai=/d' -e '/^desktop_widgets=/d' "$CHOICES_FILE"
+  run doctor
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"✗ Your answers — some questions have no answer yet. Fix: Run omamac theme, then omamac install apps desktop-widgets"* ]]
 }
 
 @test "git status takes no lock" {
@@ -451,21 +464,21 @@ own_nvim() {
 @test "mise drop-in missing" {
   healthy_mac
   rm "$HOME/.config/mise/conf.d/omamac.toml"
-  expect_fail "mise drop-in" "omamac update"
+  expect_fail "Languages list" "omamac update"
   [[ "$output" == *"~/.config/mise/conf.d/omamac.toml doesn't match your answers"* ]]
 }
 
 @test "mise drop-in edited" {
   healthy_mac
   echo 'go = "latest"' >> "$HOME/.config/mise/conf.d/omamac.toml"
-  expect_fail "mise drop-in" "omamac update"
+  expect_fail "Languages list" "omamac update"
 }
 
 @test "without saved answers the drop-in and chosen tools are skipped" {
   healthy_mac
   rm "$CHOICES_FILE"
   run doctor
-  [[ "$output" == *"ℹ mise drop-in — skipped, your saved answers can't be read"* ]]
+  [[ "$output" == *"ℹ Languages list — skipped, your saved answers can't be read"* ]]
   [[ "$output" == *"ℹ Your tools — skipped, your saved answers can't be read"* ]]
 }
 
@@ -487,7 +500,7 @@ settings_set() {
 @test "settings: both answers yes and all set: ✓" {
   healthy_mac
   settings_set
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
   [[ "$output" == *"✓ Desktops as workspaces"* ]]
   [[ "$output" == *"✓ Window margins"* ]]
@@ -497,7 +510,7 @@ settings_set() {
   healthy_mac
   settings_set
   defaults write com.apple.dock mru-spaces -bool true
-  expect_fail "Desktops as workspaces" "omamac update"
+  expect_fail_all "Desktops as workspaces" "omamac update"
   [[ "$output" == *"Spaces order was changed since omamac set it"* ]]
   [[ "$output" == *"✓ Window margins"* ]]
 }
@@ -515,10 +528,10 @@ settings_set() {
   choose desktop_widgets yes
   defaults write com.apple.WindowManager StandardHideWidgets -bool true
   defaults write com.apple.WindowManager StageManagerHideWidgets -bool true
-  run doctor
+  run doctor --all
   [[ "$output" == *"✓ Desktop widgets"* ]]
   defaults write com.apple.WindowManager StandardHideWidgets -bool false
-  expect_fail "Desktop widgets" "omamac update"
+  expect_fail_all "Desktop widgets" "omamac update"
   [[ "$output" == *"Desktop widgets was changed since omamac set it"* ]]
 }
 
@@ -607,7 +620,7 @@ settings_set() {
   mise_has go
   mkdir -p "$OMAMAC_TEST_BREW_PREFIX/Cellar/gh"
   gum_answers
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
   [[ "$output" == *"✓ Your tools"* ]]
   [ -z "$(grep '^gum' "$STUB_LOG")" ]
@@ -778,17 +791,17 @@ healthy_ghostty() {
 
 @test "Ghostty from Homebrew with its line" {
   healthy_mac
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
-  [[ "$output" == *"✓ Ghostty"$'\n'* ]]
-  [[ "$output" == *"✓ Ghostty line"* ]]
-  [[ "$output" == *"✓ App Management"* ]]
+  [[ "$output" == *"✓ Ghostty — the terminal app omamac sets up"$'\n'* ]]
+  [[ "$output" == *"✓ omamac in Ghostty"* ]]
+  [[ "$output" == *"✓ Permission to update apps"* ]]
 }
 
 @test "Ghostty by hand" {
   healthy_mac
   rm -r "$OMAMAC_TEST_BREW_PREFIX/Caskroom/ghostty"
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
   printf '%s\n' "$output" | grep -qxF "ℹ Ghostty — installed by hand, so omamac won't update it. To let Homebrew take it over: brew install --cask --adopt ghostty"
   [[ "$output" != *"App Management"* ]]
@@ -809,13 +822,13 @@ healthy_ghostty() {
 @test "Ghostty line missing" {
   healthy_mac
   : > "$HOME/.config/ghostty/config.ghostty"
-  expect_fail "Ghostty line" "Run the one-liner again"
+  expect_fail "omamac in Ghostty" "Run the one-liner again"
 }
 
 @test "omamac's Ghostty file missing" {
   healthy_mac
   rm "$HOME/.config/omamac/ghostty.conf"
-  expect_fail "omamac's Ghostty file" "omamac update"
+  expect_fail "omamac's Ghostty settings" "omamac update"
 }
 
 @test "App Management refused is info" {
@@ -823,7 +836,7 @@ healthy_ghostty() {
   stub touch 'case "$1" in *.omamac-write-test) echo "touch: $1: Operation not permitted" >&2; exit 1 ;; esac; exec /usr/bin/touch "$@"'
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ App Management"* ]]
+  [[ "$output" == *"ℹ Permission to update apps"* ]]
   [[ "$output" == *"System Settings → Privacy & Security → App Management"* ]]
 }
 
@@ -843,12 +856,12 @@ healthy_colima() {
 @test "doctor: colima with everything in place is ✓" {
   healthy_mac
   healthy_colima
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
   [[ "$output" == *"✓ Your tools"* ]]
-  [[ "$output" == *"✓ docker-compose"* ]]
-  [[ "$output" == *"✓ docker-buildx"* ]]
-  [[ "$output" == *"✓ colima's service"* ]]
+  [[ "$output" == *"✓ Docker Compose"* ]]
+  [[ "$output" == *"✓ Docker Buildx"* ]]
+  [[ "$output" == *"✓ colima at login"* ]]
   [ -z "$(printf '%s\n' "$output" | grep -E '^(✗|ℹ)')" ]
 }
 
@@ -857,7 +870,7 @@ healthy_colima() {
   healthy_colima
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" uninstall docker lazydocker
   gum_answers leave
-  expect_fail "colima — you chose it, but Homebrew no longer has docker, lazydocker" \
+  expect_fail_all "colima — you chose it, but Homebrew no longer has docker, lazydocker" \
     "omamac update puts it back; omamac uninstall colima drops it"
   [ "$(printf '%s\n' "$output" | grep -c '^✗ colima')" -eq 1 ]
 }
@@ -867,9 +880,9 @@ healthy_colima() {
   healthy_colima
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" uninstall colima
   gum_answers leave
-  expect_fail "colima — you chose it, but Homebrew no longer has colima" \
+  expect_fail_all "colima — you chose it, but Homebrew no longer has colima" \
     "omamac update puts it back; omamac uninstall colima drops it"
-  [[ "$output" != *"colima's service"* ]]
+  [[ "$output" != *"colima at login"* ]]
 }
 
 @test "doctor: Homebrew can't list: colima skipped, said once" {
@@ -885,14 +898,14 @@ healthy_colima() {
   healthy_mac
   healthy_colima
   rm "$HOME/.docker/cli-plugins/docker-buildx"
-  expect_fail "docker-buildx — docker can't find buildx" "omamac update"
+  expect_fail "Docker Buildx — docker can't find buildx" "omamac update"
 }
 
 @test "doctor: a dangling plugin link is ✗" {
   healthy_mac
   healthy_colima
   rm -r "$OMAMAC_TEST_BREW_PREFIX/opt/docker-compose"
-  expect_fail "docker-compose — docker can't find compose" "omamac update"
+  expect_fail "Docker Compose — docker can't find compose" "omamac update"
 }
 
 @test "doctor: a user's own plugin is ℹ, not ✗" {
@@ -902,7 +915,7 @@ healthy_colima() {
   : > "$HOME/.docker/cli-plugins/docker-compose"
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ docker-compose — your own file in ~/.docker/cli-plugins is kept, and docker uses it"* ]]
+  [[ "$output" == *"ℹ Docker Compose — your own file in ~/.docker/cli-plugins is kept, and docker uses it"* ]]
 }
 
 @test "doctor: a user's link that points at nothing is ✗, and stays" {
@@ -910,7 +923,7 @@ healthy_colima() {
   healthy_colima
   rm "$HOME/.docker/cli-plugins/docker-compose"
   ln -s /Applications/Docker.app/Contents/Resources/cli-plugins/docker-compose "$HOME/.docker/cli-plugins/docker-compose"
-  expect_fail "docker-compose — your link in ~/.docker/cli-plugins points at nothing" "Remove it, then run omamac update"
+  expect_fail "Docker Compose — your link in ~/.docker/cli-plugins points at nothing" "Remove it, then run omamac update"
   [ -L "$HOME/.docker/cli-plugins/docker-compose" ]
 }
 
@@ -920,7 +933,7 @@ healthy_colima() {
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" services stop colima
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ colima's service — colima doesn't start at login. To start it: brew services start colima"* ]]
+  [[ "$output" == *"ℹ colima at login — colima doesn't start at login. To start it: brew services start colima"* ]]
   [ -z "$(grep 'services start' "$STUB_LOG")" ]
 }
 
@@ -930,7 +943,7 @@ healthy_colima() {
   echo error > "$OMAMAC_TEST_BREW_PREFIX/services/colima"
   run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ colima's service — colima didn't start; see $OMAMAC_TEST_BREW_PREFIX/var/log/colima.log"* ]]
+  [[ "$output" == *"ℹ colima at login — colima didn't start; see $OMAMAC_TEST_BREW_PREFIX/var/log/colima.log"* ]]
 }
 
 @test "doctor: Homebrew can't say how the service is: ℹ skipped" {
@@ -938,7 +951,7 @@ healthy_colima() {
   healthy_colima
   T_BREW_SERVICES_INFO_FAIL=1 run doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"ℹ colima's service — skipped, Homebrew can't say whether it's registered"* ]]
+  [[ "$output" == *"ℹ colima at login — skipped, Homebrew can't say whether it's registered"* ]]
 }
 
 @test "doctor: offers to reinstall colima" {
@@ -985,7 +998,7 @@ healthy_desktop() {
 @test "doctor: Docker Desktop with everything in place is ✓" {
   healthy_mac
   healthy_desktop
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
   [[ "$output" == *"✓ Your tools"* ]]
   [ -z "$(printf '%s\n' "$output" | grep -E '^(✗|ℹ)')" ]
@@ -996,7 +1009,7 @@ healthy_desktop() {
   healthy_desktop
   rm -r "$OMAMAC_TEST_APPLICATIONS/Docker.app"
   gum_answers leave
-  expect_fail "Docker Desktop — you chose it, but Homebrew no longer has Docker Desktop" \
+  expect_fail_all "Docker Desktop — you chose it, but Homebrew no longer has Docker Desktop" \
     "omamac update puts it back; omamac uninstall docker-desktop drops it"
   [ "$(printf '%s\n' "$output" | grep -c '^✗ Docker Desktop')" -eq 1 ]
 }
@@ -1006,7 +1019,7 @@ healthy_desktop() {
   healthy_desktop
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" uninstall lazydocker
   gum_answers leave
-  expect_fail "Docker Desktop — you chose it, but Homebrew no longer has lazydocker" \
+  expect_fail_all "Docker Desktop — you chose it, but Homebrew no longer has lazydocker" \
     "omamac uninstall docker-desktop drops it"
   [ "$(printf '%s\n' "$output" | grep -c '^✗ Docker Desktop')" -eq 1 ]
 }
@@ -1015,7 +1028,7 @@ healthy_desktop() {
   healthy_mac
   healthy_desktop
   rm -r "$OMAMAC_TEST_BREW_PREFIX/Caskroom/docker-desktop"
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
   printf '%s\n' "$output" | grep -qxF "ℹ Docker Desktop — installed by hand, so omamac won't update it"
   [[ "$output" != *"--adopt"* ]]
@@ -1052,7 +1065,7 @@ healthy_apps() {
 @test "doctor: chosen apps all there is ✓" {
   healthy_mac
   healthy_apps vlc
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
   [[ "$output" == *"✓ Your apps"* ]]
 }
@@ -1077,7 +1090,7 @@ healthy_apps() {
   healthy_mac
   healthy_apps vlc
   rm -r "$OMAMAC_TEST_BREW_PREFIX/Caskroom/vlc"
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
   printf '%s\n' "$output" | grep -qxF "ℹ VLC — installed by hand, so omamac won't update it. To let Homebrew take it over: brew install --cask --adopt vlc"
 }
@@ -1088,7 +1101,7 @@ healthy_apps() {
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask visual-studio-code
   rm -r "$OMAMAC_TEST_BREW_PREFIX/Caskroom/visual-studio-code"
   omamac_lib vscode_theme_install
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
   printf '%s\n' "$output" | grep -qxF "ℹ VS Code — installed by hand, so omamac won't update it. To let Homebrew take it over: brew install --cask --adopt visual-studio-code"
 }
@@ -1097,7 +1110,7 @@ healthy_apps() {
   healthy_mac
   healthy_apps zoom
   rm -r "$OMAMAC_TEST_BREW_PREFIX/Caskroom/zoom"
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
   printf '%s\n' "$output" | grep -qxF "ℹ Zoom — installed by hand, so omamac won't update it"
   [[ "$output" != *"--adopt"* ]]
@@ -1118,7 +1131,10 @@ healthy_apps() {
     DOCTOR_HAS_CHOICES=1 DOCTOR_GONE=()
     CHOICES[apps_media]='spotify vlc'
     core_cask_state() { [ \"\$1\" = spotify ] && echo missing; }
-    doctor_check_apps || echo rc=\$?"
+    DOCTOR_ALL=1 r=0
+    doctor_check_apps || r=\$?
+    doctor_print
+    echo rc=\$r"
   [[ "$output" == *"✗ Spotify — you chose it, but it's gone from Applications"* ]]
   [[ "$output" == *"ℹ Your apps — skipped, Homebrew can't list what's installed"* ]]
   [[ "$output" == *"rc=1" ]]
@@ -1183,7 +1199,7 @@ dock_record() { plutil -create xml1 "$HOME/.local/state/omamac/dock-before.plist
   choose dock yes
   dock_record
   defaults write com.apple.dock show-recents -bool false
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
   [[ "$output" == *"✓ Dock cleanup"* ]]
 }
@@ -1216,7 +1232,7 @@ dock_record() { plutil -create xml1 "$HOME/.local/state/omamac/dock-before.plist
   healthy_mac
   choose dock_autohide yes
   defaults write com.apple.dock autohide -bool true
-  run doctor
+  run doctor --all
   [ "$status" -eq 0 ]
   [[ "$output" == *"✓ Dock auto-hide"* ]]
 }
@@ -1227,35 +1243,459 @@ dock_record() { plutil -create xml1 "$HOME/.local/state/omamac/dock-before.plist
   [[ "$output" != *"Dock"* ]]
 }
 
-@test "doctor lists your tools under ✓ Your tools, by section" {
+# Your tools and apps (#46's picks 2A 3B 4B): after the checks, a group per
+# kind, each tool with its version and whether a newer one is out, then the
+# apps with the version each reports.
+
+# app_version <bundle> <version>: the app's Info.plist reports that version.
+app_version() {
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/$1/Contents"
+  printf '<?xml version="1.0" encoding="UTF-8"?>\n<plist version="1.0"><dict><key>CFBundleShortVersionString</key><string>%s</string></dict></plist>\n' \
+    "$2" > "$OMAMAC_TEST_APPLICATIONS/$1/Contents/Info.plist"
+}
+
+# have <group>: doctor's plain list from that group's line on.
+have() { printf '%s\n' "$output" | sed -n "/^$1\$/,\$p"; }
+
+@test "doctor lists your tools after the checks, by kind, with versions" {
   healthy_mac
   choose languages 'go rust'
   choose cloud_clis gh
   mise_has go
-  mise_has rust
-  mkdir -p "$OMAMAC_TEST_BREW_PREFIX/Cellar/gh"
+  echo 1.88.0 > "$OMAMAC_TEST_BREW_PREFIX/mise/rust"
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gh
+  echo 2.83.1_1 > "$OMAMAC_TEST_BREW_PREFIX/Cellar/gh/.version"
   run doctor
   [ "$status" -eq 0 ]
-  printf '%s\n' "$output" | grep -A2 -xF '✓ Your tools' | grep -qxF '    Languages: Go, Rust'
-  printf '%s\n' "$output" | grep -qxF '    Cloud CLIs: GitHub CLI'
-  [[ "$output" != *"Coding agents:"* ]]
+  [ "$(have Languages)" = "Languages
+    Go 1.0 (latest)
+    Rust 1.88.0 (latest)
+Cloud CLIs
+    GitHub CLI 2.83.1 (latest)" ]
+  [[ "$output" != *"Coding agents"* ]]
+  [[ "$output" != *"waiting"* ]]
 }
 
 @test "doctor's list leaves out what's gone; the ✗ line names it" {
   healthy_mac
   choose languages 'go rust'
   mise_has go
+  gum_answers leave
   run doctor
   [ "$status" -eq 1 ]
-  printf '%s\n' "$output" | grep -qxF '    Languages: Go'
+  [ "$(have Languages)" = "Languages
+    Go 1.0 (latest)" ]
   [[ "$output" == *"✗ Rust — you chose it, but mise no longer has it"* ]]
 }
 
-@test "doctor lists your apps under ✓ Your apps, by group" {
+@test "doctor says which newer versions are out, and that omamac update brings them" {
   healthy_mac
-  healthy_apps vlc wispr-flow
+  choose languages 'node python'
+  choose coding_agents claude-code
+  echo 24.11.1 > "$OMAMAC_TEST_BREW_PREFIX/mise/node"
+  echo 3.14.0 > "$OMAMAC_TEST_BREW_PREFIX/mise/python"
+  echo '{"python":{"name":"python","requested":"latest","current":"3.14.0","latest":"3.14.2"}}' \
+    > "$OMAMAC_TEST_BREW_PREFIX/mise-outdated.json"
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask claude-code
+  echo 2.1.0 > "$OMAMAC_TEST_BREW_PREFIX/Caskroom/claude-code/.version"
+  echo '{"formulae":[],"casks":[{"name":"claude-code","installed_versions":["2.1.0"],"current_version":"2.2.0,abc"}]}' \
+    > "$OMAMAC_TEST_BREW_PREFIX/outdated.json"
+  : > "$STUB_LOG"
   run doctor
   [ "$status" -eq 0 ]
-  printf '%s\n' "$output" | grep -qxF '    Media: VLC'
-  printf '%s\n' "$output" | grep -qxF '    Wispr Flow'
+  [ "$(have Languages)" = "Languages
+    Node.js 24.11.1 (latest)
+    Python 3.14.0 (3.14.2 is out)
+Coding agents
+    Claude Code CLI 2.1.0 (2.2.0 is out)
+ℹ 2 updates waiting: omamac update" ]
+  # Each lookup once, and Homebrew isn't updated first.
+  [ "$(grep -c '^brew outdated' "$STUB_LOG")" -eq 1 ]
+  grep -qx 'brew outdated --greedy --json=v2' "$STUB_LOG"
+  grep -qx 'brew-env outdated HOMEBREW_NO_AUTO_UPDATE=1' "$STUB_LOG"
+  [ "$(grep -c '^mise outdated' "$STUB_LOG")" -eq 1 ]
+}
+
+@test "doctor: a pinned formula isn't an update waiting" {
+  healthy_mac
+  choose cloud_clis gh
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gh
+  echo '{"formulae":[{"name":"gh","installed_versions":["1.0"],"current_version":"2.0","pinned":true,"pinned_version":"1.0"}],"casks":[]}' \
+    > "$OMAMAC_TEST_BREW_PREFIX/outdated.json"
+  run doctor
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -qxF '    GitHub CLI 1.0 (latest)'
+}
+
+@test "doctor: a failed lookup shows versions only, and doctor's status stays its own" {
+  healthy_mac
+  choose languages go
+  choose cloud_clis gh
+  mise_has go
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gh
+  T_MISE_OUTDATED_FAIL=1 T_BREW_OUTDATED_FAIL=1 run doctor
+  [ "$status" -eq 0 ]
+  [ "$(have Languages)" = "Languages
+    Go 1.0
+Cloud CLIs
+    GitHub CLI 1.0" ]
+  # Output it can't read is a failed lookup too.
+  echo 'not json' > "$OMAMAC_TEST_BREW_PREFIX/outdated.json"
+  run doctor
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -qxF '    Go 1.0 (latest)'
+  printf '%s\n' "$output" | grep -qxF '    GitHub CLI 1.0'
+  # A ✗ elsewhere keeps doctor's 1.
+  rm "$HOME/.config/omamac/starship.toml"
+  T_BREW_OUTDATED_FAIL=1 run doctor
+  [ "$status" -eq 1 ]
+}
+
+@test "doctor: a slow lookup is cut short; its rows show versions only" {
+  healthy_mac
+  choose languages go
+  choose cloud_clis gh
+  mise_has go
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gh
+  SECONDS=0
+  OMAMAC_TEST_DOCTOR_WAIT=1 T_BREW_OUTDATED_SLEEP=30 run doctor
+  [ "$status" -eq 0 ]
+  [ "$SECONDS" -lt 15 ]
+  printf '%s\n' "$output" | grep -qxF '    Go 1.0 (latest)'
+  printf '%s\n' "$output" | grep -qxF '    GitHub CLI 1.0'
+}
+
+@test "doctor lists colima's formulas under Docker" {
+  healthy_mac
+  healthy_colima
+  run doctor
+  [ "$status" -eq 0 ]
+  [ "$(have Docker)" = "Docker
+    colima 1.0 (latest)
+    docker 1.0 (latest)
+    docker-compose 1.0 (latest)
+    docker-buildx 1.0 (latest)
+    lazydocker 1.0 (latest)" ]
+}
+
+@test "doctor lists Docker Desktop with the version the app reports, no newer column" {
+  healthy_mac
+  healthy_desktop
+  app_version Docker.app 4.52.0
+  run doctor
+  [ "$status" -eq 0 ]
+  [ "$(have Docker)" = "Docker
+    Docker Desktop 4.52.0
+    lazydocker 1.0 (latest)" ]
+}
+
+@test "doctor lists your apps one per line, in the catalog's order, with their versions" {
+  healthy_mac
+  healthy_apps vlc wispr-flow
+  choose apps_browsers firefox
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask firefox
+  app_version VLC.app 3.0.21
+  app_version Firefox.app 145.0.1
+  : > "$STUB_LOG"
+  run doctor
+  [ "$status" -eq 0 ]
+  # This Wispr Flow reports no version.
+  [ "$(have Apps)" = "Apps
+    Firefox 145.0.1
+    VLC 3.0.21
+    Wispr Flow" ]
+  # Apps update themselves: no lookup for them.
+  [ -z "$(grep outdated "$STUB_LOG")" ]
+}
+
+# The report by area (#46, made short): by default one line per area (omamac,
+# Terminal, Theme, macOS), each problem with its fix and each note under its
+# area, then Your tools and apps, then the count line. --all shows every
+# check, with what it is and where it lives. The same checks and exit codes.
+
+# shown: $output without its colour codes.
+shown() { printf '%s\n' "$output" | uncoloured; }
+
+@test "plain text: a healthy Mac is four area lines, then the groups" {
+  healthy_mac
+  choose languages go
+  mise_has go
+  run doctor
+  [ "$status" -eq 0 ]
+  [ "$output" = "✓ omamac — working
+✓ Terminal — working
+✓ Theme — Tokyo Night
+✓ macOS — nothing picked
+Languages
+    Go 1.0 (latest)" ]
+}
+
+@test "plain text: a problem and a note sit under their areas" {
+  healthy_mac
+  : > "$HOME/.zprofile"
+  mkdir -p "$HOME/.config/btop"
+  echo mine > "$HOME/.config/btop/btop.conf"
+  run doctor
+  [ "$status" -eq 1 ]
+  [ "$output" = "✗ omamac — 1 problem
+  ✗ Homebrew in your shell — ~/.zprofile does not put Homebrew on PATH. Fix: Run the one-liner again
+✓ Terminal — working
+✓ Theme — Tokyo Night
+  ℹ System monitor colours (btop) — your own btop config is kept, so themes don't reach btop
+✓ macOS — nothing picked" ]
+}
+
+@test "plain text --all: every check by area, its name, what it is and where" {
+  healthy_mac
+  run doctor --all
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | sed -n 1,5p)" = "omamac
+✓ Homebrew — the app store for command-line tools; omamac installs everything with it
+    See: $OMAMAC_TEST_BREW_PREFIX/bin/brew
+✓ bash for omamac — omamac's own scripts run in bash; your shell stays zsh
+    See: $OMAMAC_TEST_BREW_PREFIX/bin/bash" ]
+  printf '%s\n' "$output" | grep -qxF 'Terminal'
+  printf '%s\n' "$output" | grep -qxF 'Theme · Tokyo Night'
+  printf '%s\n' "$output" | grep -qxF 'macOS'
+  printf '%s\n' "$output" | grep -qxF '    See: ~/.zprofile'
+  [ "$(printf '%s\n' "$output" | tail -n 2)" = "How omamac does each of these:
+github.com/tunacinsoy/omamac#what-it-changes" ]
+}
+
+@test "--all's README link names a heading the README has" {
+  grep -qx '## What it changes' "$REPO_ROOT/README.md"
+}
+
+@test "doctor with an unknown argument: usage, exit 2" {
+  healthy_mac
+  run doctor --bogus
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"Usage: omamac <command>"* ]]
+  [[ "$output" == *"doctor --all"* ]]
+  run doctor --all extra
+  [ "$status" -eq 2 ]
+}
+
+@test "terminal look: a healthy Mac is four area rows, the tools sheet, the count line" {
+  healthy_mac
+  healthy_apps vlc
+  app_version VLC.app 3.0.21
+  terminal_look
+  run doctor
+  [ "$status" -eq 0 ]
+  [ "$(shown)" = "  ✓ omamac          working
+  ✓ Terminal        working
+  ✓ Theme           Tokyo Night
+  ✓ macOS           nothing picked
+Your tools and apps
+╭──────┬────────╮
+│ Apps │        │
+│ VLC  │ 3.0.21 │
+╰──────┴────────╯
+22 fine" ]
+  [[ "$output" == *$'\e[2mworking\e[0m'* ]]
+  [[ "$output" == *$'\e[2mTokyo Night\e[0m'* ]]
+  [[ "$output" != *"To fix"* ]]
+}
+
+@test "terminal look: a problem with its fix and a note under their areas" {
+  healthy_mac
+  : > "$HOME/.zprofile"
+  mkdir -p "$HOME/.config/btop"
+  echo mine > "$HOME/.config/btop/btop.conf"
+  terminal_look
+  run doctor
+  [ "$status" -eq 1 ]
+  [ "$(shown)" = "  ✗ omamac          1 problem
+    ✗ Homebrew in your shell — ~/.zprofile does not put Homebrew on PATH
+      Fix: Run the one-liner again
+  ✓ Terminal        working
+  ✓ Theme           Tokyo Night
+    ℹ System monitor colours (btop) — your own btop config is kept, so themes
+      don't reach btop
+  ✓ macOS           nothing picked
+1 problem · 1 note · 19 fine" ]
+  [[ "$output" == *$'\e[31mHomebrew in your shell — ~/.zprofile does not put Homebrew on PATH\e[0m'* ]]
+}
+
+@test "terminal look: two problems in one area, and a gone pick's two ways out" {
+  healthy_mac
+  rm "$HOME/.config/omamac/starship.toml"
+  choose languages "go rust"
+  mise_has go
+  gum_answers leave
+  terminal_look
+  run doctor
+  [ "$status" -eq 1 ]
+  [[ "$(shown)" == *"  ✗ omamac          1 problem
+    ✗ Rust — you chose it, but mise no longer has it
+      Fix: omamac update puts it back; omamac uninstall rust drops it
+"* ]]
+  [[ "$(shown)" == *"  ✗ Theme           1 problem
+    ✗ Theme colours — .config/omamac/starship.toml missing
+      Fix: omamac update
+"* ]]
+  shown | grep -qxF '2 problems · 19 fine'
+}
+
+@test "terminal look --all: every check under its area, with what it is and where" {
+  healthy_mac
+  terminal_look
+  run doctor --all
+  [ "$status" -eq 0 ]
+  [[ "$(shown)" == "omamac
+  ✓ Homebrew
+    the app store for command-line tools; omamac installs everything with it
+    See:"* ]]
+  [[ "$(shown)" == *"Theme · Tokyo Night
+  ✓ Code editor (neovim)
+    its setup, LazyVim, follows your theme
+    See: ~/.config/nvim
+"* ]]
+  [[ "$output" == *$'\e[2momamac\'s own scripts run in bash; your shell stays zsh\e[0m'* ]]
+  [ "$(shown | grep -c '^  ✓ ')" -eq 21 ]
+  shown | grep -qxF '21 fine'
+  [ "$(shown | tail -n 2)" = "How omamac does each of these:
+github.com/tunacinsoy/omamac#what-it-changes" ]
+}
+
+@test "terminal look --all: a ✗ shows its problem, red, and its fix" {
+  healthy_mac
+  : > "$HOME/.zprofile"
+  terminal_look
+  run doctor --all
+  [ "$status" -eq 1 ]
+  [[ "$(shown)" == *"  ✗ Homebrew in your shell
+    ~/.zprofile does not put Homebrew on PATH
+    Fix: Run the one-liner again
+    See: ~/.zprofile
+"* ]]
+  [[ "$output" == *$'\e[31m~/.zprofile does not put Homebrew on PATH\e[0m'* ]]
+}
+
+# everything: a Mac with every check there is to show.
+everything() {
+  healthy_mac
+  healthy_colima
+  healthy_apps vlc
+  vscode_app
+  omamac_lib vscode_theme_install
+  settings_set
+  choose desktop_widgets yes
+  defaults write com.apple.WindowManager StandardHideWidgets -bool true
+  defaults write com.apple.WindowManager StageManagerHideWidgets -bool true
+  choose dock_autohide yes
+  defaults write com.apple.dock autohide -bool true
+}
+
+@test "every fine check has a name and says what it is, in one line" {
+  everything
+  terminal_look
+  run doctor --all
+  [ "$status" -eq 0 ]
+  [ "$(shown | grep -c '^  ✓ ')" -ge 29 ]
+  # Each ✓ is followed by its dim explanation, never empty.
+  [ -z "$(shown | grep -A1 '^  ✓ ' | grep -vE '^(  ✓ |    [^ S]|--)')" ]
+  [ "$(shown | widest)" -le 80 ]
+}
+
+@test "every check in doctor's table has a name and an explanation that fits" {
+  run "$BASH5" -c "source '$REPO_ROOT/lib/doctor.sh'
+    for id in \"\${DOCTOR_CHECKS[@]}\"; do
+      n=\${DOCTOR_NAME[\$id]} v=\${DOCTOR_ABOUT[\$id]}
+      [ -n \"\$n\" ] && [ -n \"\$v\" ] && [ \"\${#v}\" -le 76 ] || echo \"\$id: \$n: \$v\"
+    done"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "every check doctor reports is in its table" {
+  # The ids in doctor_report calls that aren't a variable (a pick's own name).
+  run bash -c "grep -hoE 'doctor_report (ok|fail|info) [a-z_]+' '$REPO_ROOT/lib/doctor.sh' '$REPO_ROOT/lib/docker.sh' | awk '{print \$3}' | sort -u"
+  local id
+  for id in $output; do
+    grep -qE "^doctor_check $id " "$REPO_ROOT/lib/doctor.sh" || { echo "$id"; return 1; }
+  done
+  # And those that are: the variables hold ids from the table.
+  for id in homebrew bash checkout checkout_clean zprofile_line zshrc_line core neovim herdr ghostty choices mise_dropin macos_settings your_tools your_apps docker_compose docker_buildx desktops window_margins desktop_widgets dock dock_autohide; do
+    grep -qE "^doctor_check $id " "$REPO_ROOT/lib/doctor.sh" || { echo "$id"; return 1; }
+  done
+}
+
+@test "every See path exists after a healthy install" {
+  everything
+  run doctor --all
+  [ "$status" -eq 0 ]
+  local line path n=0
+  while IFS= read -r line; do
+    path=${line#    See: }
+    case $path in
+      '~'*) path=$HOME${path#\~} ;;
+      /*) ;;
+      *) continue ;;
+    esac
+    [ -e "$path" ] || { echo "missing: $path"; return 1; }
+    n=$((n + 1))
+  done < <(printf '%s\n' "$output" | grep '^    See: ')
+  [ "$n" -ge 18 ]
+}
+
+@test "terminal look: a broken Mac's report fits 80 columns, short and --all" {
+  everything
+  rm "$OMAMAC_TEST_BREW_PREFIX/bin/brew"
+  : > "$HOME/.zshrc"
+  mkdir -p "$HOME/.config/btop"
+  echo mine > "$HOME/.config/btop/btop.conf"
+  terminal_look
+  run doctor
+  [ "$status" -eq 1 ]
+  [ "$(shown | widest)" -le 80 ]
+  [[ "$(shown)" == *"Fix: Run the one-liner"* ]]
+  run doctor --all
+  [ "$status" -eq 1 ]
+  [ "$(shown | widest)" -le 80 ]
+}
+
+@test "terminal look: Your tools and apps is one sheet, a group per kind, with versions" {
+  healthy_mac
+  choose languages 'go python'
+  mise_has go
+  echo 3.14.0 > "$OMAMAC_TEST_BREW_PREFIX/mise/python"
+  echo '{"python":{"name":"python","requested":"latest","current":"3.14.0","latest":"3.14.2"}}' \
+    > "$OMAMAC_TEST_BREW_PREFIX/mise-outdated.json"
+  healthy_apps vlc wispr-flow
+  app_version VLC.app 3.0.21
+  app_version "Wispr Flow.app" 1.4.2
+  terminal_look
+  run doctor
+  [ "$status" -eq 0 ]
+  shown | grep -qxF '22 fine · 1 update waiting: omamac update'
+  [[ "$output" == *$'\e[33m1 update waiting: omamac update\e[0m'* ]]
+  [ "$(shown | sed -n '/^Your tools and apps$/,/╯/p')" = "Your tools and apps
+╭────────────┬────────┬───────────────╮
+│ Languages  │        │               │
+│ Go         │ 1.0    │ latest        │
+│ Python     │ 3.14.0 │ 3.14.2 is out │
+│ Apps       │        │               │
+│ VLC        │ 3.0.21 │               │
+│ Wispr Flow │ 1.4.2  │               │
+╰────────────┴────────┴───────────────╯" ]
+  [[ "$output" == *$'\e[1mYour tools and apps\e[0m'* ]]
+  [[ "$output" == *$'\e[1mLanguages\e[0m'* ]]
+  [[ "$output" == *$'\e[33m3.14.2 is out\e[0m'* ]]
+  [[ "$output" == *$'\e[2mlatest\e[0m'* ]]
+}
+
+@test "terminal look: only apps, no newer column" {
+  healthy_mac
+  healthy_apps vlc
+  app_version VLC.app 3.0.21
+  terminal_look
+  run doctor
+  [ "$status" -eq 0 ]
+  [ "$(shown | sed -n '/^Your tools and apps$/,/╯/p')" = "Your tools and apps
+╭──────┬────────╮
+│ Apps │        │
+│ VLC  │ 3.0.21 │
+╰──────┴────────╯" ]
 }

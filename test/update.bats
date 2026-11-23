@@ -277,6 +277,41 @@ choose() { sed -i '' "s/^$1=.*/$1=$2/" "$CHOICES_FILE"; }
   [ -e "$dir/20200101T000004Z.log" ]
 }
 
+@test "a question added since the first run is named with its command" {
+  sed -i '' -e '/^desktop_widgets=/d' -e '/^apps_media=/d' -e '/^docker=/d' "$CHOICES_FILE"
+  before=$(shasum < "$CHOICES_FILE")
+  run update
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"New question: Media. To answer it: omamac install apps."* ]]
+  [[ "$output" == *"New question: Desktop widgets. To answer it: omamac install desktop-widgets."* ]]
+  [[ "$output" == *"New question: Docker. To answer it: omamac install docker."* ]]
+  [ "$(grep -c 'New question' <<< "$output")" -eq 3 ]
+  [[ "$output" == *"omamac and your tools are up to date."* ]]
+  # Update asks nothing and leaves the answers alone.
+  run ! grep -qE '^gum (choose|confirm)' "$STUB_LOG"
+  [ "$(shasum < "$CHOICES_FILE")" = "$before" ]
+}
+
+# The theme is asked first, so a first run always answered it: update can't
+# apply the theme files without it.
+@test "every other question has no answer: each is named" {
+  grep -E '^(#|theme=)' "$CHOICES_FILE" > "$CHOICES_FILE.new"
+  mv "$CHOICES_FILE.new" "$CHOICES_FILE"
+  run update
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"New question: Wispr Flow. To answer it: omamac install wispr-flow."* ]]
+  [[ "$output" == *"New question: Dock auto-hide. To answer it: omamac install dock-autohide."* ]]
+  [[ "$output" == *"New question: Coding agents. To answer it: omamac install coding-agents."* ]]
+  [[ "$output" != *"one-liner"* ]]
+  [ "$(grep -c 'New question' <<< "$output")" -eq 18 ]
+}
+
+@test "every answer saved: no new question named" {
+  run update
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"New question"* ]]
+}
+
 @test "no saved answers: stops with the fix" {
   rm "$CHOICES_FILE"
   run update
@@ -599,4 +634,67 @@ app_installed() {
   run update
   [ "$status" -eq 0 ]
   run ! grep -q 'outdated.*vlc' "$STUB_LOG"
+}
+
+# The terminal look (#46): counted progress rows, omamac's pull first, then a
+# green Done box with Upgraded and Log.
+
+# shown: $output without its colour codes.
+shown() { printf '%s\n' "$output" | uncoloured; }
+
+@test "terminal look: the pull's row first, every stage counted, then Done" {
+  echo '# new' >> "$ORIGIN/config/zshrc"
+  commit_all "$ORIGIN" one
+  echo '# newer' >> "$ORIGIN/config/zshrc"
+  commit_all "$ORIGIN" two
+  echo herdr > "$OMAMAC_TEST_BREW_PREFIX/outdated"
+  terminal_look
+  run update
+  [ "$status" -eq 0 ]
+  [ "$(shown | grep -E '^[0-9]/[0-9] ')" = "1/7 ✓ omamac          pulled 2 commits
+2/7 ✓ Shell and theme Tokyo Night
+3/7 ✓ Core tools      15 installed
+4/7 ✓ neovim          LazyVim
+5/7 ✓ macOS           nothing chosen
+6/7 ✓ Tool upgrades   herdr
+7/7 ✓ App upgrades    nothing outdated" ]
+  [[ "$output" == *$'╭ \e[32mDone\e[0m'* ]]
+  [[ "$(shown)" == *"│ Upgraded  herdr "*"│ Log       ~/.local/state/omamac/logs/"* ]]
+  [ "$(shown | widest)" -le 80 ]
+  # The upgrade itself is the same call.
+  grep -q '^brew upgrade starship ' "$STUB_LOG"
+}
+
+@test "terminal look: nothing new to pull, and the languages get their stage" {
+  choose languages go
+  terminal_look
+  run update
+  [ "$status" -eq 0 ]
+  shown | grep -qxF '1/9 ✓ omamac          already up to date'
+  shown | grep -qxF '9/9 ✓ Language upgrades Go'
+  [[ "$(shown)" == *"│ Upgraded  nothing outdated "* ]]
+}
+
+@test "terminal look: an app macOS won't let update stays named in a To fix box, exit 1" {
+  ghostty_app
+  ghostty_outdated
+  deny_app_management
+  stub open
+  terminal_look
+  run update
+  [ "$status" -eq 1 ]
+  [[ "$(shown)" == *"✗ Ghostty has an update, but macOS won't let your terminal change apps."* ]]
+  [[ "$(shown)" == *"╭ To fix"*"│ Not upgraded  Ghostty "*"│ Upgraded      nothing outdated "* ]]
+  [[ "$output" != *"Done"* ]]
+}
+
+@test "terminal look: a failed pull stops in the Stopped box with its fix" {
+  echo '# theirs' >> "$ORIGIN/config/zshrc"
+  commit_all "$ORIGIN" theirs
+  echo '# mine' >> "$CHECKOUT/config/zshrc"
+  commit_all "$CHECKOUT" mine
+  terminal_look
+  run update
+  [ "$status" -eq 1 ]
+  [[ "$(shown)" == *"╭ Stopped"*"│ While  updating omamac's code "*"│ Fix    check your internet connection, or run git -C "*"├"* ]]
 }

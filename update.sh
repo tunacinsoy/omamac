@@ -51,14 +51,22 @@ source "$OMAMAC_CHECKOUT/lib/settings.sh"
 source "$OMAMAC_CHECKOUT/lib/dock.sh"
 # shellcheck source=lib/apply.sh
 source "$OMAMAC_CHECKOUT/lib/apply.sh"
+# shellcheck source=lib/add.sh
+source "$OMAMAC_CHECKOUT/lib/add.sh"
 
 OMAMAC_STEP='starting'
 # Labels of apps whose upgrade was skipped on purpose; update finishes, then exits 1.
 UPDATE_NOT_UPGRADED=()
+# What this run upgraded, for the terminal look's rows and Done box.
+UPDATE_TOOLS=() UPDATE_APPS=()
 
 update_failed() {
   # With set -E the trap also runs inside ( … ) and $( … ); let only the main shell speak.
   [ "$BASHPID" -eq "$$" ] || exit 1
+  if ui_term; then
+    ui_stopped "run omamac update again"
+    exit 1
+  fi
   ui_fail "omamac stopped while $OMAMAC_STEP."
   ui_fail "Fix the problem and run omamac update again."
   exit 1
@@ -79,7 +87,7 @@ update_choices() {
 # update_upgrade: upgrade, by name, the installed formulas omamac installs:
 # the core, bash, gum and the chosen cloud CLIs and coding agents (full names).
 update_upgrade() {
-  local list pinned_list installed=() pinned=() kept=() name ids=() chosen=()
+  local list out pinned_list installed=() pinned=() kept=() name ids=() chosen=()
   local -A is_pinned=()
   OMAMAC_STEP='upgrading your tools'
   list=$(core_where installed "${CORE_FORMULAS[@]}" bash gum)
@@ -112,6 +120,11 @@ update_upgrade() {
   [ "${#kept[@]}" -eq 0 ] || ui_info "Kept ${kept[*]} at the pinned version."
   # A bare brew upgrade would upgrade everything the user has.
   [ "${#installed[@]}" -gt 0 ] || return 0
+  # The terminal look names what is upgraded; brew outdated exits 1 when it lists any.
+  if ui_term; then
+    out=$("$OMAMAC_BREW_PREFIX/bin/brew" outdated --formula --quiet "${installed[@]}" 2>>"$OMAMAC_LOG") || true
+    [ -z "$out" ] || { mapfile -t chosen <<< "$out"; UPDATE_TOOLS+=("${chosen[@]##*/}"); }
+  fi
   ui_run "Upgrading your tools" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade "${installed[@]}"
 }
 
@@ -129,6 +142,10 @@ update_upgrade_casks() {
   [ -n "$list" ] || return 0
   mapfile -t casks <<< "$list"
   for id in "${casks[@]}"; do names+=("${CLI_CASK[$id]}"); done
+  if ui_term; then
+    list=$("$OMAMAC_BREW_PREFIX/bin/brew" outdated --cask --greedy --quiet "${names[@]}" 2>>"$OMAMAC_LOG") || true
+    [ -z "$list" ] || { mapfile -t casks <<< "$list"; UPDATE_TOOLS+=("${casks[@]}"); }
+  fi
   ui_run "Upgrading the CLIs that are casks" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask --greedy "${names[@]}"
 }
 
@@ -185,6 +202,7 @@ update_upgrade_apps() {
           OMAMAC_STEP="upgrading $label"
           [ "$said" -eq 1 ] || { ui_info "Homebrew may ask for your password."; said=1; }
           ui_run_open "Upgrading $label" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask "$cask"
+          UPDATE_APPS+=("$label")
         fi
         ;;
       1)
@@ -204,6 +222,7 @@ update_upgrade_apps() {
   OMAMAC_STEP="upgrading $label"
   apps_password_say "${pids[@]}"
   ui_run_open "Upgrading $label" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask "${pcasks[@]}"
+  UPDATE_APPS+=("$label")
 }
 
 # update_upgrade_languages: the chosen languages to their newest versions, old
@@ -223,15 +242,61 @@ update_upgrade_languages() {
   if [[ " ${ids[*]} " == *" ruby "* ]]; then languages_rails; fi
 }
 
+# update_new_questions: name each question with no answer yet. Update asks
+# nothing, so a question added after the first run would wait unseen.
+update_new_questions() {
+  local key command
+  while IFS= read -r key; do
+    command=$(add_command "$key") || command="run the one-liner"
+    ui_info "New question: ${QUESTION_TITLE[$key]}. To answer it: $command."
+  done < <(choices_missing)
+}
+
+# update_done_or <list…>: the list joined, or "nothing outdated".
+update_done_or() { if [ "$#" -eq 0 ]; then echo "nothing outdated"; else clis_join "$@"; fi; }
+
+# update_summary_box: the terminal look's end. A green Done box with what was
+# upgraded; when an app couldn't be, a yellow To fix box naming it. Exits 1 then.
+update_summary_box() {
+  local rows=() all=("${UPDATE_TOOLS[@]}" "${UPDATE_APPS[@]}")
+  [ "${#DOCKER_NOTES[@]}" -eq 0 ] || rows+=("Docker"$'\t'"${DOCKER_NOTES[*]}")
+  rows+=("Log"$'\t'"${OMAMAC_LOG/#"$HOME"/\~}")
+  if [ "${#UPDATE_NOT_UPGRADED[@]}" -gt 0 ]; then
+    ui_titled warn "To fix" "Not upgraded"$'\t'"$(clis_join "${UPDATE_NOT_UPGRADED[@]}")" \
+      "Upgraded"$'\t'"$(update_done_or ${all[@]+"${all[@]}"})" "${rows[@]}" >&2
+    exit 1
+  fi
+  ui_titled ok Done "Upgraded"$'\t'"$(update_done_or ${all[@]+"${all[@]}"})" "${rows[@]}"
+}
+
 update_main() {
   log_start
   update_choices
+  # The terminal look's stages: bin/omamac's pull, when it says so, apply_all's,
+  # then the upgrades: tools, apps and, when chosen, languages.
+  if ui_term; then
+    local n
+    n=$(($(apply_stage_count) + 2))
+    [ -z "${OMAMAC_PULLED:-}" ] || n=$((n + 1))
+    [ -z "${CHOICES[languages]:-}" ] || n=$((n + 1))
+    ui_stages "$n"
+    if [ -n "${OMAMAC_PULLED:-}" ]; then ui_stage omamac; ui_stage_done "$OMAMAC_PULLED"; fi
+  fi
   apply_all
+  ui_stage "Tool upgrades"
   update_upgrade
   update_upgrade_casks
+  ui_stage_done "$(update_done_or ${UPDATE_TOOLS[@]+"${UPDATE_TOOLS[@]}"})"
+  ui_stage "App upgrades"
   update_upgrade_apps
+  ui_stage_done "$(update_done_or ${UPDATE_APPS[@]+"${UPDATE_APPS[@]}"})"
+  [ -z "${CHOICES[languages]:-}" ] || ui_stage "Language upgrades"
   update_upgrade_languages
+  apply_stage_done languages
   OMAMAC_STEP='printing the summary'
+  # Its ℹ rows come before the summary box, in either look.
+  update_new_questions
+  if ui_term; then update_summary_box; return; fi
   # This run may be the one that started colima's service, as install would have.
   local notes=()
   [ "${#DOCKER_NOTES[@]}" -eq 0 ] || notes=("" "${DOCKER_NOTES[@]}" "")

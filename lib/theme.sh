@@ -52,6 +52,22 @@ theme_reaches() {
   if [ "${#to[@]}" -eq 0 ]; then echo "$last"; else echo "$(clis_join "${to[@]}") and $last"; fi
 }
 
+# theme_now / theme_next: the same tools as theme_reaches, split by when they
+# show the theme, joined with commas, for omamac theme's rows. Now: what reads
+# its file again on a signal or by itself (Ghostty, herdr, btop, the prompt,
+# VS Code). Next open: neovim. Empty when the theme reaches none of them.
+theme_now() {
+  local to=(Ghostty)
+  herdr_user_config || to+=(herdr)
+  theme_btop_user_config || to+=(btop)
+  theme_starship_user_config || to+=("the prompt")
+  if [ -x "$(vscode_code)" ] && ! vscode_user_theme; then to+=("VS Code"); fi
+  clis_join "${to[@]}"
+}
+theme_next() {
+  if [ -e "$OMAMAC_NVIM_MARKER" ] || { [ ! -e "$OMAMAC_NVIM_DIR" ] && [ ! -L "$OMAMAC_NVIM_DIR" ]; }; then echo neovim; fi
+}
+
 # theme_apply: the six theme files, from CHOICES[theme].
 theme_apply() {
   local id=${CHOICES[theme]:-} f
@@ -119,9 +135,21 @@ theme_run() {
   CHOICES[theme]=$id
   OMAMAC_STEP='saving your answers'
   choices_save "$OMAMAC_CHOICES_FILE"
+  # The terminal look is three rows: Theme, Now and Next open, each naming
+  # only what the theme reaches, so the steps' own lines stay unsaid.
+  if ui_term; then UI_QUIET=1; fi
   theme_apply
   theme_reload
   vscode_theme_install
+  if ui_term; then
+    UI_QUIET=0
+    local next
+    ui_row ok Theme "$(question_label theme "$id")"
+    ui_row ok Now "$(theme_now)"
+    next=$(theme_next)
+    [ -z "$next" ] || ui_row info "Next open" "$next"
+    return 0
+  fi
   # VS Code reloads the theme file itself (lib/vscode.sh), so an open window is
   # named with what is running; one with the user's own theme isn't reached.
   local now="What's running shows it now"

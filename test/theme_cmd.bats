@@ -175,3 +175,52 @@ listener() {
   [[ "$output" == *"omamac stopped while"* ]]
   [[ "$output" == *"omamac theme again"* ]]
 }
+
+# The terminal look (#46): three rows, each naming only what the theme reaches.
+
+@test "terminal look: Theme, Now and Next open; VS Code changes now" {
+  local bin="$OMAMAC_TEST_APPLICATIONS/Visual Studio Code.app/Contents/Resources/app/bin"
+  mkdir -p "$bin"
+  ln -sf "$HELPERS_DIR/fake-code" "$bin/code"
+  terminal_look
+  run omamac_theme nord
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | uncoloured)" = "  ✓ Theme           Nord
+  ✓ Now             Ghostty, herdr, btop, the prompt, VS Code
+  ℹ Next open       neovim" ]
+  cmp "$HOME/.vscode/extensions/omamac.omamac-theme-1.0.0/themes/omamac.json" "$REPO_ROOT/themes/nord/vscode.json"
+}
+
+@test "terminal look: no VS Code, or the user's own VS Code theme, and Now leaves it out" {
+  terminal_look
+  run omamac_theme nord
+  [ "$(printf '%s\n' "$output" | uncoloured | sed -n 2p)" = "  ✓ Now             Ghostty, herdr, btop, the prompt" ]
+  local bin="$OMAMAC_TEST_APPLICATIONS/Visual Studio Code.app/Contents/Resources/app/bin"
+  mkdir -p "$bin" "$HOME/Library/Application Support/Code/User"
+  ln -sf "$HELPERS_DIR/fake-code" "$bin/code"
+  echo '{ "workbench.colorTheme": "Solarized Light" }' > "$HOME/Library/Application Support/Code/User/settings.json"
+  run omamac_theme nord
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | uncoloured | sed -n 2p)" = "  ✓ Now             Ghostty, herdr, btop, the prompt" ]
+}
+
+@test "terminal look: the user's own btop, starship and neovim configs aren't named; no Next open row" {
+  mkdir -p "$HOME/.config/btop" "$HOME/.config/nvim"
+  echo mine > "$HOME/.config/btop/btop.conf"
+  echo mine > "$HOME/.config/starship.toml"
+  terminal_look
+  run omamac_theme dracula
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | uncoloured)" = "  ✓ Theme           Dracula
+  ✓ Now             Ghostty, herdr" ]
+}
+
+@test "terminal look: a failed write stops in the Stopped box" {
+  run omamac_theme dracula
+  chmod a-w "$OM"
+  terminal_look
+  run omamac_theme nord
+  [ "$status" -eq 1 ]
+  # The path is long in the sandbox, so it wraps inside the box.
+  [[ "$(printf "%s\n" "$output" | uncoloured)" == *"╭ Stopped"*"│ While  writing "*"│ Fix    run omamac theme again"* ]]
+}
