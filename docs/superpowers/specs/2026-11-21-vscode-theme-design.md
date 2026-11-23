@@ -33,7 +33,7 @@ Checked on 2026-11-21 with VS Code 1.147 in throwaway `--user-data-dir` and `--e
 | A second run | Skipped when the installed `themes/omamac.json` equals the chosen theme's file | Runs stay idempotent. `package.json` can't be compared, because VS Code rewrites it. |
 | Light or dark | `uiTheme` is `vs` for a light theme (`"type": "light"`), else `vs-dark` | VS Code bases the colours omamac's file doesn't set on it. rose-pine is the one light theme. |
 | The user's own theme | Kept; omamac says so, as for starship and btop | `"workbench.colorTheme"` in `~/Library/Application Support/Code/User/settings.json` |
-| An open VS Code | Shows the new theme the next time it opens, like neovim | The CLI can't reload a running window. |
+| An open VS Code | Changed by #54: the theme contribution sets `"_watch": true`, so VS Code watches the theme file and reloads it in an open window | The CLI can't reload a running window, but VS Code 1.147 reloads a watched theme file itself (`ColorThemeData.fromExtensionTheme` reads `_watch`). Dropped: an extension with code that sets `workbench.colorTheme` (VS Code writes `settings.json`), and reloading the window (disruptive). |
 | Uninstall | `omamac uninstall vscode`'s "Also remove" removes `~/.vscode`, the extension with it | The cask's zap already lists it. |
 | Doctor | One line when VS Code is installed: ok, info (own theme), or fail with `omamac update` | |
 
