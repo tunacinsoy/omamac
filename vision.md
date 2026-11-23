@@ -171,14 +171,15 @@ An app joins the catalog only if it installs cleanly as a cask with no prompt ot
 **Cap** is an open-source screen recorder (an alternative to Loom) and installs as the `cap` cask. It needs Screen Recording, and Camera and Microphone if used, granted on first launch; those clicks go in the end-of-run summary and the README's "After install". Its account and any paid features stay with the app.
 
 **macOS desktop and Dock settings**
-Four yes/no questions, each applied with `defaults`:
-- *Desktops:* desktops are not rearranged by recent use, switching to an app goes to its desktop, Reduce motion is on. The question's text names Reduce motion openly ("…and turns on Reduce motion, which shortens animations everywhere").
+Five yes/no questions, each applied with `defaults`:
+- *Desktops:* desktops are not rearranged by recent use, switching to an app goes to its desktop, Ctrl 1 to Ctrl 6 jump to desktops 1 to 6, Reduce motion is on. The question's text names Reduce motion openly ("…and turns on Reduce motion, which shortens animations everywhere").
 - *Window margins:* tiled windows get margins between them.
+- *Desktop widgets:* widgets are hidden from the desktop (the Weather and other widgets a new Mac shows).
 - *Dock:* Apple's preinstalled apps and the Downloads stack are removed from the Dock (not from the Mac), apps the user pinned stay, the apps omamac installed are added after them in catalog order, and suggested and recent apps are turned off so Apple's apps don't creep back. Scriptable with `dockutil` (a Homebrew formula) or `defaults`.
 - *Dock auto-hide:* the Dock hides when not in use, leaving more of a 14-inch screen for work.
 - The user's previous values, including the full Dock layout, are saved first; `omamac uninstall` restores them. `omamac doctor` reports any that drifted.
 - If macOS refuses a setting from Terminal (Reduce motion can be protected), omamac doesn't fail; the end-of-run summary gives the one click instead.
-- Assigning apps to desktops stays manual (Dock → Options → Assign To).
+- Creating desktops and assigning apps to them stay manual: macOS has no supported way to script either. The README's "After install" says to make six desktops in Mission Control, each with a purpose (browser and chat, code and terminal, documents, monitoring, …), the opinion omakub and Omarchy share, then Assign To from each app's Dock menu.
 
 **Voice dictation (its own question)**
 With AI agents, more and more work is talking rather than typing: people dictate prompts to their coding agents, messages and notes all day. A Mac that is "ready to work" in that world has a good dictation app, so omamac asks about it as its own question instead of hiding it under Productivity.
@@ -288,7 +289,7 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - Supported: macOS 27 and later; tests run on the latest.
 - The Wispr Flow question doesn't mention macOS's built-in Dictation.
 - The VM loop runs on Tuna's Mac via a script; bats runs in GitHub Actions. Each PR's VM run covers only what it touches (about 30 minutes); the full run happens before release. Test VMs are deleted after every run.
-- Window margins and Dock auto-hide are in v1, each as its own yes/no question; the macOS settings are four questions: desktops, window margins, Dock, Dock auto-hide.
+- Window margins and Dock auto-hide are in v1, each as its own yes/no question; the macOS settings are five questions: desktops, window margins, desktop widgets, Dock, Dock auto-hide.
 - `omamac update` follows omawsl's model: `git pull --ff-only` on `main`, timestamped migrations, regenerate configs, `brew upgrade` and `mise upgrade` for the user's choices only. Cloud CLI and coding agent casks are upgraded with `--greedy`; apps (Ghostty, Docker Desktop, the catalog) update themselves and are upgraded only when Homebrew lists them as outdated.
 - `omamac doctor` is a doctor, not an alarm: ✓, ✗ or ℹ per check, each with why and the one fix; it only reports.
 - Everything omamac prints is polished and visual, and as short as possible.
@@ -298,7 +299,7 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - A tool with one config file and no include (herdr, starship, btop) uses omamac's file only when the user has none; a user's own is left alone and doctor explains. The user's own mise pins win.
 - The v1 app catalog is the 21 apps in the table plus Wispr Flow; an app that isn't a clean cask is dropped.
 - Gatekeeper and permission prompts stay with the user, one line each in the summary, built from each app's catalog file.
-- First-run question order: theme, desktop apps, Wispr Flow, desktops, window margins, Dock, Dock auto-hide, languages, cloud CLIs, coding agents, Docker; adoption questions come after the questions at the first run, right after each app question in `omamac install`, before the summary; one summary and "Install?" at the end.
+- First-run question order: theme, desktop apps, Wispr Flow, desktops, window margins, desktop widgets, Dock, Dock auto-hide, languages, cloud CLIs, coding agents, Docker; adoption questions come after the questions at the first run, right after each app question in `omamac install`, before the summary; one summary and "Install?" at the end.
 - An existing `~/.config/nvim` is left alone with no extra files; doctor explains (ℹ) why themes don't reach neovim and what to do.
 - Homebrew in `/usr/local` on Apple Silicon stops the run with a pointer to Homebrew's instructions.
 - One clean Tart image (from `macos-*-vanilla`) stays on disk; test VMs are deleted after each run; the image is replaced, never doubled.
@@ -450,3 +451,4 @@ One line per decision: date, question, answer, who decided. Move the item out of
 - 2026-11-21 — Ghostty's keys — Cmd D and Cmd Shift D do nothing (a Ghostty split showed the same herdr session twice; herdr splits with Alt n); Ghostty's tab keys stay Ghostty's, since herdr has its own (Ctrl g t, Option ←/→) — Tuna
 - 2026-11-21 — `omamac install` targets — a section (`omamac install languages`) or names (`omamac install go rust`), as omawsl's `install <category> <item>`, so adding one thing doesn't walk every question; the names are `omamac uninstall`'s; "Install?" still comes last — Tuna (how: Claude)
 - 2026-11-22 — Output design — one kit of six blocks for every command, settled in #46 (1B 2B 3B 4B 5B 6A 7B 8A 9A); built after Gate B — Tuna
+- 2026-11-23 — From Gate B (#36), before v1 — Tuna: Ctrl 1–6 switch desktops, inside the desktops answer; desktop widgets hidden, as their own question (Claude's call); the README's "After install" becomes a tick list; six desktops with a purpose each, as a README step, since macOS can't create desktops from a script; VS Code changes theme live, not only the next time it opens, still without omamac writing `settings.json` (how: Claude's call; back to Tuna if no way exists).
