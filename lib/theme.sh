@@ -82,13 +82,23 @@ theme_apply() {
   ui_ok "Theme: $(question_label theme "$id"), in $(theme_reaches)"
 }
 
+# theme_signal <name>: send SIGUSR2 (reload your config) to every process whose
+# program is called <name>. Not pkill: on macOS 27, pgrep and pkill don't see
+# Ghostty or herdr, though ps does, so `pkill -x ghostty` signalled nothing.
+theme_signal() {
+  local pid comm
+  while read -r pid comm; do
+    [ "${comm##*/}" != "$1" ] || kill -USR2 "$pid" >> "$OMAMAC_LOG" 2>&1 || true
+  done < <(ps -axo pid=,comm= 2>> "$OMAMAC_LOG")
+}
+
 # theme_reload: tell what is running to read its new files. Each is a no-op when
 # it isn't running, so a failure is ignored; any output goes to the log.
 theme_reload() {
   OMAMAC_STEP="reloading what is running"
-  pkill -USR2 -x ghostty >> "$OMAMAC_LOG" 2>&1 || true
+  theme_signal ghostty
   herdr server reload-config >> "$OMAMAC_LOG" 2>&1 || true
-  pkill -USR2 -x btop >> "$OMAMAC_LOG" 2>&1 || true
+  theme_signal btop
 }
 
 # theme_run [<id>]: CHOICES is loaded. Save the theme first, then always apply it,
