@@ -8,7 +8,7 @@
 4. Run `test/vm.sh <branch> <fixture>` on the PR's head commit. It posts the `vm` status.
 5. The agent merges once `bats` and `vm` are green and review findings are fixed.
 
-Never run omamac on the development Mac. It runs only inside test VMs.
+Never run omamac on the development Mac. It runs only inside test VMs. To run a branch by hand, see [Testing a branch](docs/testing-changes.md).
 
 ## The merge gate
 

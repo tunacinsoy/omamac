@@ -8,6 +8,10 @@ setup() { setup_sandbox; }
   for p in README.md CONTRIBUTING.md boot.sh install.sh update.sh bin lib config themes; do
     [ ! -e "$REPO_ROOT/$p" ] || files+=("$REPO_ROOT/$p")
   done
+  # The docs pages users read (not docs/superpowers, the planning notes).
+  for p in "$REPO_ROOT"/docs/*.md; do
+    [ ! -e "$p" ] || files+=("$p")
+  done
   [ "${#files[@]}" -eq 0 ] && return 0
   # Case-insensitive for apt and WSL; case-sensitive for Windows, the OS's
   # name, since omamac's own text speaks of macOS windows.
@@ -114,11 +118,11 @@ setup() { setup_sandbox; }
   [ "$all" -eq "$inside" ]
 }
 
-@test "the README holds every allow line from apps/" {
+@test "docs/after-install.md holds every allow line from apps/" {
   local line
   while IFS= read -r line; do
-    grep -qF -- "${line#allow=}" "$REPO_ROOT/README.md" || {
-      echo "README lacks: ${line#allow=}"
+    grep -qF -- "${line#allow=}" "$REPO_ROOT/docs/after-install.md" || {
+      echo "docs/after-install.md lacks: ${line#allow=}"
       return 1
     }
   done < <(grep -h '^allow=' "$REPO_ROOT"/apps/*)

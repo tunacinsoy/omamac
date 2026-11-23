@@ -1,163 +1,138 @@
-# omamac
+<p align="center">
+  <img src="assets/logo.png" alt="omamac" width="300">
+</p>
 
-omamac turns a fresh Mac into a complete machine for development in one command. Afterwards, one command, `omamac`, keeps it up to date. It is the sister project of [omawsl](https://github.com/tunacinsoy/omawsl).
+<h1 align="center">Your Mac, fully loaded.</h1>
 
-Every Mac gets:
+<p align="center">
+  One command turns a fresh Mac into a dev machine you'll love.<br>
+  <sub>The <a href="https://github.com/basecamp/omakub">Omakub</a> "one script, done" experience, for macOS. Sister of <a href="https://github.com/tunacinsoy/omawsl">omawsl</a>.</sub>
+</p>
 
-- Ghostty, the terminal, which opens straight into herdr, the multiplexer;
-- zsh with the starship prompt, aliases, history search and fzf;
-- neovim with LazyVim, btop, mise, eza, bat, zoxide, ripgrep, fd, lazygit, tree-sitter-cli and jq;
-- one theme for Ghostty, herdr, btop, the prompt, neovim and VS Code, switched with `omamac theme`.
+<p align="center">
+  <a href="https://github.com/tunacinsoy/omamac/releases"><img src="https://img.shields.io/github/v/release/tunacinsoy/omamac?style=flat-square&color=7aa2f7&label=release" alt="release"></a>
+  <img src="https://img.shields.io/badge/macOS_27+-Apple_Silicon-9ece6a?style=flat-square" alt="macOS 27+ on Apple Silicon">
+  <img src="https://img.shields.io/badge/themes-13-bb9af7?style=flat-square" alt="13 themes">
+  <img src="https://img.shields.io/badge/setup-one_command-e0af68?style=flat-square" alt="one command setup">
+</p>
 
-It asks first, and installs only what you pick: desktop apps (AI apps among them), Wispr Flow, languages, cloud CLIs, coding agents for the terminal, Docker (colima or Docker Desktop), and five macOS settings (desktops as workspaces, window margins, desktop widgets, Dock cleanup, Dock auto-hide). Nothing is picked for you. Tools and apps come from Homebrew; languages come from mise.
+<p align="center">
+  <img src="assets/hero.webp" alt="omamac in six themes, one after another: coding agents, neovim, btop, the theme list, omamac doctor and lazygit in Ghostty and herdr" width="100%">
+</p>
 
-## Before you begin
-
-- A Mac with Apple Silicon, on macOS 27 or later.
-- Setup Assistant finished.
-- An administrator account.
-- macOS up to date.
-- An internet connection.
-- If this Mac has anything on it you care about, back it up first.
-
-## Install
-
-Open Terminal and paste:
-
-```
+```bash
 curl -fsSL https://raw.githubusercontent.com/tunacinsoy/omamac/main/boot.sh | bash
 ```
 
-omamac asks for your password once and never stores it. Then it asks a few questions: theme, apps, macOS settings, languages and Docker. Arrows move, x or Tab picks in a list, y or n answers a yes/no question, and Enter goes on. Esc at a list stops omamac, like Ctrl-C; at a yes/no question Esc is no. It shows your answers and asks "Install?"; after that it runs on its own.
+<sub>Paste it in Terminal. It asks a few questions, then runs on its own for 10 to 20 minutes (<a href="docs/install.md">what happens</a>).</sub>
 
-What you see: your answers as a sheet, then one row per stage with its count (`3/9 ✓ Core tools  15 installed`), then a green Done box (what it installed, what to do next, the log) and a sheet of the permissions to allow. If a run stops, its row turns into a red ✗ and a red Stopped box says what it was doing, how to fix it, where the log is, and the log's last lines. Every command looks this way, in the terminal's own 16 colours, so it follows your theme; piped or saved to a file, omamac prints plain text instead.
+## What you get
 
-The exception: if you chose Zoom, Google Drive or Docker Desktop, Homebrew asks for your password once more, right after "Install?", once for all of them. It asks once they are downloaded, so stay at the keyboard until it has asked.
+<table>
+  <tr>
+    <td width="42%"><b>A terminal that feels like home</b><br><sub>Ghostty opens straight into herdr's panes and tabs.</sub></td>
+    <td><code>Ghostty</code> <code>herdr</code> <code>lazygit</code> <code>btop</code> <code>starship</code> <code>fzf</code></td>
+  </tr>
+  <tr>
+    <td><b>AI agents, side by side</b><br><sub>In the terminal, or as apps.</sub></td>
+    <td><code>Claude Code</code> <code>Codex</code> <code>Copilot CLI</code> <code>Antigravity</code> <code>opencode</code></td>
+  </tr>
+  <tr>
+    <td><b>Your languages, nothing else</b><br><sub>Pick what you need. Nothing is pre-ticked.</sub></td>
+    <td><code>Ruby on Rails</code> <code>Node.js</code> <code>Go</code> <code>Python</code> <code>Elixir</code> <code>Rust</code> <code>Java</code></td>
+  </tr>
+  <tr>
+    <td><b>Editors, themed to match</b><br><sub>Switch the theme; VS Code changes while open.</sub></td>
+    <td><code>Neovim</code> <code>VS Code</code></td>
+  </tr>
+  <tr>
+    <td><b>Your apps, from one list</b><br><sub>Browsers, chat, music, notes, screen recording.</sub></td>
+    <td><code>Brave</code> <code>Chrome</code> <code>Slack</code> <code>Discord</code> <code>Spotify</code> <code>Obsidian</code> <code>Raycast</code> <code>Cap</code> <code>…</code></td>
+  </tr>
+  <tr>
+    <td><b>Desktops that stay put</b><br><sub>One purpose per desktop, Ctrl 1–6 to jump.</sub></td>
+    <td><code>Ctrl 1–6</code> <code>no widgets</code> <code>a clean Dock</code></td>
+  </tr>
+  <tr>
+    <td><b>Docker, your way</b><br><sub>Light or full.</sub></td>
+    <td><code>colima</code> <code>Docker Desktop</code> <code>lazydocker</code></td>
+  </tr>
+  <tr>
+    <td><b>Cloud CLIs on tap</b><br><sub>Sign in and go.</sub></td>
+    <td><code>Azure CLI</code> <code>AWS CLI</code> <code>Google Cloud</code> <code>GitHub CLI</code> <code>Terraform</code></td>
+  </tr>
+  <tr>
+    <td><b>Leaves your own setup alone</b><br><sub>One line added to your config files, never a rewrite; uninstall puts settings back. <a href="docs/what-it-changes.md">What it changes.</a></sub></td>
+    <td>🛡️ <sub>safe to try</sub></td>
+  </tr>
+</table>
 
-Answer no to "Install?" and nothing is saved, so the next run asks again. Once you've said yes, your answers are kept and later runs only ask "Install?".
+## See it
 
-Allow 10 to 20 minutes, depending on how much you pick: most of it is Apple's Command Line Tools and your apps' downloads. If it stops, fix what it says and run the same line again; it picks up where it stopped. Running it again on a Mac that is set up updates omamac's code and changes nothing else.
+<table>
+  <tr>
+    <td width="50%"><img src="assets/screenshots/01-agents-tokyo-night.webp" alt="Claude Code, Copilot CLI and lazygit in herdr panes"><br><b>Two agents and git, one screen</b> <sub>· Tokyo Night</sub></td>
+    <td width="50%"><img src="assets/screenshots/02-code-system-catppuccin.webp" alt="neovim and btop side by side"><br><b>Code and system at a glance</b> <sub>· Catppuccin</sub></td>
+  </tr>
+  <tr>
+    <td><img src="assets/screenshots/03-theme-picker-nord.webp" alt="The omamac theme picker"><br><b>Pick a theme, everything follows</b> <sub>· Nord</sub></td>
+    <td><img src="assets/screenshots/04-doctor-ristretto.webp" alt="omamac doctor: four areas working, then your tools and apps"><br><b>Is everything healthy? One command</b> <sub>· Ristretto</sub></td>
+  </tr>
+  <tr>
+    <td><img src="assets/screenshots/05-doctor-all-dracula.webp" alt="omamac doctor --all: every check with what it is and where it lives"><br><b>Every check, in plain words</b> <sub>· Dracula</sub></td>
+    <td><img src="assets/screenshots/06-light-rose-pine.webp" alt="neovim and lazygit in a light theme"><br><b>Light, too</b> <sub>· Rosé Pine</sub></td>
+  </tr>
+</table>
 
-Each run writes a log to `~/.local/state/omamac/logs/`. The newest 10 are kept.
+<p align="center"><sub>
+  All 13 themes: Catppuccin · Dracula · Everforest · Gruvbox · Kanagawa · Matte Black · Nord · One Dark · Osaka Jade · Ristretto · Rosé Pine · Solarized · Tokyo Night
+</sub></p>
 
-## After install
+## Your daily commands
 
-A few clicks are left that macOS doesn't let a script make. Do each once, top to bottom; skip a line that names something you didn't choose.
+<table>
+  <tr><td width="42%"><code>omamac theme</code></td><td>Switch the look everywhere (<a href="docs/themes.md">how</a>)</td></tr>
+  <tr><td><code>omamac update</code></td><td>Update omamac, your tools and apps (<a href="docs/updating.md">how</a>)</td></tr>
+  <tr><td><code>omamac install</code></td><td>Add something you skipped</td></tr>
+  <tr><td><code>omamac uninstall</code></td><td>Remove something, settings put back (<a href="docs/uninstalling.md">how</a>)</td></tr>
+  <tr><td><code>omamac doctor</code></td><td>Check that everything's healthy (<code>--all</code> for every check)</td></tr>
+</table>
 
-- [ ] Open Ghostty. It starts herdr. The first time, macOS asks you to confirm; click Open.
-- [ ] Open each app once. macOS asks you to confirm; click Open.
-- [ ] Some apps need a permission, in System Settings → Privacy & Security:
-  - [ ] Cap: allow Screen Recording, and Camera and Microphone if you use them.
-  - [ ] Wispr Flow: allow Microphone and Accessibility.
-  - [ ] Zoom: allow Camera and Microphone, and Screen Recording to share.
-- [ ] Allow App Management for Ghostty (System Settings → Privacy & Security → App Management), so `omamac update` can upgrade Ghostty, Docker Desktop and your apps, and `omamac uninstall` can remove them. Zoom and Google Drive don't need it: Homebrew changes them with your password.
-- [ ] Docker Desktop: open it once to finish its setup.
-- [ ] Sign in to each coding agent and AI app the first time you use it: run `claude`, `codex`, `copilot`, `agy` or `opencode` in Ghostty, or open the app. ChatGPT's app includes Codex; Antigravity CLI is Google's successor to Gemini CLI. omamac stores no keys or logins.
-- [ ] Desktops as workspaces: make six desktops. Open Mission Control (Ctrl ↑) and click + at the top right until there are six. Ctrl 1 to Ctrl 6 then jump straight to each.
-- [ ] Give each desktop one purpose, and each app its desktop: right-click the app's Dock icon, then Options, then Assign To. A layout to start from: 1 browser and chat, 2 code and terminal, 3 documents and PDFs, 4 notes, 5 music, 6 monitoring (btop, Activity Monitor). This is an opinion, the one omakub and Omarchy share: a desktop per purpose, always in the same place.
-- [ ] Reduce motion: if omamac said macOS refused it, search for Reduce motion in System Settings and turn it on.
-- [ ] Open `nvim` once; it downloads its plugins.
-- [ ] Set up git, SSH and GitHub sign-in; omamac doesn't touch them:
+## Good to know
 
-  ```
-  git config --global user.name "Your Name"
-  git config --global user.email you@example.com
-  ssh-keygen -t ed25519
-  gh auth login   # if you chose the GitHub CLI
-  ```
+<details open>
+<summary><b>Before you begin</b></summary>
+<br>
 
-## Keeping it up to date
+- A Mac with Apple Silicon, on macOS 27 or later, with an administrator account.
+- Setup Assistant finished, macOS up to date, and an internet connection.
+- Back it up if it has anything you care about.
 
-```
-omamac update
-```
+</details>
 
-It updates omamac and what omamac installed, nothing else:
+<details>
+<summary><b>After install</b>: a few clicks left</summary>
+<br>
 
-- pulls omamac (and stops if you edited its files) and rewrites the files omamac writes;
-- puts back any core tool, app, language, cloud CLI or coding agent that is missing, and the macOS settings you chose if you changed them;
-- upgrades the core tools, bash, gum, colima and its tools if you chose it, the cloud CLIs and coding agents you chose (the casks among them with `--greedy`) and the languages you chose;
-- upgrades Ghostty, Docker Desktop and your apps only when Homebrew lists them as outdated (they update themselves), and only if your terminal has App Management; otherwise it says what to click and exits 1. Homebrew may ask for your password for some of them;
-- runs `mise prune`, which deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`;
-- names any question added since your first run, and the command that asks it, such as `omamac install desktop-widgets`: update itself asks nothing.
+A short checklist: open Ghostty, allow a few permissions, make six desktops, set up git and SSH. See [After install](docs/after-install.md).
 
-`omamac install` adds the apps, languages, cloud CLIs and coding agents you didn't pick before. It also asks again any macOS setting you answered no, and the Docker question if you answered No Docker.
+</details>
 
-To skip the questions you don't need:
+<details>
+<summary><b>What omamac deliberately leaves out</b></summary>
+<br>
 
-- `omamac install languages` asks only that section's question. The sections are `apps`, `languages`, `cloud-clis`, `coding-agents`, `docker` and `macos` (the five macOS settings).
-- `omamac install go rust` asks nothing but "Install?". It takes the same names as `omamac uninstall`: `go`, `docker-desktop`, `vscode`, `dock-autohide` and the rest. A name you already picked is skipped, and Docker takes one choice: to switch from Docker Desktop to colima, uninstall it first.
+- **A tiling window manager:** macOS desktops, with omamac's settings, are enough.
+- **The Mac App Store:** apps come only from Homebrew.
+- **Your git identity, SSH keys and GitHub sign-in:** they stay yours.
+- **Sign-ins, keys and licences** for apps and agents: omamac stores none.
+- **A second multiplexer:** herdr only, no zellij.
+- **Xcode, OrbStack and PHP:** not offered.
 
-Sections and names can be mixed: `omamac install cloud-clis go`.
+</details>
 
-`omamac doctor` checks that everything is healthy and says so in four lines, one per area: omamac, Terminal, Theme (with your theme's name) and macOS, each `✓ working`. When a check in an area fails, its line is a ✗, and under it each problem says what is wrong and how to fix it (`Fix: omamac update`); notes show under their area too. Then it lists what omamac installed for you, a group per kind: Languages, Cloud CLIs, Coding agents and Docker, each tool with its version and whether a newer one is out (`3.14.2 is out`, or `latest`), then Apps, one per line with the version the app reports (apps update themselves, so no newer column). Finding newer versions never updates Homebrew and waits 10 seconds at most; if it can't tell, the version shows alone. A count ends it (`1 problem · 1 note · 14 fine`, and `· 2 updates waiting: omamac update` when some are). It offers to reinstall a pick that is gone. `omamac doctor --all` shows every check under its area, each with a plain name, a line on what it is (`bash for omamac`: omamac's own scripts run in bash; your shell stays zsh) and where it lives on your Mac (`See: ~/.zprofile`).
+## Docs
 
-## Themes
+[Install](docs/install.md) · [After install](docs/after-install.md) · [Updating](docs/updating.md) · [Themes](docs/themes.md) · [herdr](docs/herdr.md) · [Uninstalling](docs/uninstalling.md) · [What it changes](docs/what-it-changes.md) · [Testing changes](docs/testing-changes.md) · [Contributing](CONTRIBUTING.md)
 
-`omamac theme [<theme>]` saves a theme, applies it to Ghostty, herdr, btop, the prompt, neovim and VS Code, and reloads Ghostty, herdr and btop if they are running. An open VS Code switches too; neovim shows it the next time it opens. It says so on three rows: the theme, what shows it now, and what shows it next time it opens, each naming only what the theme reaches. Without a name it asks. The themes are `catppuccin`, `dracula`, `everforest`, `gruvbox`, `kanagawa`, `matte-black`, `nord`, `one-dark`, `osaka-jade`, `ristretto`, `rose-pine`, `solarized` and `tokyo-night`.
-
-btop: settings you save from btop's menu go into omamac's `btop.conf` and don't last, because omamac writes it again. Running `/opt/homebrew/bin/btop` without the alias makes btop write its own config in `~/.config/btop`, which then takes over from omamac's.
-
-VS Code: omamac installs a small extension of its own, `omamac.omamac-theme`, that holds the theme as one colour theme named "omamac" and makes it VS Code's default. The extension asks VS Code to watch its theme file, so an open window switches when `omamac theme` rewrites it; between rose-pine, the light theme, and a dark one, the few colours the theme leaves to VS Code follow the next time VS Code opens. omamac never writes your `settings.json`. If you set `workbench.colorTheme` there (or pick a theme in VS Code, which writes it), yours wins, and omamac says so. To follow omamac's theme again, pick "omamac" in VS Code's theme list, or remove that line. omamac only reads your default profile's settings, and VS Code's "auto detect color scheme" setting picks its own themes, so omamac's doesn't show while it is on.
-
-neovim: if you have your own `~/.config/nvim`, omamac leaves it alone, and `omamac doctor` offers to move it aside to `~/.config/nvim.bak-<date>` so LazyVim and the theme can be set up.
-
-## herdr
-
-Ghostty starts it for you; or run `herdr`. Ctrl g is the prefix, then `p` pane, `t` tab, `r` resize, `m` move, `o` session, `s` scroll. Alt h/j/k/l move between panes, Alt n opens a new pane. herdr's first-run screen is skipped.
-
-> **omamac handles herdr's settings.** It writes `~/.config/omamac/herdr.toml` again on every update (and every theme switch), so herdr always follows omamac's theme and key bindings. Changes made in herdr's own settings screen (Ctrl g `,`) or by hand to that file don't last. To use your own herdr config instead, write `~/.config/herdr/config.toml`: omamac never touches it, but then omamac's themes and key bindings don't reach herdr, and `omamac doctor` says so.
-
-## Uninstalling
-
-`omamac uninstall <name>` removes one thing you picked, after asking; with no name, it asks what to remove. A yellow Removes box shows what goes (the app, Homebrew's cask, its data only if you say yes) before the questions.
-
-- **Apps:** `brave`, `chrome`, `firefox`, `whatsapp`, `telegram`, `signal`, `discord`, `slack`, `zoom`, `spotify`, `vlc`, `cap`, `dropbox`, `google-drive`, `vscode`, `claude`, `chatgpt`, `copilot`, `antigravity`, `raycast`, `obsidian` and `wispr-flow`. omamac first asks whether to remove the app's settings and data too; Enter alone is no, and yes lets Homebrew delete what the app keeps in `~/Library`. Homebrew may ask for your password. An app Homebrew took over is removed like the others; one still installed by hand stays, and omamac only forgets your pick. With Dock cleanup on, the app's tile leaves the Dock; an app you installed by hand keeps its tile.
-- **Languages:** `ruby` (with Rails), `node`, `go`, `python`, `elixir`, `rust` and `java`. **Cloud CLIs:** `azure`, `aws`, `gcloud`, `gh` and `terraform`. **Coding agents:** `claude-code`, `codex`, `copilot-cli`, `antigravity-cli` and `opencode`. A version another mise config uses stays, and Homebrew taps stay.
-- **macOS settings:** `omamac uninstall desktops`, `window-margins`, `desktop-widgets` and `dock-autohide` put the earlier values back and turn the answer to no. `omamac uninstall dock` puts the Dock back to how it was before the cleanup; changes you made to it since are undone, and suggested and recent apps come back.
-- **Docker:** `omamac uninstall colima` removes colima, its tools, links and service; your Docker data stays in `~/.colima`. `omamac uninstall docker-desktop` removes the Docker Desktop app and lazydocker (a hand-installed app stays); your images, containers and volumes stay unless you say yes to removing its settings and data, which also deletes `~/.docker`.
-
-To change an earlier answer, for example colima to Docker Desktop, uninstall one and install the other with `omamac install`.
-
-**omamac can't remove itself or its core tools yet.** To undo the rest by hand, in Terminal (not Ghostty, which is removed):
-
-1. Remove your picks and put the macOS settings back with `omamac uninstall`, while omamac is still there.
-2. If omamac installed them: `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq` and `brew uninstall --cask ghostty`.
-3. Delete the two lines ending in `# added by omamac`, and the line naming `~/.config/omamac/ghostty.conf` from your Ghostty config.
-4. Delete the three folders (`~/.config/omamac`, `~/.local/share/omamac`, `~/.local/state/omamac`) and `~/.config/mise/conf.d/omamac.toml`, and `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`).
-5. If VS Code stays: `code --uninstall-extension omamac.omamac-theme`.
-
-To remove Homebrew too, see [Uninstall Homebrew](https://github.com/Homebrew/install#uninstall-homebrew).
-
-## What it changes
-
-- Homebrew, in `/opt/homebrew`. It brings Apple's Command Line Tools.
-- Ghostty, installed with Homebrew (a cask). A Ghostty you installed by hand is used as is and not updated; `omamac doctor` shows the command that lets Homebrew take it over.
-- The apps you chose, installed with Homebrew (casks) in Applications. If you chose an app you installed by hand, omamac asks "Let Homebrew take over …?" (Enter alone is no). Yes keeps the app where it is, and Homebrew updates it from then on; no leaves it as it is and drops it from your picks. A Zoom or Google Drive you installed by hand is left alone and dropped, since Homebrew would install it again. For an app you install by hand later, `omamac doctor` and each run show the command. Zoom and Google Drive run an installer, so Homebrew asks for your password; omamac says so first. Google Drive also brings Google Docs, Sheets and Slides. VS Code, Obsidian, VLC and Firefox add a command to `/opt/homebrew/bin`, such as `code`.
-- bash, gum and the core tools (`starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq`), installed with Homebrew.
-- The languages you chose (Ruby on Rails, Node.js, Go, Python, Elixir, Rust, Java), installed with mise, and the cloud CLIs you chose (Azure, AWS, Google Cloud, GitHub, Terraform), installed with Homebrew. Terraform comes from `hashicorp/tap`.
-- The coding agents you chose (Claude Code, Codex CLI, Copilot CLI, Antigravity CLI, opencode), installed with Homebrew.
-- `~/.config/mise/conf.d/omamac.toml`: the languages, written by omamac again on every run. Your own pins in `~/.config/mise/config.toml` win and are never touched.
-- `~/.config/nvim`: LazyVim's starter, only if you don't have one. Yours is kept. If omamac made it, it holds `lua/plugins/omamac.lua`.
-- One line in `~/.zprofile` (skipped if it already sets up Homebrew) and one in `~/.zshrc`. Both end in `# added by omamac`.
-- `~/.local/share/omamac`: omamac itself.
-- `~/.config/omamac`: files omamac writes, including `zshrc` (aliases, history, completion, mise and the starship prompt), which the line in `~/.zshrc` loads. That file takes over EDITOR and VISUAL (nvim), history sizes (raised, never lowered), ↑/↓ history search, Ctrl-R (fzf), the prompt (starship), and the aliases `ls`, `lsa`, `ll`, `lt`, `lta`, `tree`, `cat`, `cd`, `ff`, `..`, `...`, `....`, `g`, `gcm`, `gcam`, `gcad`, `d`, `lzg`, `lzd`, `n` and `r`. It also sets `HERDR_CONFIG_PATH` when you have no herdr config.
-- `~/.config/omamac/herdr.toml`: omamac's herdr config and key bindings. A `~/.config/herdr/config.toml` of your own is used instead and never touched (one holding only `onboarding = false` is herdr's own and doesn't count).
-- One line in a Ghostty config file: `config-file = ?~/.config/omamac/ghostty.conf`. It goes in the last of Ghostty's four config files that exists, or in a new `~/.config/ghostty/config.ghostty`. If one of them already has it, nothing is added.
-- `~/.config/omamac/ghostty.conf`: written again on every run. It takes over five Ghostty settings: its colours (your theme), `command` (starts herdr), `macos-option-as-alt` (left), the keys Option ←/→, which Ghostty would turn into a word back or on (they go to herdr instead, to move to the pane or tab on that side), and Cmd D / Cmd Shift D, which do nothing: a Ghostty split would show the same herdr session twice. herdr splits with Alt n or Ctrl g p. Ghostty loads the included file after the rest of your config, wherever the line sits, so these win over the same settings in your own files.
-- Theme files in `~/.config/omamac`, written again on every run and every `omamac theme`: `ghostty.conf`, `herdr.toml`, `starship.toml` (the prompt), `btop.conf` with `btop-themes/<theme>.theme`, and `neovim.lua` (loaded by `~/.config/nvim/lua/plugins/omamac.lua`).
-- If VS Code is installed: omamac's theme extension, `omamac.omamac-theme`, in `~/.vscode/extensions/omamac.omamac-theme-1.0.0`, written again whenever the theme changes. If VS Code has already run on this Mac and doesn't list it yet, omamac installs it once with VS Code's `code --install-extension`. `omamac uninstall vscode` removes it with the rest of `~/.vscode` when you say yes to removing the app's data too. Disabling it in VS Code's Extensions view lasts; removing it there doesn't, since the next run installs it again.
-- `zshrc` sets `STARSHIP_CONFIG` to omamac's `starship.toml` and aliases `btop` to use omamac's `btop.conf` and themes. It does each only if you have no `~/.config/starship.toml` or `~/.config/btop/btop.conf` (and no `STARSHIP_CONFIG` of your own). If you do, your file is kept and never written, and the theme doesn't reach that tool.
-- `~/.local/state/omamac`: logs, your saved answers (`choices.env`), `macos-settings.tsv` (the earlier value of each macOS setting omamac changed), `colima-service` (tells omamac it already started colima's service), `dock-before.plist` (the Dock from before the cleanup) and `dock-added` (the apps omamac has put in, or found in, the Dock: it never adds them again, so a tile you remove stays gone).
-- If you chose colima: `colima docker docker-compose docker-buildx lazydocker`, installed with Homebrew; two links in `~/.docker/cli-plugins`, `docker-compose` and `docker-buildx`, to Homebrew's plugins, so `docker compose` and `docker buildx` work (a file of yours there is kept; a link of yours that points at nothing, such as one Docker Desktop left, is kept too, and omamac says to remove it); and colima's login service, started once with `brew services start colima`. To stop colima starting at login: `brew services stop colima`. omamac won't start it again.
-- If you chose Docker Desktop: the `docker-desktop` cask and `lazydocker`, installed with Homebrew. Homebrew asks for your password for the cask's links in `/usr/local`; omamac says so first.
-- macOS settings, only for the answers you chose, written with `defaults` and the Dock restarted once. Desktops as workspaces: `com.apple.dock mru-spaces` (off, so Spaces keep their order), `NSGlobalDomain AppleSpacesSwitchOnActivate` (on, so switching to an app goes to its desktop), Mission Control's "Switch to Desktop 1" to "6" shortcuts set to Ctrl 1 to Ctrl 6 (`com.apple.symbolichotkeys AppleSymbolicHotKeys` 118 to 123, made to take effect without a logout; they work for the desktops you have), and Reduce motion (`com.apple.universalaccess reduceMotion` and `com.apple.Accessibility ReduceMotionEnabled`, both on). Window margins: `com.apple.WindowManager EnableTiledWindowMargins` (on). Desktop widgets: `com.apple.WindowManager StandardHideWidgets` and `StageManagerHideWidgets` (both on, so widgets are hidden on the desktop and in Stage Manager). macOS may refuse Reduce motion; omamac then leaves it alone and tells you to turn it on in System Settings. Dock auto-hide: `com.apple.dock autohide` (on). `omamac update` sets them again if you changed them; the first earlier value stays in `macos-settings.tsv`.
-- Dock cleanup, if you chose it: once, Apple's apps and Downloads leave the Dock; your own items stay. omamac's apps are added after them, and so is any app omamac installs later, but never one you took out. Suggested and recent apps turn off (`com.apple.dock show-recents`). The Dock from before is kept in `~/.local/state/omamac/dock-before.plist`.
-
-## Testing a branch
-
-For contributors; see [CONTRIBUTING.md](CONTRIBUTING.md). Put the branch in the URL and in `OMAMAC_REF`:
-
-```
-curl -fsSL https://raw.githubusercontent.com/tunacinsoy/omamac/<branch>/boot.sh | OMAMAC_REF=<branch> bash
-```
+<p align="center"><sub>Inspired by <a href="https://github.com/basecamp/omakub">Omakub</a> · made for macOS on Apple Silicon</sub></p>

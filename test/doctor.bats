@@ -1459,11 +1459,11 @@ Languages
   printf '%s\n' "$output" | grep -qxF 'macOS'
   printf '%s\n' "$output" | grep -qxF '    See: ~/.zprofile'
   [ "$(printf '%s\n' "$output" | tail -n 2)" = "How omamac does each of these:
-github.com/tunacinsoy/omamac#what-it-changes" ]
+github.com/tunacinsoy/omamac/blob/main/docs/what-it-changes.md" ]
 }
 
-@test "--all's README link names a heading the README has" {
-  grep -qx '## What it changes' "$REPO_ROOT/README.md"
+@test "--all's link names a docs page that exists" {
+  [ -f "$REPO_ROOT/docs/what-it-changes.md" ]
 }
 
 @test "doctor with an unknown argument: usage, exit 2" {
@@ -1556,7 +1556,7 @@ Your tools and apps
   [ "$(shown | grep -c '^  ✓ ')" -eq 21 ]
   shown | grep -qxF '21 fine'
   [ "$(shown | tail -n 2)" = "How omamac does each of these:
-github.com/tunacinsoy/omamac#what-it-changes" ]
+github.com/tunacinsoy/omamac/blob/main/docs/what-it-changes.md" ]
 }
 
 @test "terminal look --all: a ✗ shows its problem, red, and its fix" {
