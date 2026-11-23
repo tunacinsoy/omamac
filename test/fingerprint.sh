@@ -58,8 +58,23 @@ NSGlobalDomain AppleSpacesSwitchOnActivate
 com.apple.universalaccess reduceMotion
 com.apple.Accessibility ReduceMotionEnabled
 com.apple.WindowManager EnableTiledWindowMargins
+com.apple.WindowManager StandardHideWidgets
+com.apple.WindowManager StageManagerHideWidgets
 com.apple.dock show-recents
 com.apple.dock autohide
 KEYS
+  # Ctrl 1–6, entries of one nested dictionary, so read from an exported copy
+  # as lib/settings.sh does. plutil's XML keeps the dictionary keys sorted
+  # (its JSON doesn't), so one line of it per entry is stable. A missing
+  # domain exports nothing, and a missing entry reads as absent.
+  hotkeys=$(mktemp)
+  defaults export com.apple.symbolichotkeys "$hotkeys" 2>/dev/null || : > "$hotkeys"
+  for id in 118 119 120 121 122 123; do
+    # Without the XML header, so a changed entry reads in vm.sh's diff.
+    value=$(plutil -extract "AppleSymbolicHotKeys.$id" xml1 -o - "$hotkeys" 2>/dev/null | tr -d '\n\t' |
+      sed -e 's/^.*<plist version="1.0">//' -e 's#</plist>$##') || value=absent
+    echo "defaults: com.apple.symbolichotkeys AppleSymbolicHotKeys.$id ${value:-absent}"
+  done
+  rm -f "$hotkeys"
   echo "checkout: $head"
 } | sort
