@@ -50,7 +50,7 @@ What that means in practice:
 4. **Nothing pre-selected.** For everything optional, the user chooses; omamac never assumes. (Carried over from omawsl.) A small core is installed for everyone without a question; see "What omamac sets up".
 5. **Safe with the user's files.** omamac never silently overwrites a config the user wrote; see "Config safety on macOS".
 6. **Idempotent.** Running anything twice changes nothing the second time.
-7. **Tested as a stranger would use it.** Every install change is proven in a fresh VM that fetches omamac through the public one-liner, never on the development machine.
+7. **Tested on a real Mac.** Until Gate B, every install change was proven in a fresh VM that fetched omamac through the public one-liner. Since Gate B, changes are tested on Tuna's Mac, which now runs omamac like any user's.
 8. **Merging is shipping.** `main` is what users get. Nothing merges without passing the gate.
 
 ## What the user experiences
@@ -190,6 +190,8 @@ With AI agents, more and more work is talking rather than typing: people dictate
 
 ## How we know it works
 
+**Since Gate B (2026-11-23), the VM loop is retired.** A VM run took too long for each change, and the Mac now runs omamac anyway. A pull request merges on `bats` alone; its real-world check runs on Tuna's Mac, by Claude where a command shows the result and by Tuna where it takes eyes, and is reported on the PR. `test/vm.sh` and the fixtures stay in the repo, unused, in case a change can't safely be tried on the Mac. The rest of this section describes the loop as it ran until Gate B.
+
 **Every install change is tested as a stranger would use it.** No install is ever tested on Tuna's development Mac. Each test runs in a throwaway macOS VM (Tart) made from a clean image that has nothing on it, not even Homebrew, and behaves like an end user who is not Tuna:
 
 1. Copy the clean image, boot it, connect over SSH.
@@ -211,7 +213,7 @@ This is why the repo is public from day one: the VM must fetch omamac with no cr
 
 **Answer fixtures are for tests only.** Users always answer the first-run questions interactively; the fixture mechanism is not documented for them in v1. A test copies its fixture to `~/.local/state/omamac/choices.env` before running the one-liner, so omamac finds the questions answered and skips them, the same path a re-run takes; it still shows the summary and "Install? (y/n)", which `expect` answers. The question screens themselves are covered by bats tests.
 
-**Who runs the tests.** Tuna or an agent (Claude) may run `test/vm.sh` on Tuna's Mac and post the result and a log summary on the PR. The agent may also install the test tools (Tart, bats, shellcheck) on that Mac, build the clean image and boot test VMs to debug; omamac itself still runs only inside VMs. Gate files (the ruleset, the CI workflow, `test/vm.sh`, `test/vm.exp`, `test/fingerprint.sh`, `test/image.sh`) are written and changed by the agent, but only in a PR whose purpose is the gate itself, never to turn a red check green. CI flags every PR that touches them, and the agent names them when it reports to Tuna. The agent merges a PR once `bats` and `vm` are green and review findings are fixed; anything that needs Tuna's judgment is raised to Tuna first.
+**Who runs the tests.** Tuna or an agent (Claude) may run `test/vm.sh` on Tuna's Mac and post the result and a log summary on the PR. The agent may also install the test tools (Tart, bats, shellcheck) on that Mac, build the clean image and boot test VMs to debug; omamac itself still runs only inside VMs. Gate files (the ruleset, the CI workflow, `test/vm.sh`, `test/vm.exp`, `test/fingerprint.sh`, `test/image.sh`) are written and changed by the agent, but only in a PR whose purpose is the gate itself, never to turn a red check green. CI flags every PR that touches them, and the agent names them when it reports to Tuna. The agent merges a PR once `bats` is green, the check on Tuna's Mac passed and review findings are fixed; anything that needs Tuna's judgment is raised to Tuna first.
 
 **Gate A (end of Phase 1):** the one-liner works in a fresh VM, and a second run changes nothing.
 
@@ -222,9 +224,9 @@ Until Gate B, omamac never runs on Tuna's Mac. That Mac is the development machi
 ## How we build it
 
 - **Repo:** `tunacinsoy/omamac`, public, cloned at `~/git-repos/omamac`. omawsl is cloned read-only at `~/git-repos/omawsl` for inspiration.
-- **Tests:** a bats suite for logic, plus the VM loop for real installs.
+- **Tests:** a bats suite for logic, plus a real run on Tuna's Mac (the VM loop until Gate B).
 - **Branches and PRs:** each phase on its own branch, pushed so the VM can fetch it; a PR per phase, merged by the agent once the gate is green.
-- **Merge gate:** bats suite (GitHub Actions) and the VM loop (run on Tuna's Mac by Tuna or an agent, result recorded on the PR) green on the exact head commit of an up-to-date PR branch, enforced by a GitHub ruleset with no bypass, for admins and agents too. `bats` is pinned to GitHub Actions; `vm` is posted only by `test/vm.sh` on a pass. Gate files (the ruleset, the CI workflow, `test/vm.sh`, `test/vm.exp`, `test/fingerprint.sh`, `test/image.sh`) are written and changed by the agent, but only in a PR whose purpose is the gate itself, never to turn a red check green. CI flags every PR that touches them, and the agent names them when it reports to Tuna. The agent merges a PR once `bats` and `vm` are green and review findings are fixed; anything that needs Tuna's judgment is raised to Tuna first.
+- **Merge gate:** the bats suite (GitHub Actions) green on the exact head commit of an up-to-date PR branch, enforced by a GitHub ruleset with no bypass, for admins and agents too. `bats` is pinned to GitHub Actions; the check on Tuna's Mac is reported on the PR. (Until Gate B, `vm` was required too, posted only by `test/vm.sh` on a pass.) Gate files (the ruleset, the CI workflow, `test/vm.sh`, `test/vm.exp`, `test/fingerprint.sh`, `test/image.sh`) are written and changed by the agent, but only in a PR whose purpose is the gate itself, never to turn a red check green. CI flags every PR that touches them, and the agent names them when it reports to Tuna. The agent merges a PR once `bats` is green, the check on Tuna's Mac passed and review findings are fixed; anything that needs Tuna's judgment is raised to Tuna first.
 - **Conventions carried over from omawsl:** nothing pre-selected, config safety, idempotent scripts, migrations for changes to existing installs, comments that explain *why*. Carried over as rules; the code that follows them is omamac's own.
 
 ## Suggested roadmap
@@ -258,7 +260,7 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - No tiling window manager (AeroSpace or similar): macOS desktops with the desktop settings are enough.
 - The user's manual steps are documented in the README.
 - Only what users see must be free of apt, Windows and WSL; planning documents may refer to omawsl.
-- Installs are tested only in throwaway VMs, acting as an end user; the development Mac never runs omamac before Gate B.
+- Installs were tested only in throwaway VMs, acting as an end user, until Gate B; since then they are tested on Tuna's Mac, and the merge gate is `bats` alone.
 - Gate B is a factory reset of the Mac followed by a real user run-through from the README. No manual tool trials before it.
 - On the development Mac, repos live under `~/git-repos`.
 - omamac is opinionated about the experience: it applies the desktop settings itself (fixed desktop order, jump to the app's desktop, Reduce motion), asked as one question, previous values restored on uninstall. App-to-desktop assignment stays a README step.
@@ -450,3 +452,4 @@ One line per decision: date, question, answer, who decided. Move the item out of
 - 2026-11-21 — Ghostty's keys — Cmd D and Cmd Shift D do nothing (a Ghostty split showed the same herdr session twice; herdr splits with Alt n); Ghostty's tab keys stay Ghostty's, since herdr has its own (Ctrl g t, Option ←/→) — Tuna
 - 2026-11-21 — `omamac install` targets — a section (`omamac install languages`) or names (`omamac install go rust`), as omawsl's `install <category> <item>`, so adding one thing doesn't walk every question; the names are `omamac uninstall`'s; "Install?" still comes last — Tuna (how: Claude)
 - 2026-11-22 — Output design — one kit of six blocks for every command, settled in #46 (1B 2B 3B 4B 5B 6A 7B 8A 9A); built after Gate B — Tuna
+- 2026-11-23 — Merge gate after Gate B — the VM loop is retired: too slow per change. PRs merge on `bats`; the real check runs on Tuna's Mac (Claude for what a command shows, Tuna for what takes eyes) and is reported on the PR — Tuna

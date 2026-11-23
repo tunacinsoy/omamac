@@ -5,18 +5,18 @@
 1. Work on a branch and push it.
 2. Open a pull request into `main`.
 3. CI runs `bats`: shellcheck, then the bats suite.
-4. Run `test/vm.sh <branch> <fixture>` on the PR's head commit. It posts the `vm` status.
-5. The agent merges once `bats` and `vm` are green and review findings are fixed.
+4. Try the change on the development Mac, which runs omamac since Gate B: Claude runs the commands whose result it can read, and asks Tuna to look where it takes eyes. Report what was checked on the PR.
+5. The agent merges once `bats` is green, the check on the Mac passed and review findings are fixed.
 
-Never run omamac on the development Mac. It runs only inside test VMs.
+Until Gate B, omamac ran only inside test VMs and `vm` was required too. The VM loop below is retired but kept, for a change that can't safely be tried on the Mac.
 
 ## The merge gate
 
-`main` takes changes only through pull requests, and only when `bats` and `vm` both passed on the PR's exact head commit, with the branch up to date with `main`. No one can bypass this, admins and agents included. `bats` counts only when GitHub Actions posts it.
+`main` takes changes only through pull requests, and only when `bats` passed on the PR's exact head commit, with the branch up to date with `main`. No one can bypass this, admins and agents included. `bats` counts only when GitHub Actions posts it.
 
-Never post `vm` by hand. Only `test/vm.sh` posts it, on a pass or a fail. Only a pass posts success.
+If you run the VM loop, never post `vm` by hand. Only `test/vm.sh` posts it, on a pass or a fail. Only a pass posts success.
 
-Gate files (the ruleset, the CI workflow, `test/vm.sh`, `test/vm.exp`, `test/fingerprint.sh`, `test/image.sh`) are written and changed by the agent, but only in a PR whose purpose is the gate itself, never to turn a red check green. CI flags every PR that touches them, and the agent names them when it reports to Tuna. The agent merges a PR once `bats` and `vm` are green and review findings are fixed; anything that needs Tuna's judgment is raised to Tuna first.
+Gate files (the ruleset, the CI workflow, `test/vm.sh`, `test/vm.exp`, `test/fingerprint.sh`, `test/image.sh`) are written and changed by the agent, but only in a PR whose purpose is the gate itself, never to turn a red check green. CI flags every PR that touches them, and the agent names them when it reports to Tuna. The agent merges a PR once `bats` is green, the check on the Mac passed and review findings are fixed; anything that needs Tuna's judgment is raised to Tuna first.
 
 **Trust model.** GitHub can't prove a VM ran, or that the fixture covers what the PR touched. The gate stops accidental merges (stale commits, unpushed changes, a forgotten VM run), not deliberate fakes.
 
@@ -101,6 +101,6 @@ gh api -X POST repos/tunacinsoy/omamac/rulesets --input .github/rulesets/main.js
 To change it, edit the file in a PR about the gate, then update the live ruleset with the same file:
 
 ```
-id=$(gh api repos/tunacinsoy/omamac/rulesets --jq '.[] | select(.name == "main: bats and a fresh-VM run") | .id')
+id=$(gh api repos/tunacinsoy/omamac/rulesets --jq '.[] | select(.name == "main: bats") | .id')
 gh api -X PUT "repos/tunacinsoy/omamac/rulesets/$id" --input .github/rulesets/main.json
 ```

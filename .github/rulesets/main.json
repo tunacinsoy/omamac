@@ -1,5 +1,5 @@
 {
-  "name": "main: bats and a fresh-VM run",
+  "name": "main: bats",
   "target": "branch",
   "enforcement": "active",
   "conditions": { "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] } },
@@ -16,7 +16,6 @@
     { "type": "required_status_checks", "parameters": {
         "strict_required_status_checks_policy": true, "do_not_enforce_on_create": false,
         "required_status_checks": [
-          { "context": "bats", "integration_id": 15368 },
-          { "context": "vm" } ] } }
+          { "context": "bats", "integration_id": 15368 } ] } }
   ]
 }
