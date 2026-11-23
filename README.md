@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/hero.webp" alt="omamac in four themes: coding agents, neovim, btop, lazygit and omamac doctor in Ghostty and herdr" width="100%">
+  <img src="assets/hero.webp" alt="omamac in six themes, one after another: coding agents, neovim, btop, the theme list, omamac doctor and lazygit in Ghostty and herdr" width="100%">
 </p>
 
 ```bash
