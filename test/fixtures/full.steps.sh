@@ -13,6 +13,12 @@ settings_now() {
     print -r -- "$domain $key $now"
   done < ~/settings-before
 }
+hotkeys_now() {
+  defaults export com.apple.symbolichotkeys - > ~/hotkeys.plist
+  for id in 118 119 120 121 122 123; do
+    plutil -extract "AppleSymbolicHotKeys.$id" xml1 -o - ~/hotkeys.plist 2>/dev/null || print absent
+  done
+}
 checkout=~/.local/share/omamac
 mise=/opt/homebrew/bin/mise
 # The catalog in catalog order (lib/questions.sh), then Wispr Flow.
@@ -57,6 +63,7 @@ for a in "${agents[@]}"; do [[ -x /opt/homebrew/bin/${a#*:} ]]; done
 [[ $(defaults read com.apple.dock autohide) == 1 ]]
 [[ $(defaults read com.apple.dock mru-spaces) == 0 ]]
 [[ $(defaults read com.apple.WindowManager EnableTiledWindowMargins) == 1 ]]
+[[ $(defaults read com.apple.WindowManager StandardHideWidgets) == 1 ]]
 
 # 3. The theme: catppuccin from the first run, then dracula everywhere.
 cmp ~/.config/omamac/starship.toml $checkout/themes/catppuccin/starship.toml
@@ -103,10 +110,11 @@ omamac uninstall dock
 omamac uninstall dock-autohide
 omamac uninstall desktops
 omamac uninstall window-margins
+omamac uninstall desktop-widgets
 choices=$(< ~/.local/state/omamac/choices.env)
 for line in apps_browsers= apps_communication= apps_media= apps_screen_recording= apps_storage= \
-  apps_developer= apps_ai= apps_productivity= wispr_flow=no desktops=no window_margins=no dock=no \
-  dock_autohide=no languages= cloud_clis= coding_agents= docker=none; do
+  apps_developer= apps_ai= apps_productivity= wispr_flow=no desktops=no window_margins=no \
+  desktop_widgets=no dock=no dock_autohide=no languages= cloud_clis= coding_agents= docker=none; do
   [[ $'\n'$choices$'\n' == *$'\n'$line$'\n'* ]]
 done
 
@@ -114,6 +122,7 @@ done
 [[ $(dock_urls persistent-apps) == "$(< ~/dock-before-apps)" ]]
 [[ $(dock_urls persistent-others) == "$(< ~/dock-before-others)" ]]
 diff ~/settings-before <(settings_now)
+diff ~/hotkeys-before <(hotkeys_now)
 
 # 7. Uninstalling again changes nothing and asks nothing.
 before=$(fp)

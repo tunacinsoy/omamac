@@ -24,6 +24,9 @@ setup_sandbox() {
   mkdir -p "$T_DEFAULTS_DIR"
   ln -sf "$HELPERS_DIR/fake-defaults" "$STUB_DIR/defaults"
   stub killall
+  # Nor macOS's shortcut reload.
+  export OMAMAC_TEST_ACTIVATE_SETTINGS="$STUB_DIR/activateSettings"
+  stub activateSettings
   # No test reaches the real sudo; a test that needs it to fail restubs it.
   stub sudo
   # The terminal prompts read. fake-gum checks for this first line.
@@ -82,8 +85,8 @@ unopenable_tty() {
 }
 
 # shellcheck disable=SC2034 # used by the .bats files
-# The 18 answers bats uses for a fresh run, in table order.
-FRESH_ANSWERS=(tokyo-night "firefox brave" "" "" cap "" "" "" "" no yes no no yes "node python" gh "" none)
+# The 19 answers bats uses for a fresh run, in table order.
+FRESH_ANSWERS=(tokyo-night "firefox brave" "" "" cap "" "" "" "" no yes no no no yes "node python" gh "" none)
 
 install_fake_brew() {
   mkdir -p "$OMAMAC_TEST_BREW_PREFIX/bin"

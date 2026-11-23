@@ -1,6 +1,7 @@
 load helpers/common
 
 load helpers/dock
+load helpers/hotkeys
 bats_require_minimum_version 1.5.0
 
 setup() { setup_sandbox; }
@@ -429,7 +430,7 @@ own_nvim() {
   healthy_mac
   echo 'colour=red' >> "$CHOICES_FILE"
   expect_fail "Saved answers" "Delete that line"
-  [[ "$output" == *"line 20"* ]]
+  [[ "$output" == *"line 21"* ]]
 }
 
 @test "saved answers incomplete" {
@@ -477,6 +478,10 @@ settings_set() {
   defaults write com.apple.universalaccess reduceMotion -bool true
   defaults write com.apple.Accessibility ReduceMotionEnabled -int 1
   defaults write com.apple.WindowManager EnableTiledWindowMargins -bool true
+  local i
+  for i in "${!HOTKEY_IDS[@]}"; do
+    hotkey_seed "${HOTKEY_IDS[$i]}" '{"enabled":true,"value":{"parameters":[65535,'"${HOTKEY_CODES[$i]}"',262144],"type":"standard"}}'
+  done
 }
 
 @test "settings: both answers yes and all set: ✓" {
@@ -495,6 +500,26 @@ settings_set() {
   expect_fail "Desktops as workspaces" "omamac update"
   [[ "$output" == *"Spaces order was changed since omamac set it"* ]]
   [[ "$output" == *"✓ Window margins"* ]]
+}
+
+@test "settings: a Ctrl 1–6 shortcut turned off: ✗ naming it" {
+  healthy_mac
+  settings_set
+  hotkey_seed 122 '{"enabled":false,"value":{"parameters":[65535,23,262144],"type":"standard"}}'
+  expect_fail "Desktops as workspaces" "omamac update"
+  [[ "$output" == *"Ctrl 1–6 was changed since omamac set it"* ]]
+}
+
+@test "settings: desktop widgets shown again: ✗ naming them" {
+  healthy_mac
+  choose desktop_widgets yes
+  defaults write com.apple.WindowManager StandardHideWidgets -bool true
+  defaults write com.apple.WindowManager StageManagerHideWidgets -bool true
+  run doctor
+  [[ "$output" == *"✓ Desktop widgets"* ]]
+  defaults write com.apple.WindowManager StandardHideWidgets -bool false
+  expect_fail "Desktop widgets" "omamac update"
+  [[ "$output" == *"Desktop widgets was changed since omamac set it"* ]]
 }
 
 @test "settings: a key that is gone: ✗" {

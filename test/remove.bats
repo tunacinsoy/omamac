@@ -81,7 +81,7 @@ snapshot() {
   gum_answers
   run --separate-stderr omamac_uninstall php
   [ "$status" -eq 2 ]
-  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, claude-code, codex, copilot-cli, antigravity-cli, opencode, brave, chrome, firefox, whatsapp, telegram, signal, discord, slack, zoom, spotify, vlc, cap, dropbox, google-drive, vscode, claude, chatgpt, copilot, antigravity, raycast, obsidian, wispr-flow, desktops, window-margins, colima, docker-desktop, dock, dock-autohide."* ]]
+  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, claude-code, codex, copilot-cli, antigravity-cli, opencode, brave, chrome, firefox, whatsapp, telegram, signal, discord, slack, zoom, spotify, vlc, cap, dropbox, google-drive, vscode, claude, chatgpt, copilot, antigravity, raycast, obsidian, wispr-flow, desktops, window-margins, desktop-widgets, colima, docker-desktop, dock, dock-autohide."* ]]
   [ -z "$(prompts)" ]
 }
 
@@ -271,12 +271,15 @@ REC() { echo "$HOME/.local/state/omamac/macos-settings.tsv"; }
   gum_answers yes
   run omamac_uninstall desktops
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Desktops as workspaces: your earlier Spaces, app-switching and Reduce motion settings"* ]]
+  [[ "$output" == *"Desktops as workspaces: your earlier Spaces, app-switching, Ctrl 1–6 and Reduce motion settings"* ]]
   grep -qx 'gum confirm --default=false Remove Desktops as workspaces?' "$STUB_LOG"
   grep -qx 'desktops=no' "$CHOICES_FILE"
   [ ! -e "$(REC)" ]
   run defaults read com.apple.dock mru-spaces
   [ "$status" -ne 0 ]
+  # The clean Mac had no Ctrl 1–6 entries; none is left, and macOS reloads.
+  [ "$(plutil -extract AppleSymbolicHotKeys raw "$T_DEFAULTS_DIR/com.apple.symbolichotkeys.plist")" = "" ]
+  grep -qx 'activateSettings -u' "$STUB_LOG"
   [ "$(defaults read com.apple.Accessibility ReduceMotionEnabled)" = 0 ]
 }
 
@@ -293,6 +296,23 @@ REC() { echo "$HOME/.local/state/omamac/macos-settings.tsv"; }
   [ ! -e "$(REC)" ]
   run defaults read com.apple.WindowManager EnableTiledWindowMargins
   [ "$status" -ne 0 ]
+}
+
+@test "uninstall desktop-widgets maps the name" {
+  choose desktop_widgets yes
+  defaults write com.apple.WindowManager StandardHideWidgets -bool true
+  defaults write com.apple.WindowManager StageManagerHideWidgets -bool true
+  mkdir -p "$(dirname "$(REC)")"
+  printf 'com.apple.WindowManager\tStandardHideWidgets\tabsent\ncom.apple.WindowManager\tStageManagerHideWidgets\tboolean\tfalse\n' > "$(REC)"
+  gum_answers yes
+  run omamac_uninstall desktop-widgets
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Desktop widgets: your earlier desktop-widget settings"* ]]
+  grep -qx 'desktop_widgets=no' "$CHOICES_FILE"
+  [ ! -e "$(REC)" ]
+  run defaults read com.apple.WindowManager StandardHideWidgets
+  [ "$status" -ne 0 ]
+  [ "$(defaults read com.apple.WindowManager StageManagerHideWidgets)" = 0 ]
 }
 
 @test "not set by omamac" {
@@ -956,7 +976,7 @@ DOCK_RECORD_REL=.local/state/omamac/dock-before.plist
     for k in \"\${QUESTION_KEYS[@]}\"; do
       case \${QUESTION_KIND[\$k]} in multi) question_values \"\$k\" ;; esac
     done
-    echo wispr-flow desktops window-margins colima docker-desktop dock dock-autohide | tr ' ' '\n'"
+    echo wispr-flow desktops window-margins desktop-widgets colima docker-desktop dock dock-autohide | tr ' ' '\n'"
   [ "$status" -eq 0 ]
   [ -z "$(sort <<< "$output" | uniq -d)" ]
 }
