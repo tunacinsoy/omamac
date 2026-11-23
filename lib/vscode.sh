@@ -1,10 +1,13 @@
 # shellcheck shell=bash disable=SC2034 # OMAMAC_STEP is read by the caller's ERR trap
 # VS Code follows the theme through omamac's own extension, omamac.omamac-theme: one
 # colour theme, "omamac", that it makes VS Code's default. omamac never writes the
-# user's settings.json, so a theme the user set there wins. Needs lib/paths.sh,
-# lib/ui.sh and lib/choices.sh (the theme is CHOICES[theme]).
+# user's settings.json, so a theme the user set there wins. An open VS Code shows
+# a new theme at once, because the theme asks VS Code to watch its file. Needs
+# lib/paths.sh, lib/ui.sh and lib/choices.sh (the theme is CHOICES[theme]).
 
 VSCODE_EXTENSION=omamac.omamac-theme
+# The version stays 1.0.0: VS Code's list names the folder it installed, so a
+# folder with a new version in its name would be ignored.
 VSCODE_VERSION=1.0.0
 
 # vscode_code: the code command inside the app. It is there whenever VS Code is
@@ -19,8 +22,15 @@ vscode_theme_file() { echo "$OMAMAC_CHECKOUT/themes/${CHOICES[theme]:?no theme i
 # one to compare.
 vscode_installed_theme() { echo "$OMAMAC_VSCODE_EXTENSIONS/$VSCODE_EXTENSION-$VSCODE_VERSION/themes/omamac.json"; }
 
-# vscode_has_theme: VS Code has the chosen theme's colours.
-vscode_has_theme() { cmp -s "$(vscode_theme_file)" "$(vscode_installed_theme)"; }
+# vscode_has_theme: VS Code has the chosen theme's colours, in an extension that
+# asks VS Code to watch them. One written before the watch existed doesn't, so it
+# is written again.
+vscode_has_theme() {
+  local theme
+  theme=$(vscode_installed_theme)
+  cmp -s "$(vscode_theme_file)" "$theme" &&
+    jq -e '.contributes.themes[0]._watch == true' "${theme%/themes/*}/package.json" > /dev/null 2>&1
+}
 
 # vscode_user_theme: the user set a theme of their own in VS Code's settings. A
 # line that starts with // is a comment. Picking "omamac" in VS Code writes it
@@ -32,7 +42,14 @@ vscode_user_theme() {
 }
 
 # vscode_package <theme file> <out>: the extension's package.json. VS Code bases
-# the colours the theme file doesn't set on uiTheme: vs for a light theme.
+# the colours the theme file doesn't set on uiTheme: vs for a light theme. VS Code
+# reads package.json only when it starts, so an open window keeps its old base.
+# "_watch": true makes VS Code watch the theme file while the theme is in use and
+# reload it when the file changes: that is how an open window follows omamac
+# theme with no code in the extension and no write to settings.json. It is VS
+# Code's own switch for theme authors, undocumented (1.147 reads it when it
+# loads an extension's themes). If VS Code drops it, the theme still changes the
+# next time VS Code opens.
 vscode_package() {
   local ui=vs-dark
   [ "$(jq -r .type "$1")" != light ] || ui=vs
@@ -45,7 +62,7 @@ vscode_package() {
   "version": "$VSCODE_VERSION",
   "engines": { "vscode": "^1.70.0" },
   "contributes": {
-    "themes": [{ "id": "omamac", "label": "omamac", "uiTheme": "$ui", "path": "./themes/omamac.json" }],
+    "themes": [{ "id": "omamac", "label": "omamac", "uiTheme": "$ui", "path": "./themes/omamac.json", "_watch": true }],
     "configurationDefaults": { "workbench.colorTheme": "omamac" }
   }
 }
@@ -54,7 +71,8 @@ JSON
 
 # vscode_extension_files <dir>: write the extension's two files into dir, the
 # theme file last: it is the one vscode_has_theme compares, so a run cut short
-# between the two writes both again.
+# between the two writes both again. cp writes over the theme file in place, so
+# the file VS Code watches stays the same file.
 vscode_extension_files() {
   mkdir -p "$1/themes" &&
     vscode_package "$(vscode_theme_file)" "$1/package.json" &&

@@ -36,7 +36,18 @@ stamp() { (cd "$OM" && find . -type f -exec stat -f '%N %m' {} + | sort); }
   run omamac_theme nord
   [ "$status" -eq 0 ]
   cmp "$HOME/.vscode/extensions/omamac.omamac-theme-1.0.0/themes/omamac.json" "$REPO_ROOT/themes/nord/vscode.json"
-  [[ "$output" == *"neovim and VS Code the next time they open"* ]]
+  [[ "$output" == *"What's running shows it now, an open VS Code too; neovim the next time it opens."* ]]
+}
+
+@test "theme with the user's own VS Code theme doesn't promise VS Code" {
+  local bin="$OMAMAC_TEST_APPLICATIONS/Visual Studio Code.app/Contents/Resources/app/bin"
+  mkdir -p "$bin"
+  ln -sf "$HELPERS_DIR/fake-code" "$bin/code"
+  mkdir -p "$HOME/Library/Application Support/Code/User"
+  echo '{ "workbench.colorTheme": "Solarized Light" }' > "$HOME/Library/Application Support/Code/User/settings.json"
+  run omamac_theme nord
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"What's running shows it now; neovim the next time it opens."* ]]
 }
 
 @test "theme dracula: saved, applied, reloaded, summary" {

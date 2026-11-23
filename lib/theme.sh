@@ -122,7 +122,9 @@ theme_run() {
   theme_apply
   theme_reload
   vscode_theme_install
-  local later='neovim the next time it opens'
-  [ ! -x "$(vscode_code)" ] || later='neovim and VS Code the next time they open'
-  ui_ok "What's running shows it now; $later."
+  # VS Code reloads the theme file itself (lib/vscode.sh), so an open window is
+  # named with what is running; one with the user's own theme isn't reached.
+  local now="What's running shows it now"
+  if [ -x "$(vscode_code)" ] && ! vscode_user_theme; then now+=", an open VS Code too"; fi
+  ui_ok "$now; neovim the next time it opens."
 }

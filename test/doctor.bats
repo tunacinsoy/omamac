@@ -261,6 +261,16 @@ vscode_app() {
   [[ "$output" == *"VS Code doesn't have omamac's theme"* ]]
 }
 
+@test "VS Code with omamac's theme from before the watch is a fail" {
+  healthy_mac
+  vscode_app
+  omamac_lib vscode_theme_install
+  local pkg="$HOME/.vscode/extensions/omamac.omamac-theme-1.0.0/package.json"
+  jq 'del(.contributes.themes[0]._watch)' "$pkg" > "$BATS_TEST_TMPDIR/old.json"
+  mv "$BATS_TEST_TMPDIR/old.json" "$pkg"
+  expect_fail "VS Code theme" "omamac update"
+}
+
 @test "own VS Code theme is info" {
   healthy_mac
   vscode_app
