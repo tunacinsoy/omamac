@@ -277,6 +277,41 @@ choose() { sed -i '' "s/^$1=.*/$1=$2/" "$CHOICES_FILE"; }
   [ -e "$dir/20200101T000004Z.log" ]
 }
 
+@test "a question added since the first run is named with its command" {
+  sed -i '' -e '/^desktop_widgets=/d' -e '/^apps_media=/d' -e '/^docker=/d' "$CHOICES_FILE"
+  before=$(shasum < "$CHOICES_FILE")
+  run update
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"New question: Media. To answer it: omamac install apps."* ]]
+  [[ "$output" == *"New question: Desktop widgets. To answer it: omamac install desktop-widgets."* ]]
+  [[ "$output" == *"New question: Docker. To answer it: omamac install docker."* ]]
+  [ "$(grep -c 'New question' <<< "$output")" -eq 3 ]
+  [[ "$output" == *"omamac and your tools are up to date."* ]]
+  # Update asks nothing and leaves the answers alone.
+  run ! grep -qE '^gum (choose|confirm)' "$STUB_LOG"
+  [ "$(shasum < "$CHOICES_FILE")" = "$before" ]
+}
+
+# The theme is asked first, so a first run always answered it: update can't
+# apply the theme files without it.
+@test "every other question has no answer: each is named" {
+  grep -E '^(#|theme=)' "$CHOICES_FILE" > "$CHOICES_FILE.new"
+  mv "$CHOICES_FILE.new" "$CHOICES_FILE"
+  run update
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"New question: Wispr Flow. To answer it: omamac install wispr-flow."* ]]
+  [[ "$output" == *"New question: Dock auto-hide. To answer it: omamac install dock-autohide."* ]]
+  [[ "$output" == *"New question: Coding agents. To answer it: omamac install coding-agents."* ]]
+  [[ "$output" != *"one-liner"* ]]
+  [ "$(grep -c 'New question' <<< "$output")" -eq 18 ]
+}
+
+@test "every answer saved: no new question named" {
+  run update
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"New question"* ]]
+}
+
 @test "no saved answers: stops with the fix" {
   rm "$CHOICES_FILE"
   run update

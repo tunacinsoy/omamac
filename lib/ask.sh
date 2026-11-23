@@ -34,6 +34,17 @@ ask_broken() {
   exit 1
 }
 
+# ask_choose_stopped <status>: a pick list's Esc or Ctrl-C stops the run.
+# gum 2.0.2 exits 1 on Esc at gum choose, which would otherwise read as
+# "couldn't ask", a fault. A real gum failure that exits 1 also reads as
+# Stopped; gum gives no way to tell them apart, and that is accepted.
+# Yes/no prompts differ: there exit 1 is no, and Esc is no.
+ask_choose_stopped() {
+  case $1 in
+    1 | 130) ask_stopped ;;
+  esac
+}
+
 # ask_one <key> [<value>…]: ask one question and set CHOICES[key]. With values,
 # only those options are offered (in table order), and CHOICES[key] is the picks.
 ask_one() {
@@ -60,7 +71,7 @@ ask_one() {
   [ "${QUESTION_KIND[$key]}" = single ] || limit=(--no-limit)
   out=$("$UI_GUM" choose "${limit[@]}" --header "${QUESTION_TEXT[$key]}" --label-delimiter=: \
     "${options[@]}" < "$OMAMAC_TTY") || status=$?
-  [ "$status" -ne 130 ] || ask_stopped
+  ask_choose_stopped "$status"
   [ "$status" -eq 0 ] || ask_broken "${QUESTION_TITLE[$key]}"
   # gum prints one value per line; the file holds them space-separated.
   normal=$(choices_normalise "$key" "$(paste -sd' ' - <<< "$out")") || ask_broken "${QUESTION_TITLE[$key]}"
@@ -130,7 +141,7 @@ ask_choose() {
   shift
   ask_need_tty
   out=$("$UI_GUM" choose --header "$header" --label-delimiter=: "$@" < "$OMAMAC_TTY") || status=$?
-  [ "$status" -ne 130 ] || ask_stopped
+  ask_choose_stopped "$status"
   [ "$status" -eq 0 ] || ask_broken "$header"
   # shellcheck disable=SC2034 # read by the caller
   ASK_PICKED=$out

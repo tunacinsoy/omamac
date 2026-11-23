@@ -28,7 +28,7 @@ Open Terminal and paste:
 curl -fsSL https://raw.githubusercontent.com/tunacinsoy/omamac/main/boot.sh | bash
 ```
 
-omamac asks for your password once and never stores it. Then it asks a few questions: theme, apps, macOS settings, languages and Docker. Arrows move, x or Tab picks in a list, y or n answers a yes/no question, and Enter goes on. It shows your answers and asks "Install?"; after that it runs on its own.
+omamac asks for your password once and never stores it. Then it asks a few questions: theme, apps, macOS settings, languages and Docker. Arrows move, x or Tab picks in a list, y or n answers a yes/no question, and Enter goes on. Esc at a list stops omamac, like Ctrl-C; at a yes/no question Esc is no. It shows your answers and asks "Install?"; after that it runs on its own.
 
 What you see: your answers as a sheet, then one row per stage with its count (`3/9 ✓ Core tools  15 installed`), then a green Done box (what it installed, what to do next, the log) and a sheet of the permissions to allow. If a run stops, its row turns into a red ✗ and a red Stopped box says what it was doing, how to fix it, where the log is, and the log's last lines. Every command looks this way, in the terminal's own 16 colours, so it follows your theme; piped or saved to a file, omamac prints plain text instead.
 
@@ -78,13 +78,14 @@ It updates omamac and what omamac installed, nothing else:
 - puts back any core tool, app, language, cloud CLI or coding agent that is missing, and the macOS settings you chose if you changed them;
 - upgrades the core tools, bash, gum, colima and its tools if you chose it, the cloud CLIs and coding agents you chose (the casks among them with `--greedy`) and the languages you chose;
 - upgrades Ghostty, Docker Desktop and your apps only when Homebrew lists them as outdated (they update themselves), and only if your terminal has App Management; otherwise it says what to click and exits 1. Homebrew may ask for your password for some of them;
-- runs `mise prune`, which deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`.
+- runs `mise prune`, which deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`;
+- names any question added since your first run, and the command that asks it, such as `omamac install desktop-widgets`: update itself asks nothing.
 
 `omamac install` adds the apps, languages, cloud CLIs and coding agents you didn't pick before. It also asks again any macOS setting you answered no, and the Docker question if you answered No Docker.
 
 To skip the questions you don't need:
 
-- `omamac install languages` asks only that section's question. The sections are `apps`, `languages`, `cloud-clis`, `coding-agents`, `docker` and `macos` (the four macOS settings).
+- `omamac install languages` asks only that section's question. The sections are `apps`, `languages`, `cloud-clis`, `coding-agents`, `docker` and `macos` (the five macOS settings).
 - `omamac install go rust` asks nothing but "Install?". It takes the same names as `omamac uninstall`: `go`, `docker-desktop`, `vscode`, `dock-autohide` and the rest. A name you already picked is skipped, and Docker takes one choice: to switch from Docker Desktop to colima, uninstall it first.
 
 Sections and names can be mixed: `omamac install cloud-clis go`.

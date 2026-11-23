@@ -247,6 +247,23 @@ doctor_check_ghostty() {
   return "$status"
 }
 
+# doctor_unanswered_fix: the commands that ask the unanswered questions, the
+# same ones update names. omamac install takes several names in one run.
+doctor_unanswered_fix() {
+  local key command names=() commands=()
+  while IFS= read -r key; do
+    command=$(add_command "$key") || { echo "Run the one-liner; it asks only those"; return 0; }
+    case $command in
+      "omamac install "*) [[ " ${names[*]} " == *" ${command#omamac install } "* ]] || names+=("${command#omamac install }") ;;
+      *) commands+=("$command") ;;
+    esac
+  done < <(choices_missing)
+  [ "${#names[@]}" -eq 0 ] || commands+=("omamac install ${names[*]}")
+  local IFS=,
+  command="${commands[*]}"
+  echo "Run ${command//,/, then }"
+}
+
 # Sets DOCTOR_HAS_CHOICES so the checks after it know CHOICES is loaded.
 doctor_check_choices() {
   local what="Saved answers" message
@@ -258,7 +275,7 @@ doctor_check_choices() {
     message=$(choices_load "$OMAMAC_CHOICES_FILE" 2>&1) || true
     doctor_report fail "$what" "${message%%. Fix: *}" "${message#*. Fix: }"
   elif [ -n "$(choices_missing)" ]; then
-    doctor_report fail "$what" "some questions have no answer yet" "Run the one-liner; it asks only those"
+    doctor_report fail "$what" "some questions have no answer yet" "$(doctor_unanswered_fix)"
   else
     DOCTOR_HAS_CHOICES=1
     doctor_report ok "$what"

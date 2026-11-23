@@ -436,7 +436,15 @@ own_nvim() {
 @test "saved answers incomplete" {
   healthy_mac
   sed -i '' '/^docker=/d' "$CHOICES_FILE"
-  expect_fail "Saved answers" "it asks only those"
+  expect_fail "Saved answers" "Run omamac install docker"
+}
+
+@test "saved answers incomplete: one omamac install for every name, the theme apart" {
+  healthy_mac
+  sed -i '' -e '/^theme=/d' -e '/^apps_media=/d' -e '/^apps_ai=/d' -e '/^desktop_widgets=/d' "$CHOICES_FILE"
+  run doctor
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"✗ Saved answers — some questions have no answer yet. Fix: Run omamac theme, then omamac install apps desktop-widgets"* ]]
 }
 
 @test "git status takes no lock" {

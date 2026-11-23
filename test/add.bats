@@ -526,6 +526,53 @@ by_hand() { # <cask> <App.app>
   grep -qx 'dock_autohide=yes' "$CHOICES_FILE"
 }
 
+# update names a question added after the first run, and sends the user here.
+@test "a new question answered no in its section: the no is saved, nothing applied" {
+  sed -i '' '/^desktop_widgets=/d' "$CHOICES_FILE"
+  gum_answers no
+  run omamac_install macos
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "gum confirm --default=false Hide widgets on the desktop?" ]
+  [[ "$output" == *"Nothing picked, so nothing changed."* ]]
+  grep -qx 'desktop_widgets=no' "$CHOICES_FILE"
+  run ! grep -q '^defaults write' "$STUB_LOG"
+}
+
+@test "a new question by its name, no at Install?: the no is saved, not the other picks" {
+  sed -i '' '/^desktop_widgets=/d' "$CHOICES_FILE"
+  gum_answers no
+  run omamac_install desktop-widgets go
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Stopped. Nothing else was changed."* ]]
+  grep -qx 'desktop_widgets=no' "$CHOICES_FILE"
+  grep -qx 'languages=' "$CHOICES_FILE"
+  run ! grep -qE '^(defaults write|brew install|mise install)' "$STUB_LOG"
+  [ ! -e "$HOME/.config/omamac" ]
+}
+
+@test "a new app group answered with nothing: saved as none" {
+  sed -i '' '/^apps_media=/d' "$CHOICES_FILE"
+  gum_answers ""
+  run omamac_install apps
+  [ "$status" -eq 0 ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 1 ]
+  grep -qx 'apps_media=' "$CHOICES_FILE"
+}
+
+@test "add_command: every question has a command that asks it" {
+  run "$BASH5" -c "set -Eeuo pipefail
+    OMAMAC_CHECKOUT='$REPO_ROOT'
+    for f in paths ui questions choices clis core apps add; do source '$REPO_ROOT/lib/'\$f.sh; done
+    for k in \"\${QUESTION_KEYS[@]}\"; do echo \"\$k: \$(add_command \"\$k\")\"; done"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"theme: omamac theme"* ]]
+  [[ "$output" == *"apps_ai: omamac install apps"* ]]
+  [[ "$output" == *"desktop_widgets: omamac install desktop-widgets"* ]]
+  [[ "$output" == *"cloud_clis: omamac install cloud-clis"* ]]
+  [[ "$output" == *"docker: omamac install docker"* ]]
+  [ "$(grep -c ': omamac ' <<< "$output")" -eq 19 ]
+}
+
 @test "install desktop-widgets: hides them" {
   choose desktop_widgets no
   gum_answers yes
