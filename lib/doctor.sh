@@ -941,9 +941,9 @@ doctor_draw_all() {
   done
 }
 
-# doctor_how: --all's last lines, where the README says how omamac does each.
+# doctor_how: --all's last lines, where the docs say how omamac does each.
 doctor_how() {
-  printf 'How omamac does each of these:\n%s#what-it-changes\n' "${OMAMAC_REPO_URL#https://}"
+  printf 'How omamac does each of these:\n%s/blob/main/docs/what-it-changes.md\n' "${OMAMAC_REPO_URL#https://}"
 }
 
 # doctor_draw: the terminal look's report. The areas (short, or --all), then
@@ -969,7 +969,7 @@ doctor_draw() {
 # problems and notes indented under it; with --all, each area's name, then a
 # line per check: "✓ <name> — <what it is>", "✗ <name> — <problem>. Fix:
 # <fix>", "ℹ <name> — <note>", each with "    See: <where>" under it. Then
-# Your tools and apps (and, with --all, where the README says how).
+# Your tools and apps (and, with --all, where the docs say how).
 doctor_print() {
   local area row s line
   for area in "${DOCTOR_AREAS[@]}"; do
