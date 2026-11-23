@@ -9,6 +9,20 @@
 # The questions whose picks omamac uninstall can remove.
 REMOVE_KEYS=(languages cloud_clis coding_agents)
 
+# remove_box <plain line> <label<TAB>value>…: what uninstall removes, before
+# its questions. Plain text keeps its one-line box; the terminal look draws a
+# yellow Removes box with a row per part.
+remove_box() {
+  local plain=$1
+  shift
+  if ui_term; then ui_titled warn Removes "$@"; else ui_box "$plain"; fi
+}
+
+# remove_done <plain sentence> <label> <detail>: the result, one row.
+remove_done() {
+  if ui_term; then ui_row ok "$2" "$3"; else ui_ok "$1"; fi
+}
+
 # remove_setting <name>: put a desktop, window-margin, desktop-widget or Dock
 # auto-hide setting back. The answer is saved no last, so a failure leaves it
 # yes and the rest recorded.
@@ -24,7 +38,7 @@ remove_setting() {
     ui_info "$title isn't set by omamac."
     exit 0
   fi
-  ui_box "$title: $(settings_what "$key")"
+  remove_box "$title: $(settings_what "$key")" "Setting"$'\t'"$title" "Puts back"$'\t'"$(settings_what "$key")"
   if ! ask_yes "Remove $title?"; then
     ui_info "Nothing was removed."
     exit 0
@@ -34,7 +48,7 @@ remove_setting() {
   CHOICES[$key]=no
   OMAMAC_STEP='saving your answers'
   choices_save "$OMAMAC_CHOICES_FILE"
-  ui_ok "$title is removed"
+  remove_done "$title is removed" "$title" removed
 }
 
 # remove_dock: put the Dock and show-recents back. The answer is saved no
@@ -45,7 +59,8 @@ remove_dock() {
     ui_info "$title isn't set by omamac."
     exit 0
   fi
-  ui_box "$title: your Dock goes back to how it was before omamac cleaned it. Changes you made to it since are undone."
+  remove_box "$title: your Dock goes back to how it was before omamac cleaned it. Changes you made to it since are undone." \
+    "Setting"$'\t'"$title" "Puts back"$'\t'"your Dock as it was before omamac cleaned it; changes you made to it since are undone"
   ask_yes "Remove $title?" || { ui_info "Nothing was removed."; exit 0; }
   log_start
   dock_restore || return
@@ -53,7 +68,7 @@ remove_dock() {
   CHOICES[dock]=no
   OMAMAC_STEP='saving your answers'
   choices_save "$OMAMAC_CHOICES_FILE"
-  ui_ok "$title is removed"
+  remove_done "$title is removed" "$title" removed
 }
 
 # remove_app_management_ok <app path> <name>: Homebrew replaces the app
@@ -88,7 +103,8 @@ remove_app() {
   fi
   state=$(core_cask_state "$cask") || return
   if [ "$state" = hand ]; then
-    ui_box "$label: installed by hand, so the app stays. omamac only forgets your pick."
+    remove_box "$label: installed by hand, so the app stays. omamac only forgets your pick." \
+      "App"$'\t'"${APP_BUNDLE[$id]} stays: it was installed by hand" "omamac"$'\t'"forgets your pick"
     ask_yes "Remove $label?" || { ui_info "Nothing was removed."; exit 0; }
     log_start
   else
@@ -97,14 +113,20 @@ remove_app() {
     [ "$state" != brew ] || [ "${APP_PASSWORD[$id]}" = yes ] \
       || remove_app_management_ok "$OMAMAC_APPLICATIONS/${APP_BUNDLE[$id]}" "$id"
     # Without the cask Homebrew has no data list to delete, so nothing to ask.
-    if core_cask_listed "$cask"; then
-      listed=1
-      ui_info "On yes, Homebrew also deletes what $label keeps in ~/Library."
+    core_cask_listed "$cask" && listed=1
+    # The terminal look says it all before the first question, in one box.
+    if ui_term; then
+      local parts=("App"$'\t'"${APP_BUNDLE[$id]}")
+      [ "$listed" -eq 0 ] || parts+=("Homebrew"$'\t'"the $cask cask" "Data"$'\t'"what $label keeps in ~/Library, only if you say yes below")
+      ui_titled warn Removes "${parts[@]}"
+    fi
+    if [ "$listed" -eq 1 ]; then
+      ui_term || ui_info "On yes, Homebrew also deletes what $label keeps in ~/Library."
       if ask_yes "Also remove $label's settings and data?"; then
         zap=(--zap) what='the app, with its settings and data'
       fi
     fi
-    ui_box "$label: $what."
+    ui_term || ui_box "$label: $what."
     ask_yes "Remove $label?" || { ui_info "Nothing was removed."; exit 0; }
     log_start
     if [ "$listed" -eq 1 ]; then
@@ -119,7 +141,9 @@ remove_app() {
   apps_drop "$id"
   OMAMAC_STEP='saving your answers'
   choices_save "$OMAMAC_CHOICES_FILE"
-  if [ "$state" = hand ]; then ui_ok "$label is removed from your answers"; else ui_ok "$label is removed"; fi
+  if [ "$state" = hand ]; then remove_done "$label is removed from your answers" "$label" "removed from your answers"
+  elif [ "${#zap[@]}" -gt 0 ]; then remove_done "$label is removed" "$label" "removed, with its settings and data"
+  else remove_done "$label is removed" "$label" "removed; its settings stay"; fi
 }
 
 # remove_docker <colima|docker-desktop>: take that away. The user's Docker
@@ -134,29 +158,48 @@ remove_docker() {
     exit 0
   fi
   if [ "$name" = colima ]; then
-    ui_box "colima: colima, docker, docker-compose, docker-buildx and lazydocker. Your images, containers and volumes stay in ~/.colima."
+    remove_box "colima: colima, docker, docker-compose, docker-buildx and lazydocker. Your images, containers and volumes stay in ~/.colima." \
+      "Homebrew"$'\t'"colima, docker, docker-compose, docker-buildx and lazydocker" \
+      "Data"$'\t'"your images, containers and volumes stay in ~/.colima"
     ask_yes "Remove colima?" || { ui_info "Nothing was removed."; exit 0; }
     log_start
     docker_uninstall_colima || return
     CHOICES[docker]=none
     OMAMAC_STEP='saving your answers'
     choices_save "$OMAMAC_CHOICES_FILE"
-    ui_ok "colima is removed"
+    remove_done "colima is removed" colima removed
     return
   fi
   state=$(core_cask_state docker-desktop) || return
   # A trashed app has nothing to write to.
   [ "$state" != brew ] || remove_app_management_ok "$app" docker-desktop
   # A hand-installed app has no cask, so Homebrew has no data list to delete.
-  if core_cask_listed docker-desktop; then
-    ui_info "On yes, Homebrew also deletes Docker Desktop's images, containers and volumes, and ~/.docker (Docker's settings and saved logins)."
+  local listed=0
+  core_cask_listed docker-desktop && listed=1
+  # The terminal look says it all before the first question, in one box.
+  if ui_term; then
+    local parts=()
+    if [ "$state" = hand ]; then parts+=("App"$'\t'"Docker Desktop stays: omamac didn't install it")
+    else parts+=("App"$'\t'"Docker Desktop"); fi
+    if [ "$listed" -eq 1 ]; then
+      parts+=("Homebrew"$'\t'"the docker-desktop cask and lazydocker")
+      parts+=("Data"$'\t'"Docker Desktop's images, containers and volumes, and ~/.docker (Docker's settings and saved logins), only if you say yes below")
+    else
+      parts+=("Homebrew"$'\t'"lazydocker" "Data"$'\t'"your images, containers and volumes stay")
+    fi
+    ui_titled warn Removes "${parts[@]}"
+  fi
+  if [ "$listed" -eq 1 ]; then
+    ui_term || ui_info "On yes, Homebrew also deletes Docker Desktop's images, containers and volumes, and ~/.docker (Docker's settings and saved logins)."
     if ask_yes "Also remove Docker Desktop's settings and data?"; then
       zap=(--zap)
       box="Docker Desktop: the app and lazydocker, with Docker Desktop's images, containers, volumes and ~/.docker."
     fi
   fi
-  ui_box "$box"
-  [ "$state" != hand ] || ui_info "Docker Desktop wasn't installed by omamac, so it stays."
+  if ! ui_term; then
+    ui_box "$box"
+    [ "$state" != hand ] || ui_info "Docker Desktop wasn't installed by omamac, so it stays."
+  fi
   ask_yes "Remove Docker Desktop?" || { ui_info "Nothing was removed."; exit 0; }
   log_start
   docker_uninstall_desktop "${zap[@]}" || return
@@ -164,7 +207,8 @@ remove_docker() {
   CHOICES[docker]=none
   OMAMAC_STEP='saving your answers'
   choices_save "$OMAMAC_CHOICES_FILE"
-  ui_ok "Docker Desktop is removed"
+  if [ "${#zap[@]}" -gt 0 ]; then remove_done "Docker Desktop is removed" "Docker Desktop" "removed, with its data"
+  else remove_done "Docker Desktop is removed" "Docker Desktop" removed; fi
 }
 
 # remove_refuse_core <name>: stop when name is a core tool. bin/omamac calls it
@@ -235,9 +279,9 @@ remove_run() {
   if [ "$key" = languages ]; then
     read -ra tools <<< "${LANGUAGE_TOOLS[$name]}"
     printf -v joined '%s and ' "${tools[@]}"
-    ui_box "$label: mise's ${joined% and }"
+    remove_box "$label: mise's ${joined% and }" "mise"$'\t'"${joined% and }"
   else
-    ui_box "$label: $(clis_what "$name")"
+    remove_box "$label: $(clis_what "$name")" "Homebrew"$'\t'"$(clis_what "$name")"
   fi
   if ! ask_yes "Remove $label?"; then
     ui_info "Nothing was removed."
@@ -272,5 +316,5 @@ remove_run() {
   fi
   OMAMAC_STEP='saving your answers'
   choices_save "$OMAMAC_CHOICES_FILE"
-  ui_ok "$label is removed"
+  remove_done "$label is removed" "$label" removed
 }
