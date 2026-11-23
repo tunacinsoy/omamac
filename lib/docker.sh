@@ -177,26 +177,28 @@ docker_uninstall_desktop() {
 # docker_check: doctor's lines for colima's plugin links and its service
 # (doctor_check_chosen reports its formulas). Returns 1 only for a ✗.
 docker_check() {
-  local plugin state rc list status=0
+  local plugin name state rc list status=0
   if [ "${CHOICES[docker]:-none}" = docker-desktop ]; then
     # The ✓ comes from Your tools; only a hand-installed app needs a word.
     if [ "$(core_cask_state docker-desktop 2>/dev/null)" = hand ]; then
-      doctor_report info "Docker Desktop" "installed by hand, so omamac won't update it"
+      doctor_report info docker_desktop "installed by hand, so omamac won't update it"
     fi
     return 0
   fi
   [ "${CHOICES[docker]:-none}" = colima ] || return 0
   for plugin in "${DOCKER_PLUGINS[@]}"; do
     state=$(docker_link_state "$plugin")
+    # Its check in doctor: docker_compose, docker_buildx.
+    name=${plugin//-/_}
     if [ "$state" = theirs ]; then
-      doctor_report info "$plugin" "your own file in ~/.docker/cli-plugins is kept, and docker uses it"
+      doctor_report info "$name" "your own file in ~/.docker/cli-plugins is kept, and docker uses it"
     elif [ "$state" = broken ]; then
-      doctor_report fail "$plugin" "your link in ~/.docker/cli-plugins points at nothing" \
+      doctor_report fail "$name" "your link in ~/.docker/cli-plugins points at nothing" \
         "Remove it, then run omamac update" || status=1
     elif [ "$state" = ours ] && [ -e "$(docker_link_path "$plugin")" ]; then
-      doctor_report ok "$plugin"
+      doctor_report ok "$name"
     else
-      doctor_report fail "$plugin" "docker can't find ${plugin#docker-}" "omamac update" || status=1
+      doctor_report fail "$name" "docker can't find ${plugin#docker-}" "omamac update" || status=1
     fi
   done
   # Without the colima formula there is no service to ask about, and the ✗
@@ -210,13 +212,13 @@ docker_check() {
   case $rc in
     0)
       if [ "$(docker_service_status)" = error ]; then
-        doctor_report info "colima's service" "colima didn't start; see $OMAMAC_BREW_PREFIX/var/log/colima.log"
+        doctor_report info colima_service "colima didn't start; see $OMAMAC_BREW_PREFIX/var/log/colima.log"
       else
-        doctor_report ok "colima's service"
+        doctor_report ok colima_service
       fi
       ;;
-    1) doctor_report info "colima's service" "colima doesn't start at login. To start it: brew services start colima" ;;
-    *) doctor_report info "colima's service" "skipped, Homebrew can't say whether it's registered" ;;
+    1) doctor_report info colima_service "colima doesn't start at login. To start it: brew services start colima" ;;
+    *) doctor_report info colima_service "skipped, Homebrew can't say whether it's registered" ;;
   esac
   return "$status"
 }

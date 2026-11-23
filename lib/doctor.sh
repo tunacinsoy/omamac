@@ -3,49 +3,61 @@
 # omamac doctor. Sourced after the libraries it checks. It reports, then offers
 # fixes as questions: only for a chosen language, cloud CLI, coding agent, colima, Docker Desktop or app that is gone.
 
-# The terminal look (#46) draws doctor as one sheet of every check, so the
-# rows are kept and drawn at the end (doctor_draw); plain text prints each as
-# it comes. DOCTOR_SECTION is the sheet's section a check's rows go to; the
+# Every check's row is kept and the report is drawn at the end (doctor_draw),
+# by area: omamac, Terminal, Theme, macOS. By default an area is one line,
+# with only its problems and notes under it; --all (DOCTOR_ALL=1) shows every
+# check and what it is. DOCTOR_AREA is the area a check's rows go to; the
 # checks run in an order of their own, so herdr's row still lands in Terminal.
-DOCTOR_SECTION=setup
-DOCTOR_ROWS=() DOCTOR_FIX_CMDS=()
-declare -A DOCTOR_FIX_WHAT=()
+DOCTOR_AREA=omamac DOCTOR_ALL=0
+DOCTOR_ROWS=()
+DOCTOR_AREAS=(omamac terminal theme macos)
+declare -A DOCTOR_AREA_TITLE=([omamac]=omamac [terminal]=Terminal [theme]=Theme [macos]=macOS)
 
-# What each check is, in plain words, for the sheet's Detail column when the
-# check is fine (a ✗ or ℹ says its own). At most 45 columns, so the sheet
-# fits 80. The macOS settings go by their question's title.
-declare -A DOCTOR_ABOUT=(
-  [Homebrew]="installs and updates the tools omamac sets up"
-  ["bash 5"]="the shell omamac's scripts run in"
-  [gum]="draws omamac's questions and boxes"
-  [Checkout]="omamac itself, which omamac update refreshes"
-  ["Checkout is clean"]="no edits there that would stop omamac update"
-  ["Homebrew line"]="lets your shell find Homebrew's tools"
-  ["omamac line"]="makes your shell load omamac's settings"
-  ["omamac's zsh file"]="omamac's settings for your shell"
-  ["Core tools"]="the editor, prompt and tools your shell uses"
-  ["Saved answers"]="what you picked when omamac asked"
-  ["mise drop-in"]="tells mise which languages you picked"
-  [Ghostty]="the terminal app omamac sets up"
-  ["Ghostty line"]="makes Ghostty load omamac's settings"
-  ["omamac's Ghostty file"]="omamac's settings for Ghostty"
-  ["App Management"]="lets omamac update keep Ghostty up to date"
-  ["herdr config"]="omamac's keys and theme for herdr's panes"
-  ["neovim config"]="the code editor's setup (LazyVim)"
-  ["Theme files"]="your theme's colours for each tool"
-  ["starship config"]="the prompt follows your theme"
-  ["btop config"]="the system monitor follows your theme"
-  ["Your tools"]="every language and CLI you picked is there"
-  ["Your apps"]="every app you picked is in Applications"
-  [docker-compose]="lets docker find its compose plugin"
-  [docker-buildx]="lets docker find its build plugin"
-  ["colima's service"]="starts colima, docker's engine, at login"
-  ["Desktops as workspaces"]="desktops in order, Ctrl 1–6 to switch"
-  ["Window margins"]="a gap between windows tiled side by side"
-  ["Desktop widgets"]="widgets stay off the desktop"
-  ["Dock cleanup"]="the Dock holds the apps omamac installed"
-  ["Dock auto-hide"]="the Dock hides until you point at it"
-)
+# Every check in one table: its id (what the checks report), the name doctor
+# shows, and what it is in plain words, shown under a fine check's name by
+# --all (a ✗ or ℹ says its own). An explanation is one line, at most 76
+# columns, so it fits 80 under its name. A check about one pick (a gone
+# language, a hand-installed app) goes by the pick's own name, not a row here.
+declare -A DOCTOR_NAME=() DOCTOR_ABOUT=()
+DOCTOR_CHECKS=()
+doctor_check() { DOCTOR_CHECKS+=("$1"); DOCTOR_NAME[$1]=$2 DOCTOR_ABOUT[$1]=$3; }
+# omamac
+doctor_check homebrew "Homebrew" "the app store for command-line tools; omamac installs everything with it"
+doctor_check bash "bash for omamac" "omamac's own scripts run in bash; your shell stays zsh"
+doctor_check gum "gum" "draws omamac's questions, boxes and colours"
+doctor_check checkout "omamac's files" "omamac itself, in ~/.local/share/omamac; omamac update refreshes them"
+doctor_check checkout_clean "omamac's files unchanged" "no edits there, so omamac update can refresh them"
+doctor_check zprofile_line "Homebrew in your shell" "a line in ~/.zprofile so your shell finds Homebrew's tools"
+doctor_check zshrc_line "omamac in your shell" "a line in ~/.zshrc that loads omamac's shell settings"
+doctor_check zsh_file "omamac's shell settings" "the prompt, shortcuts and tools every new shell gets"
+doctor_check core "Everyday tools" "neovim, starship, btop and the other tools omamac always installs"
+doctor_check choices "Your answers" "what you picked when omamac asked, kept in ~/.local/state/omamac"
+doctor_check mise_dropin "Languages list" "tells mise, the language manager, which languages you picked"
+doctor_check your_tools "Your tools" "every language and command-line tool you picked is installed"
+doctor_check your_apps "Your apps" "every app you picked is in Applications"
+doctor_check docker_desktop "Docker Desktop" "runs Docker; you picked it"
+doctor_check docker_compose "Docker Compose" "lets the docker command find its compose add-on"
+doctor_check docker_buildx "Docker Buildx" "lets the docker command find its build add-on"
+doctor_check colima_service "colima at login" "starts colima, which runs Docker, each time you log in"
+# Terminal
+doctor_check ghostty "Ghostty" "the terminal app omamac sets up"
+doctor_check ghostty_line "omamac in Ghostty" "a line in Ghostty's settings that loads omamac's"
+doctor_check ghostty_file "omamac's Ghostty settings" "opens herdr, and sets Ghostty's keys and colours"
+doctor_check app_management "Permission to update apps" "App Management in System Settings, so omamac update can upgrade apps"
+doctor_check herdr "herdr settings" "herdr splits the terminal into panes; omamac sets its keys and colours"
+# Theme
+doctor_check neovim "Code editor (neovim)" "its setup, LazyVim, follows your theme"
+doctor_check theme_files "Theme colours" "your theme's colours for each tool"
+doctor_check starship "Prompt colours (starship)" "the line before each command follows your theme"
+doctor_check btop "System monitor colours (btop)" "btop follows your theme"
+doctor_check vscode "VS Code colours" "VS Code follows your theme"
+# macOS: the settings' ids are their questions' keys, the names their titles.
+doctor_check macos_settings "macOS settings" "the macOS settings you picked"
+doctor_check desktops "Desktops as workspaces" "desktops keep their order, and Ctrl 1–6 jump to desktops 1 to 6"
+doctor_check window_margins "Window margins" "a gap between windows tiled side by side"
+doctor_check desktop_widgets "Desktop widgets" "the Weather and other widgets stay off the desktop"
+doctor_check dock "Dock cleanup" "Apple's apps leave the Dock; the apps omamac installs take their place"
+doctor_check dock_autohide "Dock auto-hide" "the Dock hides until you point at it"
 
 # Your tools and apps, after the checks: one row per tool or app omamac
 # installed, "group<TAB>name<TAB>version<TAB>newer". newer is "latest", the
@@ -58,44 +70,15 @@ DOCTOR_WAIT=${OMAMAC_TEST_DOCTOR_WAIT:-10}
 DOCTOR_LOOKUP_DIR='' DOCTOR_LOOKUP_START=0 DOCTOR_BREW_LISTED=0
 declare -A DOCTOR_LOOKUP_PID=() DOCTOR_LOOKUP_OK=() DOCTOR_NEWER=() DOCTOR_BREW_VERSION=()
 
-# doctor_fix <command> <what it does>: one line of the To fix box. Each
-# command is said once, with all it fixes.
-doctor_fix() {
-  if [ -z "${DOCTOR_FIX_WHAT[$1]+set}" ]; then
-    DOCTOR_FIX_CMDS+=("$1")
-    DOCTOR_FIX_WHAT[$1]=$2
-  else
-    DOCTOR_FIX_WHAT[$1]+=", $2"
-  fi
-}
-
-# doctor_report <ok|fail|info> <what> [<why>] [<fix>]. Returns 1 for fail so callers can count it.
+# doctor_report <ok|fail|info> <name> [<why>] [<fix>]: a check's row in
+# DOCTOR_AREA, kept for doctor_draw. Returns 1 for fail so callers can count it.
 doctor_report() {
-  local kind=$1 what=$2 why=${3:-} fix=${4:-}
-  if ui_term; then
-    DOCTOR_ROWS+=("$DOCTOR_SECTION"$'\t'"$kind"$'\t'"$what"$'\t'"$why")
-    [ "$kind" = fail ] || return 0
-    # A gone pick has two ways out, each its own command.
-    if [[ $fix =~ ^omamac\ update\ puts\ it\ back\;\ (omamac\ uninstall\ [^ ]+)\ drops\ it$ ]]; then
-      doctor_fix "omamac update" "puts back $what"
-      doctor_fix "${BASH_REMATCH[1]}" "drops $what from your answers"
-    else
-      doctor_fix "$fix" "fixes $what"
-    fi
-    return 1
-  fi
-  case "$kind" in
-    ok) ui_ok "$what" ;;
-    fail)
-      ui_fail "$what — $why. Fix: $fix"
-      return 1
-      ;;
-    info) ui_info "$what — $why" ;;
-  esac
+  DOCTOR_ROWS+=("$DOCTOR_AREA"$'\x1f'"$1"$'\x1f'"$2"$'\x1f'"${3:-}"$'\x1f'"${4:-}")
+  [ "$1" != fail ]
 }
 
 doctor_check_homebrew() {
-  local what=Homebrew
+  local what=homebrew
   if [ -e "$OMAMAC_USR_LOCAL_BREW" ]; then
     doctor_report fail "$what" "Homebrew is also at /usr/local, which mixes two installs" \
       "see https://docs.brew.sh/Installation"
@@ -108,7 +91,7 @@ doctor_check_homebrew() {
 }
 
 doctor_check_bash() {
-  local what="bash 5" major
+  local what=bash major
   # shellcheck disable=SC2016 # the inner bash expands it
   major=$("$OMAMAC_BREW_PREFIX/bin/bash" -c 'echo ${BASH_VERSINFO[0]}' 2>/dev/null) || major=0
   if [ "${major:-0}" -ge 5 ]; then
@@ -128,7 +111,7 @@ doctor_check_gum() {
 
 # Sets DOCTOR_HAS_CHECKOUT so the clean check knows whether it can run.
 doctor_check_checkout() {
-  local what=Checkout origin=""
+  local what=checkout origin=""
   DOCTOR_HAS_CHECKOUT=0
   if [ -e "$OMAMAC_HOME/.git" ]; then
     origin=$(git -C "$OMAMAC_HOME" remote get-url origin 2>/dev/null) || origin=""
@@ -142,7 +125,7 @@ doctor_check_checkout() {
 }
 
 doctor_check_clean() {
-  local what="Checkout is clean" changes
+  local what=checkout_clean changes
   if [ "$DOCTOR_HAS_CHECKOUT" -ne 1 ]; then
     doctor_report info "$what" "skipped, there is no checkout"
     return 0
@@ -169,14 +152,14 @@ doctor_check_line() {
 
 doctor_check_zsh_file() {
   if [ -e "$OMAMAC_ZSH_FILE" ]; then
-    doctor_report ok "omamac's zsh file"
+    doctor_report ok zsh_file
   else
-    doctor_report fail "omamac's zsh file" "~/.config/omamac/zshrc is missing" "Run the one-liner again"
+    doctor_report fail zsh_file "~/.config/omamac/zshrc is missing" "Run the one-liner again"
   fi
 }
 
 doctor_check_core() {
-  local what="Core tools" missing names
+  local what=core missing names
   # Homebrew's own ✗ is reported above; here a failed list only skips the check.
   if ! missing=$(core_missing 2>/dev/null); then
     doctor_report info "$what" "skipped, Homebrew can't list its formulas"
@@ -190,7 +173,7 @@ doctor_check_core() {
 }
 
 doctor_check_neovim() {
-  local what="neovim config"
+  local what=neovim
   if [ -e "$OMAMAC_NVIM_MARKER" ]; then
     doctor_report ok "$what"
   elif [ -e "$OMAMAC_NVIM_DIR" ] || [ -L "$OMAMAC_NVIM_DIR" ]; then
@@ -201,7 +184,7 @@ doctor_check_neovim() {
 }
 
 doctor_check_herdr() {
-  local what="herdr config"
+  local what=herdr
   if herdr_user_config; then
     doctor_report info "$what" "your own herdr config is kept, so omamac's key bindings and themes don't reach herdr"
   elif [ ! -e "$OMAMAC_HERDR_FILE" ]; then
@@ -219,44 +202,45 @@ doctor_check_theme_files() {
   done
   compgen -G "$OMAMAC_BTOP_THEMES/*.theme" >/dev/null || missing+=(".config/omamac/btop-themes")
   if [ "${#missing[@]}" -eq 0 ]; then
-    doctor_report ok "Theme files"
+    doctor_report ok theme_files
   else
-    doctor_report fail "Theme files" "${missing[*]} missing" "omamac update"
+    doctor_report fail theme_files "${missing[*]} missing" "omamac update"
   fi
 }
 
-# doctor_check_vscode: a line only when VS Code is installed and something is
-# off: the user's own theme (ℹ), or omamac's theme missing (✗). When all is
-# well, "Theme files" covers it.
+# doctor_check_vscode: a line only when VS Code is installed: the user's own
+# theme (ℹ), omamac's theme missing (✗), or ✓.
 doctor_check_vscode() {
   [ -x "$(vscode_code)" ] || return 0
   if vscode_user_theme; then
-    doctor_report info "VS Code theme" "your own VS Code theme is kept, so themes don't reach VS Code"
+    doctor_report info vscode "your own VS Code theme is kept, so themes don't reach VS Code"
   elif ! vscode_has_theme; then
-    doctor_report fail "VS Code theme" "VS Code doesn't have omamac's theme" "omamac update"
+    doctor_report fail vscode "VS Code doesn't have omamac's theme" "omamac update"
+  else
+    doctor_report ok vscode
   fi
 }
 
 doctor_check_starship() {
   if theme_starship_user_config; then
-    doctor_report info "starship config" "your own starship config is kept, so themes don't reach the prompt"
+    doctor_report info starship "your own starship config is kept, so themes don't reach the prompt"
   else
-    doctor_report ok "starship config"
+    doctor_report ok starship
   fi
 }
 
 doctor_check_btop() {
   if theme_btop_user_config; then
-    doctor_report info "btop config" "your own btop config is kept, so themes don't reach btop"
+    doctor_report info btop "your own btop config is kept, so themes don't reach btop"
   else
-    doctor_report ok "btop config"
+    doctor_report ok btop
   fi
 }
 
 # Ghostty: the app, the include line in the user's files, omamac's own file,
 # and App Management (only for a Ghostty Homebrew upgrades).
 doctor_check_ghostty() {
-  local what=Ghostty state fix app="$OMAMAC_APPLICATIONS/${CASK_APP[ghostty]}" status=0
+  local what=ghostty state fix app="$OMAMAC_APPLICATIONS/${CASK_APP[ghostty]}" status=0
   if ! state=$(core_cask_state ghostty 2>/dev/null); then
     doctor_report info "$what" "skipped, Homebrew can't list its casks"
     state=skipped
@@ -272,23 +256,23 @@ doctor_check_ghostty() {
     esac
   fi
   if lines_has "$(ghostty_line_file)" "$OMAMAC_GHOSTTY_LINE"; then
-    doctor_report ok "Ghostty line"
+    doctor_report ok ghostty_line
   else
-    doctor_report fail "Ghostty line" "Ghostty's config doesn't load omamac's file" "Run the one-liner again" || status=1
+    doctor_report fail ghostty_line "Ghostty's config doesn't load omamac's file" "Run the one-liner again" || status=1
   fi
   if [ -e "$OMAMAC_GHOSTTY_FILE" ]; then
-    doctor_report ok "omamac's Ghostty file"
+    doctor_report ok ghostty_file
   else
-    doctor_report fail "omamac's Ghostty file" "~/.config/omamac/ghostty.conf is missing" "omamac update" || status=1
+    doctor_report fail ghostty_file "~/.config/omamac/ghostty.conf is missing" "omamac update" || status=1
   fi
   if [ "$state" = brew ]; then
     # Status 1 is a refusal, 2 is some other failure; only a refusal is known to be App Management.
     local am=0
     app_management_ok "$app" 2>/dev/null || am=$?
     case $am in
-      0) doctor_report ok "App Management" ;;
-      1) doctor_report info "App Management" "off, so omamac update can't upgrade Ghostty. Fix: System Settings → Privacy & Security → App Management, turn on your terminal" ;;
-      *) doctor_report info "App Management" "skipped, omamac couldn't test it" ;;
+      0) doctor_report ok app_management ;;
+      1) doctor_report info app_management "off, so omamac update can't upgrade Ghostty. Fix: System Settings → Privacy & Security → App Management, turn on your terminal" ;;
+      *) doctor_report info app_management "skipped, omamac couldn't test it" ;;
     esac
   fi
   return "$status"
@@ -313,7 +297,7 @@ doctor_unanswered_fix() {
 
 # Sets DOCTOR_HAS_CHOICES so the checks after it know CHOICES is loaded.
 doctor_check_choices() {
-  local what="Saved answers" message
+  local what=choices message
   DOCTOR_HAS_CHOICES=0
   if [ ! -e "$OMAMAC_CHOICES_FILE" ]; then
     doctor_report fail "$what" "omamac doesn't know your answers" "Run the one-liner"
@@ -330,7 +314,7 @@ doctor_check_choices() {
 }
 
 doctor_check_mise_dropin() {
-  local what="mise drop-in"
+  local what=mise_dropin
   if [ "$DOCTOR_HAS_CHOICES" -ne 1 ]; then
     doctor_report info "$what" "skipped, your saved answers can't be read"
   elif [ -f "$OMAMAC_MISE_DROPIN" ] && cmp -s "$OMAMAC_MISE_DROPIN" <(languages_render); then
@@ -342,28 +326,27 @@ doctor_check_mise_dropin() {
 
 # One line per yes answer of the macOS settings: the values omamac set are still there.
 doctor_check_settings() {
-  local what="macOS settings" answer title unmet status=0
+  local what=macos_settings answer unmet status=0
   if [ "$DOCTOR_HAS_CHOICES" -ne 1 ]; then
     doctor_report info "$what" "skipped, your saved answers can't be read"
     return 0
   fi
   for answer in desktops window_margins desktop_widgets dock dock_autohide; do
     [ "${CHOICES[$answer]:-}" = yes ] || continue
-    title=${QUESTION_TITLE[$answer]}
     # Without the record, update never cleaned the Dock, so there is nothing to check.
     if [ "$answer" = dock ] && [ ! -f "$OMAMAC_DOCK_RECORD" ]; then
-      doctor_report fail "$title" "omamac hasn't cleaned the Dock" "omamac update" || status=1
+      doctor_report fail "$answer" "omamac hasn't cleaned the Dock" "omamac update" || status=1
       continue
     fi
     settings_check "$answer"
     if [ "${#SETTINGS_UNMET[@]}" -gt 0 ]; then
       # Names joined with ", ".
       unmet=$(IFS=,; echo "${SETTINGS_UNMET[*]}")
-      doctor_report fail "$title" "${unmet//,/, } was changed since omamac set it" "omamac update" || status=1
+      doctor_report fail "$answer" "${unmet//,/, } was changed since omamac set it" "omamac update" || status=1
     elif [ "$SETTINGS_REFUSED" -eq 1 ]; then
-      doctor_report info "$title" "macOS doesn't let omamac read Reduce motion; to check it, search for Reduce motion in System Settings"
+      doctor_report info "$answer" "macOS doesn't let omamac read Reduce motion; to check it, search for Reduce motion in System Settings"
     else
-      doctor_report ok "$title"
+      doctor_report ok "$answer"
     fi
   done
   return "$status"
@@ -395,7 +378,7 @@ doctor_label() {
 # Sets DOCTOR_GONE to the chosen language and CLI ids that are gone, and
 # colima or docker-desktop when any of its parts is, for doctor_offer.
 doctor_check_chosen() {
-  local what="Your tools" id tool status=0 out key why result=0 state formulas=() tools=() langs=() clis=() skipped=() docker_gone=
+  local what=your_tools id tool status=0 out key why result=0 state formulas=() tools=() langs=() clis=() skipped=() docker_gone=
   DOCTOR_GONE=()
   if [ "$DOCTOR_HAS_CHOICES" -ne 1 ]; then
     doctor_report info "$what" "skipped, your saved answers can't be read"
@@ -475,7 +458,7 @@ doctor_check_chosen() {
 # doctor_check_apps: "Your apps". Appends the chosen apps that are gone to DOCTOR_GONE,
 # after the tools'. Says nothing when no app is chosen.
 doctor_check_apps() {
-  local what="Your apps" id label state result=0 ids=()
+  local what=your_apps id label state result=0 ids=()
   if [ "$DOCTOR_HAS_CHOICES" -ne 1 ]; then
     doctor_report info "$what" "skipped, your saved answers can't be read"
     return 0
@@ -796,39 +779,235 @@ doctor_have_draw() {
   ui_sheet '' "${rows[@]}"
 }
 
-# doctor_draw: the terminal look's report. A sheet of every check (mark,
-# Check, Detail) in sections, a fine check's Detail saying what it is; the
-# count line; a yellow To fix box with each command once; Your tools and apps.
-doctor_draw() {
-  local section title row kind what why rows=() cmd fixes=() problems=0 notes=0 fine=0
-  local -A titles=([setup]=Setup [terminal]=Terminal [theme]=Theme [picks]="Your tools and apps" [macos]=macOS)
-  # The theme's name joins its section, once the answers can be read.
-  if [ "${DOCTOR_HAS_CHOICES:-0}" -eq 1 ] && [ -n "${CHOICES[theme]:-}" ]; then
-    titles[theme]="${UI_BOLD}Theme$UI_OFF $UI_DIM· $(question_label theme "${CHOICES[theme]}")$UI_OFF"
-  else
-    titles[theme]="${UI_BOLD}Theme$UI_OFF"
+
+# --- The report, by area.
+
+# doctor_see <id> <kind>: REPLY is where a check lives on this Mac, the path
+# or command that shows it, for --all's "See:" line; ~ for home. Empty for a
+# check with no one place (a pick's own row, the skipped macOS settings). A
+# note about the user's own config sees their file.
+doctor_see() {
+  local mac='System Settings → Desktop & Dock'
+  REPLY=''
+  case $1 in
+    homebrew) REPLY=$OMAMAC_BREW_PREFIX/bin/brew ;;
+    bash) REPLY=$OMAMAC_BREW_PREFIX/bin/bash ;;
+    gum) REPLY=$OMAMAC_BREW_PREFIX/bin/gum ;;
+    checkout) REPLY=$OMAMAC_HOME ;;
+    checkout_clean) REPLY="git -C ${OMAMAC_HOME/#"$HOME"/\~} status" ;;
+    zprofile_line) REPLY=$HOME/.zprofile ;;
+    zshrc_line) REPLY=$HOME/.zshrc ;;
+    zsh_file) REPLY=$OMAMAC_ZSH_FILE ;;
+    core) REPLY='brew list' ;;
+    choices) REPLY=$OMAMAC_CHOICES_FILE ;;
+    mise_dropin) REPLY=$OMAMAC_MISE_DROPIN ;;
+    your_tools) REPLY='mise ls, and brew list' ;;
+    your_apps) REPLY=$OMAMAC_APPLICATIONS ;;
+    docker_compose) REPLY=$(docker_link_path docker-compose) ;;
+    docker_buildx) REPLY=$(docker_link_path docker-buildx) ;;
+    colima_service) REPLY='brew services info colima' ;;
+    ghostty) REPLY=$OMAMAC_APPLICATIONS/${CASK_APP[ghostty]} ;;
+    ghostty_line) REPLY=$(ghostty_line_file) ;;
+    ghostty_file) REPLY=$OMAMAC_GHOSTTY_FILE ;;
+    app_management) REPLY='System Settings → Privacy & Security → App Management' ;;
+    herdr) if [ "$2" = info ]; then REPLY=${HERDR_CONFIG_PATH:-$OMAMAC_HERDR_USER_FILE}; else REPLY=$OMAMAC_HERDR_FILE; fi ;;
+    neovim) REPLY=$OMAMAC_NVIM_DIR ;;
+    theme_files) REPLY=$OMAMAC_CONFIG_DIR ;;
+    starship) if [ "$2" = info ]; then REPLY=${STARSHIP_CONFIG:-$OMAMAC_STARSHIP_USER_FILE}; else REPLY=$OMAMAC_STARSHIP_FILE; fi ;;
+    btop) if [ "$2" = info ]; then REPLY=$OMAMAC_BTOP_USER_FILE; else REPLY=$OMAMAC_BTOP_FILE; fi ;;
+    vscode)
+      # The extension omamac wrote, or the user's settings that pick their own theme.
+      if [ "$2" = info ]; then REPLY=$OMAMAC_VSCODE_SETTINGS; else REPLY=$(vscode_installed_theme); REPLY=${REPLY%/themes/*}; fi
+      ;;
+    desktops) REPLY="$mac, and Keyboard → Keyboard Shortcuts" ;;
+    window_margins | desktop_widgets | dock | dock_autohide) REPLY=$mac ;;
+  esac
+  REPLY=${REPLY/#"$HOME"/\~}
+}
+
+# _doctor_split <row>: DOCTOR_R_AREA, _KIND, _NAME (the check's name, or the
+# pick's own), _WHY and _FIX of a row.
+_doctor_split() {
+  IFS=$'\x1f' read -r DOCTOR_R_AREA DOCTOR_R_KIND DOCTOR_R_ID DOCTOR_R_WHY DOCTOR_R_FIX <<< "$1"
+  DOCTOR_R_ABOUT=${DOCTOR_ABOUT[$DOCTOR_R_ID]:-}
+  DOCTOR_R_NAME=${DOCTOR_NAME[$DOCTOR_R_ID]:-$DOCTOR_R_ID}
+}
+
+# doctor_area_detail <area>: REPLY is what an area with no problem says:
+# Theme its theme's name, once the answers can be read; an area with no
+# check (no macOS setting picked) "nothing picked"; the others "working".
+doctor_area_detail() {
+  local row
+  REPLY=working
+  if [ "$1" = theme ] && [ "${DOCTOR_HAS_CHOICES:-0}" -eq 1 ] && [ -n "${CHOICES[theme]:-}" ]; then
+    REPLY=$(question_label theme "${CHOICES[theme]}")
+    return 0
   fi
-  for section in setup terminal theme picks macos; do
-    title=${titles[$section]}
-    [[ $title == *$'\e'* ]] || title="{bold}$title"
+  for row in "${DOCTOR_ROWS[@]}"; do [ "${row%%$'\x1f'*}" != "$1" ] || return 0; done
+  REPLY='nothing picked'
+}
+
+# doctor_area_problems <area>: REPLY is how many ✗ the area has.
+doctor_area_problems() {
+  local row
+  REPLY=0
+  for row in "${DOCTOR_ROWS[@]}"; do
+    [[ $row != "$1"$'\x1f'fail$'\x1f'* ]] || REPLY=$((REPLY + 1))
+  done
+}
+
+# _doctor_lines <indent> <colour> <text>: the text wrapped to fit 80 columns
+# at that indent, each line in the colour.
+_doctor_lines() {
+  local pad line
+  printf -v pad '%*s' "$1" ''
+  _ui_wrap $((UI_WIDTH - $1)) "$3"
+  for line in "${UI_LINES[@]}"; do printf '%s%s%s%s\n' "$pad" "$2" "$line" "${2:+$UI_OFF}"; done
+}
+
+# _doctor_marked <indent> <ok|fail|info> <colour> <text>: a mark, then the
+# text in the colour, wrapped under itself.
+_doctor_marked() {
+  local pad sym col i
+  case $2 in
+    ok) sym=✓ col=$UI_GREEN ;;
+    fail) sym=✗ col=$UI_RED ;;
+    *) sym=ℹ col=$UI_BLUE ;;
+  esac
+  printf -v pad '%*s' "$1" ''
+  _ui_wrap $((UI_WIDTH - $1 - 2)) "$4"
+  for i in "${!UI_LINES[@]}"; do
+    if [ "$i" -eq 0 ]; then printf '%s%s%s%s %s%s%s\n' "$pad" "$col" "$sym" "$UI_OFF" "$3" "${UI_LINES[0]}" "${3:+$UI_OFF}"
+    else printf '%s  %s%s%s\n' "$pad" "$3" "${UI_LINES[$i]}" "${3:+$UI_OFF}"; fi
+  done
+}
+
+# doctor_draw_short: the terminal look's default. One row per area, ✓ and
+# what it says (doctor_area_detail), or ✗ and how many problems; under it,
+# each problem with its fix, and each note.
+doctor_draw_short() {
+  local area row s
+  for area in "${DOCTOR_AREAS[@]}"; do
+    doctor_area_problems "$area"
+    if [ "$REPLY" -gt 0 ]; then
+      s=s
+      [ "$REPLY" -ne 1 ] || s=''
+      ui_row fail "${DOCTOR_AREA_TITLE[$area]}" "$REPLY problem$s"
+    else
+      doctor_area_detail "$area"
+      ui_row ok "${DOCTOR_AREA_TITLE[$area]}" "$REPLY"
+    fi
     for row in "${DOCTOR_ROWS[@]}"; do
-      [ "${row%%$'\t'*}" = "$section" ] || continue
-      [ -z "$title" ] || { rows+=($'\t'"$title"$'\t'); title=''; }
-      IFS=$'\t' read -r _ kind what why <<< "$row"
-      case $kind in
-        ok) rows+=("{ok}✓"$'\t'"$what"$'\t'"{dim}${why:-${DOCTOR_ABOUT[$what]:-}}"); fine=$((fine + 1)) ;;
-        fail) rows+=("{fail}✗"$'\t'"$what"$'\t'"{red}$why"); problems=$((problems + 1)) ;;
-        *) rows+=("{info}ℹ"$'\t'"$what"$'\t'"{dim}$why"); notes=$((notes + 1)) ;;
+      _doctor_split "$row"
+      [ "$DOCTOR_R_AREA" = "$area" ] || continue
+      case $DOCTOR_R_KIND in
+        fail)
+          _doctor_marked 4 fail "$UI_RED" "$DOCTOR_R_NAME — $DOCTOR_R_WHY"
+          _doctor_lines 6 '' "Fix: $DOCTOR_R_FIX"
+          ;;
+        info) _doctor_marked 4 info '' "$DOCTOR_R_NAME — $DOCTOR_R_WHY" ;;
       esac
     done
   done
-  ui_sheet $'\tCheck\tDetail' "${rows[@]}"
-  ui_count "$problems" "$notes" "$fine" "$DOCTOR_UPDATES"
-  if [ "${#DOCTOR_FIX_CMDS[@]}" -gt 0 ]; then
-    for cmd in "${DOCTOR_FIX_CMDS[@]}"; do fixes+=("$cmd"$'\t'"${DOCTOR_FIX_WHAT[$cmd]}"); done
-    ui_titled -c warn "To fix" "${fixes[@]}"
-  fi
+}
+
+# doctor_draw_all: the terminal look's --all. Each area a heading (Theme's
+# with its theme), then every check: its name, and under it, dim, what it is;
+# a ✗'s problem in red and its fix; a note's text.
+doctor_draw_all() {
+  local area row
+  for area in "${DOCTOR_AREAS[@]}"; do
+    if [ "$area" = theme ] && [ "${DOCTOR_HAS_CHOICES:-0}" -eq 1 ] && [ -n "${CHOICES[theme]:-}" ]; then
+      doctor_area_detail theme
+      ui_heading Theme "$REPLY"
+    else
+      ui_heading "${DOCTOR_AREA_TITLE[$area]}"
+    fi
+    for row in "${DOCTOR_ROWS[@]}"; do
+      _doctor_split "$row"
+      [ "$DOCTOR_R_AREA" = "$area" ] || continue
+      _doctor_marked 2 "$DOCTOR_R_KIND" '' "$DOCTOR_R_NAME"
+      case $DOCTOR_R_KIND in
+        ok) _doctor_lines 4 "$UI_DIM" "$DOCTOR_R_ABOUT" ;;
+        fail)
+          _doctor_lines 4 "$UI_RED" "$DOCTOR_R_WHY"
+          _doctor_lines 4 '' "Fix: $DOCTOR_R_FIX"
+          ;;
+        *) _doctor_lines 4 '' "$DOCTOR_R_WHY" ;;
+      esac
+      doctor_see "$DOCTOR_R_ID" "$DOCTOR_R_KIND"
+      [ -z "$REPLY" ] || _doctor_lines 4 "$UI_DIM" "See: $REPLY"
+    done
+  done
+}
+
+# doctor_how: --all's last lines, where the README says how omamac does each.
+doctor_how() {
+  printf 'How omamac does each of these:\n%s#what-it-changes\n' "${OMAMAC_REPO_URL#https://}"
+}
+
+# doctor_draw: the terminal look's report. The areas (short, or --all), then
+# Your tools and apps, then the count line.
+doctor_draw() {
+  local row problems=0 notes=0 fine=0
+  for row in "${DOCTOR_ROWS[@]}"; do
+    _doctor_split "$row"
+    case $DOCTOR_R_KIND in
+      ok) fine=$((fine + 1)) ;;
+      fail) problems=$((problems + 1)) ;;
+      *) notes=$((notes + 1)) ;;
+    esac
+  done
+  if [ "$DOCTOR_ALL" -eq 1 ]; then doctor_draw_all; else doctor_draw_short; fi
   doctor_have_draw
+  ui_count "$problems" "$notes" "$fine" "$DOCTOR_UPDATES"
+  [ "$DOCTOR_ALL" -eq 0 ] || doctor_how
+}
+
+# doctor_print: the report in plain text, the same structure. By default a
+# line per area ("✓ omamac — working", "✗ Terminal — 1 problem") with its
+# problems and notes indented under it; with --all, each area's name, then a
+# line per check: "✓ <name> — <what it is>", "✗ <name> — <problem>. Fix:
+# <fix>", "ℹ <name> — <note>", each with "    See: <where>" under it. Then
+# Your tools and apps (and, with --all, where the README says how).
+doctor_print() {
+  local area row s line
+  for area in "${DOCTOR_AREAS[@]}"; do
+    if [ "$DOCTOR_ALL" -eq 1 ]; then
+      line=${DOCTOR_AREA_TITLE[$area]}
+      if [ "$area" = theme ] && [ "${DOCTOR_HAS_CHOICES:-0}" -eq 1 ] && [ -n "${CHOICES[theme]:-}" ]; then
+        doctor_area_detail theme
+        line+=" · $REPLY"
+      fi
+      printf '%s\n' "$line"
+    else
+      doctor_area_problems "$area"
+      if [ "$REPLY" -gt 0 ]; then
+        s=s
+        [ "$REPLY" -ne 1 ] || s=''
+        printf '✗ %s — %s problem%s\n' "${DOCTOR_AREA_TITLE[$area]}" "$REPLY" "$s"
+      else
+        doctor_area_detail "$area"
+        printf '✓ %s — %s\n' "${DOCTOR_AREA_TITLE[$area]}" "$REPLY"
+      fi
+    fi
+    for row in "${DOCTOR_ROWS[@]}"; do
+      _doctor_split "$row"
+      [ "$DOCTOR_R_AREA" = "$area" ] || continue
+      s='  '
+      [ "$DOCTOR_ALL" -eq 0 ] || s=''
+      case $DOCTOR_R_KIND in
+        ok) [ "$DOCTOR_ALL" -eq 0 ] || printf '✓ %s — %s\n' "$DOCTOR_R_NAME" "$DOCTOR_R_ABOUT" ;;
+        fail) printf '%s✗ %s — %s. Fix: %s\n' "$s" "$DOCTOR_R_NAME" "$DOCTOR_R_WHY" "$DOCTOR_R_FIX" ;;
+        *) printf '%sℹ %s — %s\n' "$s" "$DOCTOR_R_NAME" "$DOCTOR_R_WHY" ;;
+      esac
+      [ "$DOCTOR_ALL" -eq 1 ] || continue
+      doctor_see "$DOCTOR_R_ID" "$DOCTOR_R_KIND"
+      [ -z "$REPLY" ] || printf '    See: %s\n' "$REPLY"
+    done
+  done
+  doctor_have_plain
+  [ "$DOCTOR_ALL" -eq 0 ] || doctor_how
 }
 
 # doctor_reinstall_failed <label>: a Reinstall offer failed. The terminal look
@@ -838,45 +1017,45 @@ doctor_reinstall_failed() {
   ! ui_term || ui_row info Log "${OMAMAC_LOG/#"$HOME"/\~}"
 }
 
-# Prints one line per check; returns 1 if any is a ✗.
+# doctor_run [--all]: every check, then the report; returns 1 if any is a ✗.
 doctor_run() {
   local status=0
-  DOCTOR_SECTION=setup
+  [ "${1:-}" != --all ] || DOCTOR_ALL=1
+  DOCTOR_AREA=omamac
   doctor_check_homebrew || status=1
   doctor_check_bash || status=1
   doctor_check_gum || status=1
   doctor_check_checkout || status=1
   doctor_check_clean || status=1
-  doctor_check_line "Homebrew line" "$HOME/.zprofile" "brew shellenv" \
+  doctor_check_line zprofile_line "$HOME/.zprofile" "brew shellenv" \
     "~/.zprofile does not put Homebrew on PATH" || status=1
-  doctor_check_line "omamac line" "$HOME/.zshrc" "$OMAMAC_ZSHRC_LINE" \
+  doctor_check_line zshrc_line "$HOME/.zshrc" "$OMAMAC_ZSHRC_LINE" \
     "~/.zshrc does not load omamac's settings" || status=1
   doctor_check_zsh_file || status=1
   doctor_check_core || status=1
-  DOCTOR_SECTION=terminal
+  DOCTOR_AREA=terminal
   doctor_check_ghostty || status=1
-  DOCTOR_SECTION=theme
+  DOCTOR_AREA=theme
   doctor_check_neovim || status=1
   doctor_check_theme_files || status=1
   doctor_check_starship || status=1
   doctor_check_btop || status=1
-  DOCTOR_SECTION=terminal
+  DOCTOR_AREA=terminal
   doctor_check_herdr || status=1
-  DOCTOR_SECTION=setup
+  DOCTOR_AREA=omamac
   doctor_check_choices || status=1
   [ "$DOCTOR_HAS_CHOICES" -ne 1 ] || doctor_lookups_start
   doctor_check_mise_dropin || status=1
-  DOCTOR_SECTION=picks
   doctor_check_chosen || status=1
   doctor_check_apps || status=1
   if [ "$DOCTOR_HAS_CHOICES" -eq 1 ]; then docker_check || status=1; fi
-  DOCTOR_SECTION=theme
+  DOCTOR_AREA=theme
   if [ "$DOCTOR_HAS_CHOICES" -eq 1 ]; then doctor_check_vscode || status=1; fi
-  DOCTOR_SECTION=macos
+  DOCTOR_AREA=macos
   doctor_check_settings || status=1
   # Never a ✗: a lookup that fails only leaves its column out.
   [ "$DOCTOR_HAS_CHOICES" -ne 1 ] || doctor_have || true
-  if ui_term; then doctor_draw; else doctor_have_plain; fi
+  if ui_term; then doctor_draw; else doctor_print; fi
   doctor_offer
   doctor_offer_neovim || status=1
   return "$status"

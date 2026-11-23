@@ -96,7 +96,8 @@ Usage: omamac <command>
               macos), or what you name, such as: install go rust
   update      Update omamac and what it installed
   theme       Switch the theme everywhere
-  doctor      Check that everything is healthy
+  doctor      Check that everything is healthy; doctor --all
+              shows every check and what it is
   uninstall   Remove one thing omamac installed
 USAGE
 }
@@ -147,9 +148,13 @@ omamac_main() {
   case "$cmd" in
     help | -h | --help) omamac_usage ;;
     doctor)
+      if [ "$#" -gt 2 ] || { [ "$#" -eq 2 ] && [ "$2" != --all ]; }; then
+        omamac_usage >&2
+        return 2
+      fi
       # Its Reinstall offers ask; a broken prompt then names omamac doctor.
       OMAMAC_CMD=doctor
-      doctor_run
+      doctor_run "${@:2}"
       ;;
     update) omamac_update ;;
     install)
