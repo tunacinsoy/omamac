@@ -1259,3 +1259,94 @@ dock_record() { plutil -create xml1 "$HOME/.local/state/omamac/dock-before.plist
   printf '%s\n' "$output" | grep -qxF '    Media: VLC'
   printf '%s\n' "$output" | grep -qxF '    Wispr Flow'
 }
+
+# The terminal look (#46): one sheet of every check, the count line, a To fix
+# box with each command once, and What you have. The same checks and exit codes.
+
+# shown: $output without its colour codes.
+shown() { printf '%s\n' "$output" | uncoloured; }
+
+@test "terminal look: a healthy Mac is one sheet in sections, then the count line" {
+  healthy_mac
+  terminal_look
+  run doctor
+  [ "$status" -eq 0 ]
+  [ "$(shown | sed -n 1,5p)" = "╭───┬───────────────────────┬────────╮
+│   │ Check                 │ Detail │
+├───┼───────────────────────┼────────┤
+│   │ Setup                 │        │
+│ ✓ │ Homebrew              │        │" ]
+  shown | grep -qxF '│   │ Terminal              │        │'
+  shown | grep -qxF '│   │ Theme · Tokyo Night   │        │'
+  # The same 21 checks as the plain text, and nothing to fix.
+  [ "$(shown | grep -c '^│ ✓ │')" -eq 21 ]
+  shown | grep -qxF '21 fine'
+  [[ "$output" != *"To fix"* ]]
+  [[ "$output" == *$'\e[1mTheme\e[0m \e[2m· Tokyo Night\e[0m'* ]]
+}
+
+@test "terminal look: a ✗ in its section, red; To fix says each command once" {
+  healthy_mac
+  rm "$HOME/.config/omamac/starship.toml"
+  choose languages "go rust"
+  mise_has go
+  gum_answers leave
+  terminal_look
+  run doctor
+  [ "$status" -eq 1 ]
+  shown | grep -qxF '│ ✗ │ Theme files           │ .config/omamac/starship.toml missing    │'
+  # Rust sits under Your picks, after the theme's rows.
+  [[ "$(shown)" == *"│   │ Your picks "*"│ ✗ │ Rust                  │ you chose it, but mise no longer has it │"* ]]
+  [[ "$output" == *$'\e[31myou chose it, but mise no longer has it\e[0m'* ]]
+  shown | grep -qxF '2 problems · 19 fine'
+  [ "$(shown | sed -n '/To fix/,/╰/p')" = "╭ To fix ─────────────────────────────╮
+│ omamac update                       │
+│   fixes Theme files, puts back Rust │
+│                                     │
+│ omamac uninstall rust               │
+│   drops Rust from your answers      │
+╰─────────────────────────────────────╯" ]
+}
+
+@test "terminal look: notes count apart from problems" {
+  healthy_mac
+  mkdir -p "$HOME/.config/btop"
+  echo mine > "$HOME/.config/btop/btop.conf"
+  terminal_look
+  run doctor
+  [ "$status" -eq 0 ]
+  # A long detail wraps inside its cell.
+  [[ "$(shown)" == *"│ ℹ │ btop config           │ your own btop config is kept, so themes don't │
+│   │                       │ reach btop                                    │"* ]]
+  shown | grep -qxF '1 note · 20 fine'
+}
+
+@test "terminal look: What you have is a sheet of your picks, apps and Wispr Flow" {
+  healthy_mac
+  choose languages go
+  mise_has go
+  healthy_apps vlc wispr-flow
+  terminal_look
+  run doctor
+  [ "$status" -eq 0 ]
+  [ "$(shown | sed -n '/^What you have$/,$p')" = "What you have
+╭────────────┬───────────╮
+│ Languages  │ Go        │
+│ Media      │ VLC       │
+│ Wispr Flow │ installed │
+╰────────────┴───────────╯" ]
+  [[ "$output" == *$'\e[1mWhat you have\e[0m'* ]]
+}
+
+@test "terminal look: a broken Mac's report fits 80 columns" {
+  healthy_mac
+  rm "$OMAMAC_TEST_BREW_PREFIX/bin/brew"
+  : > "$HOME/.zshrc"
+  mkdir -p "$HOME/.config/btop"
+  echo mine > "$HOME/.config/btop/btop.conf"
+  terminal_look
+  run doctor
+  [ "$status" -eq 1 ]
+  [ "$(shown | widest)" -le 80 ]
+  [[ "$(shown)" == *"To fix"*"Run the one-liner"* ]]
+}

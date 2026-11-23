@@ -3,9 +3,40 @@
 # omamac doctor. Sourced after the libraries it checks. It reports, then offers
 # fixes as questions: only for a chosen language, cloud CLI, coding agent, colima, Docker Desktop or app that is gone.
 
+# The terminal look (#46) draws doctor as one sheet of every check, so the
+# rows are kept and drawn at the end (doctor_draw); plain text prints each as
+# it comes. DOCTOR_SECTION is the sheet's section a check's rows go to; the
+# checks run in an order of their own, so herdr's row still lands in Terminal.
+DOCTOR_SECTION=setup
+DOCTOR_ROWS=() DOCTOR_FIX_CMDS=() DOCTOR_HAVE=()
+declare -A DOCTOR_FIX_WHAT=()
+
+# doctor_fix <command> <what it does>: one line of the To fix box. Each
+# command is said once, with all it fixes.
+doctor_fix() {
+  if [ -z "${DOCTOR_FIX_WHAT[$1]+set}" ]; then
+    DOCTOR_FIX_CMDS+=("$1")
+    DOCTOR_FIX_WHAT[$1]=$2
+  else
+    DOCTOR_FIX_WHAT[$1]+=", $2"
+  fi
+}
+
 # doctor_report <ok|fail|info> <what> [<why>] [<fix>]. Returns 1 for fail so callers can count it.
 doctor_report() {
   local kind=$1 what=$2 why=${3:-} fix=${4:-}
+  if ui_term; then
+    DOCTOR_ROWS+=("$DOCTOR_SECTION"$'\t'"$kind"$'\t'"$what"$'\t'"$why")
+    [ "$kind" = fail ] || return 0
+    # A gone pick has two ways out, each its own command.
+    if [[ $fix =~ ^omamac\ update\ puts\ it\ back\;\ (omamac\ uninstall\ [^ ]+)\ drops\ it$ ]]; then
+      doctor_fix "omamac update" "puts back $what"
+      doctor_fix "${BASH_REMATCH[1]}" "drops $what from your answers"
+    else
+      doctor_fix "$fix" "fixes $what"
+    fi
+    return 1
+  fi
   case "$kind" in
     ok) ui_ok "$what" ;;
     fail)
@@ -392,12 +423,16 @@ doctor_list() {
     for id in ${ids[@]+"${ids[@]}"}; do
       [[ " ${DOCTOR_GONE[*]} " != *" $id "* ]] || continue
       if [ "${QUESTION_KIND[$key]}" = yesno ]; then
-        printf '    %s\n' "${QUESTION_TITLE[$key]}"
+        # The terminal look's What you have sheet gives each row a value.
+        if ui_term; then DOCTOR_HAVE+=("${QUESTION_TITLE[$key]}"$'\t'installed)
+        else printf '    %s\n' "${QUESTION_TITLE[$key]}"; fi
         continue 2
       fi
       labels+=("$(question_label "$key" "$id")")
     done
-    [ "${#labels[@]}" -eq 0 ] || printf '    %s: %s\n' "${QUESTION_TITLE[$key]}" "$(clis_join "${labels[@]}")"
+    [ "${#labels[@]}" -gt 0 ] || continue
+    if ui_term; then DOCTOR_HAVE+=("${QUESTION_TITLE[$key]}"$'\t'"$(clis_join "${labels[@]}")")
+    else printf '    %s: %s\n' "${QUESTION_TITLE[$key]}" "$(clis_join "${labels[@]}")"; fi
   done
 }
 
@@ -457,14 +492,14 @@ doctor_offer() {
       reinstall)
         [ "$logged" -eq 1 ] || { log_start; logged=1; }
         case $key in
-          languages) languages_install "$id" || ui_fail "omamac couldn't reinstall $label." ;;
+          languages) languages_install "$id" || doctor_reinstall_failed "$label" ;;
           # Docker Desktop's cask is the password step's.
           docker)
             if [ "$id" = docker-desktop ]; then
               apps_install_password docker-desktop && docker_install
             else
               docker_install
-            fi || ui_fail "omamac couldn't reinstall $label."
+            fi || doctor_reinstall_failed "$label"
             ;;
           apps_* | wispr_flow)
             # A password app's cask is the password step's, run in the open.
@@ -472,9 +507,9 @@ doctor_offer() {
               apps_install_password "$id"
             else
               apps_install "$id"
-            fi || ui_fail "omamac couldn't reinstall $label."
+            fi || doctor_reinstall_failed "$label"
             ;;
-          *) clis_install "$id" || ui_fail "omamac couldn't reinstall $label." ;;
+          *) clis_install "$id" || doctor_reinstall_failed "$label" ;;
         esac
         ;;
       drop)
@@ -513,9 +548,56 @@ doctor_offer_neovim() {
   fi
 }
 
+# doctor_draw: the terminal look's report. A sheet of every check (mark,
+# Check, Detail) in sections, the count line, a yellow To fix box with each
+# command once, and What you have.
+doctor_draw() {
+  local section title row kind what why rows=() have=() cmd fixes=() problems=0 notes=0 fine=0
+  local -A titles=([setup]=Setup [terminal]=Terminal [theme]=Theme [picks]="Your picks" [macos]=macOS)
+  # The theme's name joins its section, once the answers can be read.
+  if [ "${DOCTOR_HAS_CHOICES:-0}" -eq 1 ] && [ -n "${CHOICES[theme]:-}" ]; then
+    titles[theme]="${UI_BOLD}Theme$UI_OFF $UI_DIM· $(question_label theme "${CHOICES[theme]}")$UI_OFF"
+  else
+    titles[theme]="${UI_BOLD}Theme$UI_OFF"
+  fi
+  for section in setup terminal theme picks macos; do
+    title=${titles[$section]}
+    [[ $title == *$'\e'* ]] || title="{bold}$title"
+    for row in "${DOCTOR_ROWS[@]}"; do
+      [ "${row%%$'\t'*}" = "$section" ] || continue
+      [ -z "$title" ] || { rows+=($'\t'"$title"$'\t'); title=''; }
+      IFS=$'\t' read -r _ kind what why <<< "$row"
+      case $kind in
+        ok) rows+=("{ok}✓"$'\t'"$what"$'\t'"{dim}$why"); fine=$((fine + 1)) ;;
+        fail) rows+=("{fail}✗"$'\t'"$what"$'\t'"{red}$why"); problems=$((problems + 1)) ;;
+        *) rows+=("{info}ℹ"$'\t'"$what"$'\t'"{dim}$why"); notes=$((notes + 1)) ;;
+      esac
+    done
+  done
+  ui_sheet $'\tCheck\tDetail' "${rows[@]}"
+  ui_count "$problems" "$notes" "$fine"
+  if [ "${#DOCTOR_FIX_CMDS[@]}" -gt 0 ]; then
+    for cmd in "${DOCTOR_FIX_CMDS[@]}"; do fixes+=("$cmd"$'\t'"${DOCTOR_FIX_WHAT[$cmd]}"); done
+    ui_titled -c warn "To fix" "${fixes[@]}"
+  fi
+  if [ "${#DOCTOR_HAVE[@]}" -gt 0 ]; then
+    have=("${DOCTOR_HAVE[@]}")
+    ui_heading "What you have"
+    ui_sheet_labels "${have[@]}"
+  fi
+}
+
+# doctor_reinstall_failed <label>: a Reinstall offer failed. The terminal look
+# has no Stopped box here (doctor goes on), so the log is named on a row.
+doctor_reinstall_failed() {
+  ui_fail "omamac couldn't reinstall $1."
+  ! ui_term || ui_row info Log "${OMAMAC_LOG/#"$HOME"/\~}"
+}
+
 # Prints one line per check; returns 1 if any is a ✗.
 doctor_run() {
   local status=0
+  DOCTOR_SECTION=setup
   doctor_check_homebrew || status=1
   doctor_check_bash || status=1
   doctor_check_gum || status=1
@@ -527,19 +609,27 @@ doctor_run() {
     "~/.zshrc does not load omamac's settings" || status=1
   doctor_check_zsh_file || status=1
   doctor_check_core || status=1
+  DOCTOR_SECTION=terminal
   doctor_check_ghostty || status=1
+  DOCTOR_SECTION=theme
   doctor_check_neovim || status=1
   doctor_check_theme_files || status=1
   doctor_check_starship || status=1
   doctor_check_btop || status=1
+  DOCTOR_SECTION=terminal
   doctor_check_herdr || status=1
+  DOCTOR_SECTION=setup
   doctor_check_choices || status=1
   doctor_check_mise_dropin || status=1
+  DOCTOR_SECTION=picks
   doctor_check_chosen || status=1
   doctor_check_apps || status=1
   if [ "$DOCTOR_HAS_CHOICES" -eq 1 ]; then docker_check || status=1; fi
+  DOCTOR_SECTION=theme
   if [ "$DOCTOR_HAS_CHOICES" -eq 1 ]; then doctor_check_vscode || status=1; fi
+  DOCTOR_SECTION=macos
   doctor_check_settings || status=1
+  if ui_term; then doctor_draw; fi
   doctor_offer
   doctor_offer_neovim || status=1
   return "$status"
