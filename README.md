@@ -30,6 +30,8 @@ curl -fsSL https://raw.githubusercontent.com/tunacinsoy/omamac/main/boot.sh | ba
 
 omamac asks for your password once and never stores it. Then it asks a few questions: theme, apps, macOS settings, languages and Docker. Arrows move, x or Tab picks in a list, y or n answers a yes/no question, and Enter goes on. It shows your answers and asks "Install?"; after that it runs on its own.
 
+What you see: your answers as a sheet, then one row per stage with its count (`3/9 ✓ Core tools  15 installed`), then a green Done box (what it installed, what to do next, the log) and a sheet of the permissions to allow. If a run stops, its row turns into a red ✗ and a red Stopped box says what it was doing, how to fix it, where the log is, and the log's last lines. Every command looks this way, in the terminal's own 16 colours, so it follows your theme; piped or saved to a file, omamac prints plain text instead.
+
 The exception: if you chose Zoom, Google Drive or Docker Desktop, Homebrew asks for your password once more, right after "Install?", once for all of them. It asks once they are downloaded, so stay at the keyboard until it has asked.
 
 Answer no to "Install?" and nothing is saved, so the next run asks again. Once you've said yes, your answers are kept and later runs only ask "Install?".
@@ -87,11 +89,11 @@ To skip the questions you don't need:
 
 Sections and names can be mixed: `omamac install cloud-clis go`.
 
-`omamac doctor` checks that everything is healthy, and lists what omamac installed for you, by section (languages, cloud CLIs, coding agents, Docker, then your apps by group). For each problem it says why it matters and how to fix it, and it offers to reinstall a pick that is gone.
+`omamac doctor` checks that everything is healthy, and lists what omamac installed for you, by section (languages, cloud CLIs, coding agents, Docker, then your apps by group). For each problem it says why it matters and how to fix it, and it offers to reinstall a pick that is gone. Every check is a row of one sheet, by section, with a count under it (`1 problem · 1 note · 14 fine`); a yellow To fix box names each command once with what it fixes, and What you have is a sheet of your picks.
 
 ## Themes
 
-`omamac theme [<theme>]` saves a theme, applies it to Ghostty, herdr, btop, the prompt, neovim and VS Code, and reloads Ghostty, herdr and btop if they are running. An open VS Code switches too; neovim shows it the next time it opens. Without a name it asks. The themes are `catppuccin`, `dracula`, `everforest`, `gruvbox`, `kanagawa`, `matte-black`, `nord`, `one-dark`, `osaka-jade`, `ristretto`, `rose-pine`, `solarized` and `tokyo-night`.
+`omamac theme [<theme>]` saves a theme, applies it to Ghostty, herdr, btop, the prompt, neovim and VS Code, and reloads Ghostty, herdr and btop if they are running. An open VS Code switches too; neovim shows it the next time it opens. It says so on three rows: the theme, what shows it now, and what shows it next time it opens, each naming only what the theme reaches. Without a name it asks. The themes are `catppuccin`, `dracula`, `everforest`, `gruvbox`, `kanagawa`, `matte-black`, `nord`, `one-dark`, `osaka-jade`, `ristretto`, `rose-pine`, `solarized` and `tokyo-night`.
 
 btop: settings you save from btop's menu go into omamac's `btop.conf` and don't last, because omamac writes it again. Running `/opt/homebrew/bin/btop` without the alias makes btop write its own config in `~/.config/btop`, which then takes over from omamac's.
 
@@ -107,7 +109,7 @@ Ghostty starts it for you; or run `herdr`. Ctrl g is the prefix, then `p` pane, 
 
 ## Uninstalling
 
-`omamac uninstall <name>` removes one thing you picked, after asking; with no name, it asks what to remove.
+`omamac uninstall <name>` removes one thing you picked, after asking; with no name, it asks what to remove. A yellow Removes box shows what goes (the app, Homebrew's cask, its data only if you say yes) before the questions.
 
 - **Apps:** `brave`, `chrome`, `firefox`, `whatsapp`, `telegram`, `signal`, `discord`, `slack`, `zoom`, `spotify`, `vlc`, `cap`, `dropbox`, `google-drive`, `vscode`, `claude`, `chatgpt`, `copilot`, `antigravity`, `raycast`, `obsidian` and `wispr-flow`. omamac first asks whether to remove the app's settings and data too; Enter alone is no, and yes lets Homebrew delete what the app keeps in `~/Library`. Homebrew may ask for your password. An app Homebrew took over is removed like the others; one still installed by hand stays, and omamac only forgets your pick. With Dock cleanup on, the app's tile leaves the Dock; an app you installed by hand keeps its tile.
 - **Languages:** `ruby` (with Rails), `node`, `go`, `python`, `elixir`, `rust` and `java`. **Cloud CLIs:** `azure`, `aws`, `gcloud`, `gh` and `terraform`. **Coding agents:** `claude-code`, `codex`, `copilot-cli`, `antigravity-cli` and `opencode`. A version another mise config uses stays, and Homebrew taps stay.
