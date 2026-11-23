@@ -314,6 +314,40 @@ com.apple.Accessibility${TAB}ReduceMotionEnabled${TAB}integer${TAB}0" ]
   [ "$status" -ne 0 ]
 }
 
+@test "desktop widgets hidden on a clean Mac; a second run writes nothing" {
+  in_lib 'CHOICES[desktop_widgets]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ Desktop widgets"* ]]
+  [ "$(value com.apple.WindowManager StandardHideWidgets)" = 1 ]
+  [ "$(value com.apple.WindowManager StageManagerHideWidgets)" = 1 ]
+  [ "$(cat "$REC")" = "com.apple.WindowManager${TAB}StandardHideWidgets${TAB}absent
+com.apple.WindowManager${TAB}StageManagerHideWidgets${TAB}absent" ]
+  [[ "$(stub_calls)" != *killall* ]]
+  : > "$STUB_LOG"
+  in_lib 'CHOICES[desktop_widgets]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [[ "$(stub_calls)" != *"defaults write"* ]]
+}
+
+@test "desktop widgets: uninstall puts back an earlier value and deletes an absent one" {
+  seed com.apple.WindowManager StandardHideWidgets boolean false
+  in_lib 'CHOICES[desktop_widgets]=yes; settings_apply'
+  in_lib 'settings_uninstall desktop_widgets'
+  [ "$status" -eq 0 ]
+  [ "$(value com.apple.WindowManager StandardHideWidgets)" = 0 ]
+  [ "$(value com.apple.WindowManager StageManagerHideWidgets)" = absent ]
+  [ ! -e "$REC" ]
+}
+
+@test "desktop widgets: Put back prints once for both keys" {
+  in_lib 'CHOICES[desktop_widgets]=yes; settings_apply'
+  seed com.apple.WindowManager StandardHideWidgets boolean false
+  seed com.apple.WindowManager StageManagerHideWidgets boolean false
+  in_lib 'CHOICES[desktop_widgets]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [ "$(grep -c 'Put back: Desktop widgets' <<< "$output")" -eq 1 ]
+}
+
 @test "Ctrl 1–6 on a clean Mac: on, reloaded once, a second run changes nothing" {
   local i
   in_lib 'CHOICES[desktops]=yes; settings_apply'

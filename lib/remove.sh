@@ -9,13 +9,14 @@
 # The questions whose picks omamac uninstall can remove.
 REMOVE_KEYS=(languages cloud_clis coding_agents)
 
-# remove_setting <name>: put a desktop, window-margin or Dock auto-hide
-# setting back. The answer is saved no last, so a failure leaves it yes and
-# the rest recorded.
+# remove_setting <name>: put a desktop, window-margin, desktop-widget or Dock
+# auto-hide setting back. The answer is saved no last, so a failure leaves it
+# yes and the rest recorded.
 remove_setting() {
   local key=desktops title
   case $1 in
     window-margins) key=window_margins ;;
+    desktop-widgets) key=desktop_widgets ;;
     dock-autohide) key=dock_autohide ;;
   esac
   title=${QUESTION_TITLE[$key]}
@@ -192,6 +193,7 @@ remove_run() {
     done
     [ "${CHOICES[desktops]:-}" != yes ] || options+=("${QUESTION_TITLE[desktops]}:desktops")
     [ "${CHOICES[window_margins]:-}" != yes ] || options+=("${QUESTION_TITLE[window_margins]}:window-margins")
+    [ "${CHOICES[desktop_widgets]:-}" != yes ] || options+=("${QUESTION_TITLE[desktop_widgets]}:desktop-widgets")
     [ "${CHOICES[dock]:-}" != yes ] || options+=("${QUESTION_TITLE[dock]}:dock")
     [ "${CHOICES[dock_autohide]:-}" != yes ] || options+=("${QUESTION_TITLE[dock_autohide]}:dock-autohide")
     while IFS= read -r v; do options+=("$(apps_label "$v"):$v"); done < <(apps_chosen)
@@ -208,7 +210,7 @@ remove_run() {
     name=$ASK_PICKED
   fi
   case $name in
-    desktops | window-margins | dock-autohide) remove_setting "$name"; return ;;
+    desktops | window-margins | desktop-widgets | dock-autohide) remove_setting "$name"; return ;;
     dock) remove_dock; return ;;
     colima | docker-desktop) remove_docker "$name"; return ;;
   esac
@@ -222,7 +224,7 @@ remove_run() {
     all+=("${ids[@]}")
   done
   if [ -z "$key" ]; then
-    ui_fail "omamac can't remove '$name'. It can remove: $(clis_join "${all[@]}" "${apps[@]}" desktops window-margins colima docker-desktop dock dock-autohide)."
+    ui_fail "omamac can't remove '$name'. It can remove: $(clis_join "${all[@]}" "${apps[@]}" desktops window-margins desktop-widgets colima docker-desktop dock dock-autohide)."
     exit 2
   fi
   label=$(question_label "$key" "$name")

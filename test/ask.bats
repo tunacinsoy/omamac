@@ -18,27 +18,27 @@ in_ask() {
 # The prompts fake-gum saw, one per line.
 prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
 
-@test "fresh: all 18 asked in table order, nothing pre-selected" {
+@test "fresh: all 19 asked in table order, nothing pre-selected" {
   gum_answers "${FRESH_ANSWERS[@]}"
   in_ask 'ask_missing
     for k in "${QUESTION_KEYS[@]}"; do echo "TEXT ${QUESTION_TEXT[$k]}"; done'
   [ "$status" -eq 0 ]
-  [ "$(prompts | wc -l | tr -d ' ')" = 18 ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 19 ]
   i=0
   while IFS= read -r text; do
     i=$((i + 1))
     [[ "$(prompts | sed -n "${i}p")" == *"${text#TEXT }"* ]] || { echo "prompt $i isn't: $text"; return 1; }
   done < <(printf '%s\n' "${lines[@]}" | grep '^TEXT ')
   ! grep -q -- '--selected' "$STUB_LOG"
-  [ "$(grep -c '^gum confirm' "$STUB_LOG")" = 5 ]
-  [ "$(grep -c '^gum confirm --default=false ' "$STUB_LOG")" = 5 ]
+  [ "$(grep -c '^gum confirm' "$STUB_LOG")" = 6 ]
+  [ "$(grep -c '^gum confirm --default=false ' "$STUB_LOG")" = 6 ]
 }
 
 @test "the user's GUM_ settings don't reach the prompts" {
   gum_answers "${FRESH_ANSWERS[@]}"
   GUM_CHOOSE_SELECTED=tokyo-night GUM_CONFIRM_DEFAULT=true in_ask 'ask_missing'
   [ "$status" -eq 0 ]
-  [ "$(prompts | wc -l | tr -d ' ')" = 18 ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 19 ]
   [ ! -s "$STUB_LOG.gum-env" ]
 }
 
@@ -60,8 +60,8 @@ prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
   [ "$status" -eq 0 ]
   [[ "$(prompts | sed -n 1p)" != *--no-limit* ]]
   [[ "$(prompts | sed -n 2p)" == *"--no-limit"* ]]
-  [[ "$(prompts | sed -n 18p)" != *--no-limit* ]]
-  [[ "$(prompts | sed -n 18p)" == *"--label-delimiter=: No Docker:none colima:colima Docker Desktop:docker-desktop"* ]]
+  [[ "$(prompts | sed -n 19p)" != *--no-limit* ]]
+  [[ "$(prompts | sed -n 19p)" == *"--label-delimiter=: No Docker:none colima:colima Docker Desktop:docker-desktop"* ]]
 }
 
 @test "answers land in CHOICES, multi in table order" {
@@ -136,7 +136,7 @@ prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
   [[ "$output" == *"Media: none"* ]]
   [[ "$output" == *"Wispr Flow: no"* ]]
   [[ "$output" == *"Docker: No Docker"* ]]
-  [ "$(grep -c ': ' <<< "$output")" = 18 ]
+  [ "$(grep -c ': ' <<< "$output")" = 19 ]
 }
 
 @test "ask_yes: yes 0, no 1, Ctrl-C 130" {

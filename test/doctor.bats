@@ -420,7 +420,7 @@ own_nvim() {
   healthy_mac
   echo 'colour=red' >> "$CHOICES_FILE"
   expect_fail "Saved answers" "Delete that line"
-  [[ "$output" == *"line 20"* ]]
+  [[ "$output" == *"line 21"* ]]
 }
 
 @test "saved answers incomplete" {
@@ -498,6 +498,18 @@ settings_set() {
   hotkey_seed 122 '{"enabled":false,"value":{"parameters":[65535,23,262144],"type":"standard"}}'
   expect_fail "Desktops as workspaces" "omamac update"
   [[ "$output" == *"Ctrl 1–6 was changed since omamac set it"* ]]
+}
+
+@test "settings: desktop widgets shown again: ✗ naming them" {
+  healthy_mac
+  choose desktop_widgets yes
+  defaults write com.apple.WindowManager StandardHideWidgets -bool true
+  defaults write com.apple.WindowManager StageManagerHideWidgets -bool true
+  run doctor
+  [[ "$output" == *"✓ Desktop widgets"* ]]
+  defaults write com.apple.WindowManager StandardHideWidgets -bool false
+  expect_fail "Desktop widgets" "omamac update"
+  [[ "$output" == *"Desktop widgets was changed since omamac set it"* ]]
 }
 
 @test "settings: a key that is gone: ✗" {

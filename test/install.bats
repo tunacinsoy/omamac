@@ -101,9 +101,10 @@ snapshot() {
   for f in "${mine[@]}"; do after+="$(shasum < "$HOME/$f") $(stat -f %m "$HOME/$f");"; done
   [ "$after" = "$before" ]
   run grep -rnE '/etc/|/Library/' "$REPO_ROOT/install.sh" "$REPO_ROOT/lib"
-  # Only comment lines may match, Ghostty's own folder under $HOME, and VS Code's
-  # settings under $HOME, which omamac only reads.
-  [ -z "$(grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' <<< "$output" | grep -vF -e '$HOME/Library/Application Support/com.mitchellh.ghostty' -e 'OMAMAC_VSCODE_SETTINGS="$HOME/Library/Application Support/Code/User/settings.json"')" ]
+  # Only comment lines may match, Ghostty's own folder under $HOME, VS Code's
+  # settings under $HOME, which omamac only reads, and macOS's activateSettings,
+  # which omamac only runs.
+  [ -z "$(grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' <<< "$output" | grep -vF -e '$HOME/Library/Application Support/com.mitchellh.ghostty' -e 'OMAMAC_VSCODE_SETTINGS="$HOME/Library/Application Support/Code/User/settings.json"' -e 'OMAMAC_ACTIVATE_SETTINGS=${OMAMAC_TEST_ACTIVATE_SETTINGS:-/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings}')" ]
 }
 
 @test "never-touch: colima leaves ~/.docker/config.json alone" {
@@ -154,10 +155,10 @@ snapshot() {
   fresh_answers yes
   run install
   [ "$status" -eq 0 ]
-  [ "$(prompts | wc -l | tr -d ' ')" = 19 ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 20 ]
   grep -qx 'apps_browsers=brave firefox' "$CHOICES_FILE"
   grep -qx 'docker=none' "$CHOICES_FILE"
-  [ "$(grep -c '=' "$CHOICES_FILE")" = 18 ]
+  [ "$(grep -c '=' "$CHOICES_FILE")" = 19 ]
   [ -e "$HOME/.config/omamac/zshrc" ]
   [[ "$output" == *"Theme: Tokyo Night"* ]]
 }
@@ -230,7 +231,7 @@ snapshot() {
   [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
   grep -qx 'docker=docker-desktop' "$CHOICES_FILE"
   grep -qx 'apps_media=vlc' "$CHOICES_FILE"
-  [ "$(grep -c '=' "$CHOICES_FILE")" = 18 ]
+  [ "$(grep -c '=' "$CHOICES_FILE")" = 19 ]
 }
 
 @test "no on a re-run keeps the saved answers and says nothing about asking again" {

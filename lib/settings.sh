@@ -1,6 +1,6 @@
 # shellcheck shell=bash disable=SC2034 # OMAMAC_STEP is read by the caller's ERR trap; SETTINGS_REFUSED by install_summary
 # The macOS settings behind the yes/no answers `desktops`, `window_margins`,
-# `dock` and `dock_autohide`.
+# `desktop_widgets`, `dock` and `dock_autohide`.
 # Sourced after lib/ui.sh, lib/questions.sh and lib/choices.sh, before lib/dock.sh
 # (settings_apply calls its dock_apply) and lib/apply.sh.
 # Each key is "domain key type value"; the type is the word `defaults read-type`
@@ -25,6 +25,10 @@ SETTINGS_KEYS_desktops=(
 )
 SETTINGS_KEYS_window_margins=(
   "com.apple.WindowManager EnableTiledWindowMargins boolean true"
+)
+SETTINGS_KEYS_desktop_widgets=(
+  "com.apple.WindowManager StandardHideWidgets boolean true"
+  "com.apple.WindowManager StageManagerHideWidgets boolean true"
 )
 SETTINGS_KEYS_dock=(
   "com.apple.dock show-recents boolean false"
@@ -146,6 +150,7 @@ settings_label() {
     mru-spaces) echo "Spaces order" ;;
     AppleSpacesSwitchOnActivate) echo "Switching to an app's desktop" ;;
     EnableTiledWindowMargins) echo "Window margins" ;;
+    StandardHideWidgets | StageManagerHideWidgets) echo "Desktop widgets" ;;
     show-recents) echo "Suggested and recent apps" ;;
     autohide) echo "Dock auto-hide" ;;
     *) echo "$1" ;;
@@ -265,7 +270,7 @@ settings_apply() {
   SETTINGS_DOCK=0
   SETTINGS_HOTKEYS=0
   SETTINGS_PUT_BACK=' '
-  for answer in desktops window_margins dock dock_autohide; do
+  for answer in desktops window_margins desktop_widgets dock dock_autohide; do
     [ "${CHOICES[$answer]:-}" = yes ] || continue
     unit=()
     while IFS= read -r line; do
@@ -324,6 +329,7 @@ settings_dock_restart() {
 settings_what() {
   case $1 in
     desktops) echo "your earlier Spaces, app-switching, Ctrl 1–6 and Reduce motion settings" ;;
+    desktop_widgets) echo "your earlier desktop-widget settings" ;;
     dock_autohide) echo "your earlier Dock auto-hide setting" ;;
     *) echo "your earlier window-margin setting" ;;
   esac
