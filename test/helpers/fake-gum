@@ -1,5 +1,10 @@
 #!/bin/bash
 # Test double for gum. Bash 3.2 safe.
+# T_REAL_GUM: a real gum that draws (style, table, join), for the tests of the
+# terminal look (#46); the prompts and the spinner stay fake.
+if [ -n "${T_REAL_GUM:-}" ]; then
+  case "${1:-}" in style | table | join) exec "$T_REAL_GUM" "$@" ;; esac
+fi
 case "${1:-}" in
   style)
     shift
