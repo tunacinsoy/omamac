@@ -100,14 +100,17 @@ setup() { setup_sandbox; }
   [ -z "$(grep -vF -- '--install-extension "$tmp/omamac-theme.vsix" --force' <<< "$output")" ]
 }
 
-@test "--greedy only in update_upgrade_casks" {
+@test "--greedy only in update_upgrade_casks and doctor's lookup" {
   # Apps update themselves; --greedy would call them outdated forever. Only
-  # the cloud CLI casks need it. Comments may name it (no # before it).
+  # the cloud CLI casks need it: update upgrades them, and doctor says when
+  # one is out (it shows no newer version for an app). Comments may name it
+  # (no # before it).
   cd "$REPO_ROOT"
   local all inside
   all=$(grep -rhE -e '^[^#]*--greedy' bin lib install.sh update.sh | wc -l)
   inside=$(sed -n '/^update_upgrade_casks()/,/^}/p' update.sh | grep -cE -e '^[^#]*--greedy')
-  [ "$all" -ge 1 ]
+  inside=$((inside + $(sed -n '/^doctor_lookups_start()/,/^}/p' lib/doctor.sh | grep -cE -e '^[^#]*--greedy')))
+  [ "$all" -ge 2 ]
   [ "$all" -eq "$inside" ]
 }
 

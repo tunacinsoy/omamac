@@ -169,6 +169,24 @@ b" ]
   [[ "$output" == *$'\e[31m1 problem\e[0m · \e[34m1 note\e[0m · \e[32m14 fine\e[0m'* ]]
 }
 
+@test "count line: updates waiting end it, yellow" {
+  terminal_look
+  run kit 'ui_count 0 0 21 2; ui_count 1 0 3 1; ui_count 0 0 4 0'
+  [ "$(shown)" = "21 fine · 2 updates waiting: omamac update
+1 problem · 3 fine · 1 update waiting: omamac update
+4 fine" ]
+  [[ "$output" == *$'\e[32m21 fine\e[0m · \e[33m2 updates waiting: omamac update\e[0m'* ]]
+}
+
+@test "sheet: a {yellow} cell is yellow" {
+  terminal_look
+  run kit 'ui_sheet "" "Python"$'"'"'\t'"'"'"{yellow}3.14.2 is out"'
+  [ "$(shown)" = "╭────────┬───────────────╮
+│ Python │ 3.14.2 is out │
+╰────────┴───────────────╯" ]
+  [[ "$output" == *$'\e[33m3.14.2 is out\e[0m'* ]]
+}
+
 @test "stages: each row has its count; inside, ✓ and step lines wait for the row" {
   terminal_look
   run kit 'ui_stages 2

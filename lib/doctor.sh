@@ -8,8 +8,55 @@
 # it comes. DOCTOR_SECTION is the sheet's section a check's rows go to; the
 # checks run in an order of their own, so herdr's row still lands in Terminal.
 DOCTOR_SECTION=setup
-DOCTOR_ROWS=() DOCTOR_FIX_CMDS=() DOCTOR_HAVE=()
+DOCTOR_ROWS=() DOCTOR_FIX_CMDS=()
 declare -A DOCTOR_FIX_WHAT=()
+
+# What each check is, in plain words, for the sheet's Detail column when the
+# check is fine (a ✗ or ℹ says its own). At most 45 columns, so the sheet
+# fits 80. The macOS settings go by their question's title.
+declare -A DOCTOR_ABOUT=(
+  [Homebrew]="installs and updates the tools omamac sets up"
+  ["bash 5"]="the shell omamac's scripts run in"
+  [gum]="draws omamac's questions and boxes"
+  [Checkout]="omamac itself, which omamac update refreshes"
+  ["Checkout is clean"]="no edits there that would stop omamac update"
+  ["Homebrew line"]="lets your shell find Homebrew's tools"
+  ["omamac line"]="makes your shell load omamac's settings"
+  ["omamac's zsh file"]="omamac's settings for your shell"
+  ["Core tools"]="the editor, prompt and tools your shell uses"
+  ["Saved answers"]="what you picked when omamac asked"
+  ["mise drop-in"]="tells mise which languages you picked"
+  [Ghostty]="the terminal app omamac sets up"
+  ["Ghostty line"]="makes Ghostty load omamac's settings"
+  ["omamac's Ghostty file"]="omamac's settings for Ghostty"
+  ["App Management"]="lets omamac update keep Ghostty up to date"
+  ["herdr config"]="omamac's keys and theme for herdr's panes"
+  ["neovim config"]="the code editor's setup (LazyVim)"
+  ["Theme files"]="your theme's colours for each tool"
+  ["starship config"]="the prompt follows your theme"
+  ["btop config"]="the system monitor follows your theme"
+  ["Your tools"]="every language and CLI you picked is there"
+  ["Your apps"]="every app you picked is in Applications"
+  [docker-compose]="lets docker find its compose plugin"
+  [docker-buildx]="lets docker find its build plugin"
+  ["colima's service"]="starts colima, docker's engine, at login"
+  ["Desktops as workspaces"]="desktops in order, Ctrl 1–6 to switch"
+  ["Window margins"]="a gap between windows tiled side by side"
+  ["Desktop widgets"]="widgets stay off the desktop"
+  ["Dock cleanup"]="the Dock holds the apps omamac installed"
+  ["Dock auto-hide"]="the Dock hides until you point at it"
+)
+
+# Your tools and apps, after the checks: one row per tool or app omamac
+# installed, "group<TAB>name<TAB>version<TAB>newer". newer is "latest", the
+# newer version that is out, or empty when it can't be known or isn't asked
+# (apps update themselves). DOCTOR_UPDATES counts the newer versions.
+DOCTOR_HAVE=() DOCTOR_UPDATES=0 DOCTOR_LIST_TOOLS=0 DOCTOR_LIST_APPS=0
+# How long doctor waits for brew outdated and mise outdated, in seconds,
+# counted from when they start (after the saved answers are read).
+DOCTOR_WAIT=${OMAMAC_TEST_DOCTOR_WAIT:-10}
+DOCTOR_LOOKUP_DIR='' DOCTOR_LOOKUP_START=0 DOCTOR_BREW_LISTED=0
+declare -A DOCTOR_LOOKUP_PID=() DOCTOR_LOOKUP_OK=() DOCTOR_NEWER=() DOCTOR_BREW_VERSION=()
 
 # doctor_fix <command> <what it does>: one line of the To fix box. Each
 # command is said once, with all it fixes.
@@ -421,36 +468,8 @@ doctor_check_chosen() {
       "omamac update puts it back; omamac uninstall $id drops it" || result=1
   done
   if [ "${#skipped[@]}" -eq 0 ] && [ "$result" -eq 0 ]; then doctor_report ok "$what"; fi
-  [ "${#skipped[@]}" -gt 0 ] || doctor_list languages "${CLI_KEYS[@]}" docker
+  [ "${#skipped[@]}" -gt 0 ] || DOCTOR_LIST_TOOLS=1
   return "$result"
-}
-
-# doctor_list <key>…: under a ✓ or ✗ line, one line per question with picks:
-# what omamac installed, by its labels, leaving out what DOCTOR_GONE names. A
-# yes/no question's line is its title alone ("Wispr Flow").
-doctor_list() {
-  local key id ids labels
-  for key in "$@"; do
-    ids=() labels=()
-    case ${QUESTION_KIND[$key]} in
-      yesno) [ "${CHOICES[$key]:-}" != yes ] || ids=("${key//_/-}") ;;
-      single) [ "${CHOICES[$key]:-none}" = none ] || ids=("${CHOICES[$key]}") ;;
-      *) read -ra ids <<< "${CHOICES[$key]:-}" ;;
-    esac
-    for id in ${ids[@]+"${ids[@]}"}; do
-      [[ " ${DOCTOR_GONE[*]} " != *" $id "* ]] || continue
-      if [ "${QUESTION_KIND[$key]}" = yesno ]; then
-        # The terminal look's What you have sheet gives each row a value.
-        if ui_term; then DOCTOR_HAVE+=("${QUESTION_TITLE[$key]}"$'\t'installed)
-        else printf '    %s\n' "${QUESTION_TITLE[$key]}"; fi
-        continue 2
-      fi
-      labels+=("$(question_label "$key" "$id")")
-    done
-    [ "${#labels[@]}" -gt 0 ] || continue
-    if ui_term; then DOCTOR_HAVE+=("${QUESTION_TITLE[$key]}"$'\t'"$(clis_join "${labels[@]}")")
-    else printf '    %s: %s\n' "${QUESTION_TITLE[$key]}" "$(clis_join "${labels[@]}")"; fi
-  done
 }
 
 # doctor_check_apps: "Your apps". Appends the chosen apps that are gone to DOCTOR_GONE,
@@ -486,7 +505,7 @@ doctor_check_apps() {
     esac
   done
   if [ "$result" -eq 0 ]; then doctor_report ok "$what"; fi
-  doctor_list "${APPS_KEYS[@]}" wispr_flow
+  DOCTOR_LIST_APPS=1
   return "$result"
 }
 
@@ -565,12 +584,224 @@ doctor_offer_neovim() {
   fi
 }
 
+# --- Your tools and apps: versions, and whether a newer one is out.
+
+# doctor_lookups_start: brew outdated and mise outdated, in the background
+# while the other checks run, each into a file of its own, once per run. Not
+# into a pipe: a lookup cut short must not hold doctor's output open.
+# HOMEBREW_NO_AUTO_UPDATE: doctor never updates Homebrew.
+doctor_lookups_start() {
+  local dir brew=$OMAMAC_BREW_PREFIX/bin/brew mise=$OMAMAC_BREW_PREFIX/bin/mise
+  dir=$(mktemp -d "${TMPDIR:-/tmp}/omamac-doctor.XXXXXX" 2>/dev/null) || return 0
+  DOCTOR_LOOKUP_DIR=$dir DOCTOR_LOOKUP_START=$SECONDS
+  if [ -n "${CHOICES[languages]:-}" ] && [ -x "$mise" ]; then
+    (cd "$HOME" && exec "$mise" outdated --json) > "$dir/mise" 2>/dev/null < /dev/null &
+    DOCTOR_LOOKUP_PID[mise]=$!
+  fi
+  if [ -x "$brew" ] && { [ -n "${CHOICES[cloud_clis]:-}${CHOICES[coding_agents]:-}" ] || [ "${CHOICES[docker]:-none}" != none ]; }; then
+    HOMEBREW_NO_AUTO_UPDATE=1 "$brew" outdated --greedy --json=v2 > "$dir/brew" 2>/dev/null < /dev/null &
+    DOCTOR_LOOKUP_PID[brew]=$!
+  fi
+}
+
+# doctor_lookups_wait: wait for the lookups, DOCTOR_WAIT seconds at most from
+# their start, then read what each found into DOCTOR_NEWER ("mise:<tool>" or
+# "brew:<name>" → the newer version). A lookup that failed, timed out or
+# printed something unreadable stays out of DOCTOR_LOOKUP_OK, and its rows
+# show only the version. Never fails.
+doctor_lookups_wait() {
+  local dir=$DOCTOR_LOOKUP_DIR source pid running name current latest out
+  [ -n "$dir" ] || return 0
+  DOCTOR_LOOKUP_DIR=''
+  while :; do
+    running=0
+    for pid in "${DOCTOR_LOOKUP_PID[@]}"; do ! kill -0 "$pid" 2>/dev/null || running=1; done
+    [ "$running" -eq 1 ] && [ $((SECONDS - DOCTOR_LOOKUP_START)) -lt "$DOCTOR_WAIT" ] || break
+    sleep 0.1
+  done
+  for source in "${!DOCTOR_LOOKUP_PID[@]}"; do
+    pid=${DOCTOR_LOOKUP_PID[$source]}
+    if kill -0 "$pid" 2>/dev/null; then
+      # Too slow: stopped, and its rows show only the version.
+      kill -KILL "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+      continue
+    fi
+    wait "$pid" 2>/dev/null || true
+    [ -s "$dir/$source" ] || continue
+    if [ "$source" = mise ]; then
+      # An object by tool name; a list in older mise versions.
+      out=$(jq -r 'if type == "object" then to_entries | map(.value + {key}) elif type == "array" then . else error end
+        | .[] | "\(.name // .key)\t\(.current // "")\t\(.latest // "")"' "$dir/mise" 2>/dev/null) || continue
+    else
+      # Pinned formulas stay where they are, as omamac update leaves them.
+      out=$(jq -r 'if has("formulae") then . else error end
+        | (.formulae[] | select(.pinned | not)), .casks[]
+        | "\(.name)\t\(.installed_versions[-1] // "")\t\(.current_version // "")"' "$dir/brew" 2>/dev/null) || continue
+    fi
+    DOCTOR_LOOKUP_OK[$source]=1
+    while IFS=$'\t' read -r name current latest; do
+      [ -n "$name" ] && [ -n "$latest" ] || continue
+      latest=$(doctor_version "$latest") current=$(doctor_version "$current")
+      [ "$latest" = "$current" ] || DOCTOR_NEWER[$source:${name##*/}]=$latest
+    done <<< "$out"
+  done
+  rm -rf "$dir"
+}
+
+# doctor_version <version>: as shown. Homebrew's ",<build>" (casks) and
+# "_<revision>" (formulas) are left out.
+doctor_version() {
+  local v=${1%%,*}
+  [[ ! $v =~ ^(.+)_[0-9]+$ ]] || v=${BASH_REMATCH[1]}
+  echo "$v"
+}
+
+# doctor_brew_version <name>: the version Homebrew has of a formula (any tap)
+# or cask; empty when it can't say. One brew list each per run.
+doctor_brew_version() {
+  local name versions
+  if [ "$DOCTOR_BREW_LISTED" -eq 0 ]; then
+    DOCTOR_BREW_LISTED=1
+    while read -r name versions; do
+      [ -z "$name" ] || DOCTOR_BREW_VERSION[$name]=${versions##* }
+    done < <("$OMAMAC_BREW_PREFIX/bin/brew" list --formula --versions 2>/dev/null
+      "$OMAMAC_BREW_PREFIX/bin/brew" list --cask --versions 2>/dev/null)
+  fi
+  name=${1##*/}
+  [ -z "${DOCTOR_BREW_VERSION[$name]:-}" ] || doctor_version "${DOCTOR_BREW_VERSION[$name]}"
+}
+
+# doctor_mise_version <tool>: the newest version mise has installed; empty
+# when it can't say.
+doctor_mise_version() {
+  local line version=''
+  while read -r _ line _; do
+    [ -z "$line" ] || version=$line
+  done < <(languages_mise ls --installed --no-header "$1" 2>/dev/null)
+  echo "$version"
+}
+
+# doctor_app_version <bundle>: the version the app itself reports, from its
+# Info.plist in Applications; empty when it has none.
+doctor_app_version() {
+  plutil -extract CFBundleShortVersionString raw -o - \
+    "$OMAMAC_APPLICATIONS/$1/Contents/Info.plist" 2>/dev/null || true
+}
+
+# doctor_have_row <group> <name> <version> [<mise|brew> <name>]: a row of Your
+# tools and apps. With a lookup that worked, its newer column: latest, or
+# the version that is out.
+doctor_have_row() {
+  local newer=''
+  if [ -n "${4:-}" ] && [ -n "$3" ] && [ -n "${DOCTOR_LOOKUP_OK[$4]:-}" ]; then
+    newer=${DOCTOR_NEWER[$4:${5##*/}]:-latest}
+    [ "$newer" = latest ] || DOCTOR_UPDATES=$((DOCTOR_UPDATES + 1))
+  fi
+  DOCTOR_HAVE+=("$1"$'\t'"$2"$'\t'"$3"$'\t'"$newer")
+}
+
+# doctor_gone <id>: a pick doctor found gone; its ✗ names it, so it isn't listed.
+doctor_gone() { [[ " ${DOCTOR_GONE[*]} " == *" $1 "* ]]; }
+
+# doctor_have: DOCTOR_HAVE, by kind: Languages (mise), Cloud CLIs, Coding
+# agents and Docker (Homebrew), then Apps in the catalog's order.
+doctor_have() {
+  local id key tool name ids=() tools=()
+  doctor_lookups_wait
+  if [ "$DOCTOR_LIST_TOOLS" -eq 1 ]; then
+    read -ra ids <<< "${CHOICES[languages]:-}"
+    for id in "${ids[@]}"; do
+      ! doctor_gone "$id" || continue
+      # A language's version is its last tool's: Elixir's, not Erlang's.
+      read -ra tools <<< "${LANGUAGE_TOOLS[$id]}"
+      tool=${tools[${#tools[@]} - 1]}
+      doctor_have_row "${QUESTION_TITLE[languages]}" "$(question_label languages "$id")" \
+        "$(doctor_mise_version "$tool")" mise "$tool"
+    done
+    for key in "${CLI_KEYS[@]}"; do
+      read -ra ids <<< "${CHOICES[$key]:-}"
+      for id in "${ids[@]}"; do
+        ! doctor_gone "$id" || continue
+        name=${CLI_FORMULA[$id]:-${CLI_CASK[$id]:-}}
+        doctor_have_row "${QUESTION_TITLE[$key]}" "$(question_label "$key" "$id")" \
+          "$(doctor_brew_version "$name")" brew "$name"
+      done
+    done
+    id=${CHOICES[docker]:-none}
+    if [ "$id" != none ] && ! doctor_gone "$id"; then
+      # Docker Desktop is an app, and updates itself.
+      if [ "$id" = docker-desktop ]; then
+        doctor_have_row "${QUESTION_TITLE[docker]}" "$(question_label docker "$id")" \
+          "$(doctor_app_version "${CASK_APP[docker-desktop]}")"
+      fi
+      while IFS= read -r name; do
+        doctor_have_row "${QUESTION_TITLE[docker]}" "$name" "$(doctor_brew_version "$name")" brew "$name"
+      done < <(docker_formulas "$id")
+    fi
+  fi
+  if [ "$DOCTOR_LIST_APPS" -eq 1 ]; then
+    while IFS= read -r id; do
+      ! doctor_gone "$id" || continue
+      doctor_have_row Apps "$(apps_label "$id")" "$(doctor_app_version "${APP_BUNDLE[$id]}")"
+    done < <(apps_chosen)
+  fi
+}
+
+# doctor_have_plain: Your tools and apps in plain text, after the checks: a
+# line per group, then one per tool or app ("    Go 1.25.0 (latest)"), and
+# how many updates wait.
+doctor_have_plain() {
+  local row group name version newer last='' line s=s
+  for row in "${DOCTOR_HAVE[@]}"; do
+    IFS=$'\t' read -r group name version newer <<< "$row"
+    [ "$group" = "$last" ] || { printf '%s\n' "$group"; last=$group; }
+    line="    $name${version:+ $version}"
+    case $newer in
+      '') ;;
+      latest) line+=" (latest)" ;;
+      *) line+=" ($newer is out)" ;;
+    esac
+    printf '%s\n' "$line"
+  done
+  [ "$DOCTOR_UPDATES" -ne 1 ] || s=''
+  [ "$DOCTOR_UPDATES" -eq 0 ] || ui_info "$DOCTOR_UPDATES update$s waiting: omamac update"
+}
+
+# doctor_have_draw: Your tools and apps in the terminal look: one sheet, a
+# bold row per group, then each name, its version, and a dim "latest" or a
+# yellow "<version> is out". No newer column when no row has one.
+doctor_have_draw() {
+  local row group name version newer last='' rows=() wide=0
+  [ "${#DOCTOR_HAVE[@]}" -gt 0 ] || return 0
+  for row in "${DOCTOR_HAVE[@]}"; do [ -z "${row##*$'\t'}" ] || wide=1; done
+  for row in "${DOCTOR_HAVE[@]}"; do
+    IFS=$'\t' read -r group name version newer <<< "$row"
+    if [ "$group" != "$last" ]; then
+      rows+=("{bold}$group"$'\t')
+      last=$group
+    fi
+    [ -n "$version" ] || version='{dim}—'
+    row="$name"$'\t'"$version"
+    if [ "$wide" -eq 1 ]; then
+      case $newer in
+        '') row+=$'\t' ;;
+        latest) row+=$'\t'"{dim}latest" ;;
+        *) row+=$'\t'"{yellow}$newer is out" ;;
+      esac
+    fi
+    rows+=("$row")
+  done
+  ui_heading "Your tools and apps"
+  ui_sheet '' "${rows[@]}"
+}
+
 # doctor_draw: the terminal look's report. A sheet of every check (mark,
-# Check, Detail) in sections, the count line, a yellow To fix box with each
-# command once, and What you have.
+# Check, Detail) in sections, a fine check's Detail saying what it is; the
+# count line; a yellow To fix box with each command once; Your tools and apps.
 doctor_draw() {
-  local section title row kind what why rows=() have=() cmd fixes=() problems=0 notes=0 fine=0
-  local -A titles=([setup]=Setup [terminal]=Terminal [theme]=Theme [picks]="Your picks" [macos]=macOS)
+  local section title row kind what why rows=() cmd fixes=() problems=0 notes=0 fine=0
+  local -A titles=([setup]=Setup [terminal]=Terminal [theme]=Theme [picks]="Your tools and apps" [macos]=macOS)
   # The theme's name joins its section, once the answers can be read.
   if [ "${DOCTOR_HAS_CHOICES:-0}" -eq 1 ] && [ -n "${CHOICES[theme]:-}" ]; then
     titles[theme]="${UI_BOLD}Theme$UI_OFF $UI_DIM· $(question_label theme "${CHOICES[theme]}")$UI_OFF"
@@ -585,23 +816,19 @@ doctor_draw() {
       [ -z "$title" ] || { rows+=($'\t'"$title"$'\t'); title=''; }
       IFS=$'\t' read -r _ kind what why <<< "$row"
       case $kind in
-        ok) rows+=("{ok}✓"$'\t'"$what"$'\t'"{dim}$why"); fine=$((fine + 1)) ;;
+        ok) rows+=("{ok}✓"$'\t'"$what"$'\t'"{dim}${why:-${DOCTOR_ABOUT[$what]:-}}"); fine=$((fine + 1)) ;;
         fail) rows+=("{fail}✗"$'\t'"$what"$'\t'"{red}$why"); problems=$((problems + 1)) ;;
         *) rows+=("{info}ℹ"$'\t'"$what"$'\t'"{dim}$why"); notes=$((notes + 1)) ;;
       esac
     done
   done
   ui_sheet $'\tCheck\tDetail' "${rows[@]}"
-  ui_count "$problems" "$notes" "$fine"
+  ui_count "$problems" "$notes" "$fine" "$DOCTOR_UPDATES"
   if [ "${#DOCTOR_FIX_CMDS[@]}" -gt 0 ]; then
     for cmd in "${DOCTOR_FIX_CMDS[@]}"; do fixes+=("$cmd"$'\t'"${DOCTOR_FIX_WHAT[$cmd]}"); done
     ui_titled -c warn "To fix" "${fixes[@]}"
   fi
-  if [ "${#DOCTOR_HAVE[@]}" -gt 0 ]; then
-    have=("${DOCTOR_HAVE[@]}")
-    ui_heading "What you have"
-    ui_sheet_labels "${have[@]}"
-  fi
+  doctor_have_draw
 }
 
 # doctor_reinstall_failed <label>: a Reinstall offer failed. The terminal look
@@ -637,6 +864,7 @@ doctor_run() {
   doctor_check_herdr || status=1
   DOCTOR_SECTION=setup
   doctor_check_choices || status=1
+  [ "$DOCTOR_HAS_CHOICES" -ne 1 ] || doctor_lookups_start
   doctor_check_mise_dropin || status=1
   DOCTOR_SECTION=picks
   doctor_check_chosen || status=1
@@ -646,7 +874,9 @@ doctor_run() {
   if [ "$DOCTOR_HAS_CHOICES" -eq 1 ]; then doctor_check_vscode || status=1; fi
   DOCTOR_SECTION=macos
   doctor_check_settings || status=1
-  if ui_term; then doctor_draw; fi
+  # Never a ✗: a lookup that fails only leaves its column out.
+  [ "$DOCTOR_HAS_CHOICES" -ne 1 ] || doctor_have || true
+  if ui_term; then doctor_draw; else doctor_have_plain; fi
   doctor_offer
   doctor_offer_neovim || status=1
   return "$status"

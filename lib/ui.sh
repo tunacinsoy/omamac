@@ -205,10 +205,10 @@ ui_heading() {
 }
 
 # _ui_cell <cell>: REPLY is the cell's text and UI_STYLE its colour codes. A
-# cell may start with a style: {dim} {bold} {ok} {fail} {info} {red}.
+# cell may start with a style: {dim} {bold} {ok} {fail} {info} {red} {yellow}.
 _ui_cell() {
   UI_STYLE='' REPLY=$1
-  if [[ $1 =~ ^\{(dim|bold|ok|fail|info|red)\}(.*)$ ]]; then
+  if [[ $1 =~ ^\{(dim|bold|ok|fail|info|red|yellow)\}(.*)$ ]]; then
     REPLY=${BASH_REMATCH[2]}
     case ${BASH_REMATCH[1]} in
       dim) UI_STYLE=$UI_DIM ;;
@@ -216,6 +216,7 @@ _ui_cell() {
       ok) UI_STYLE=$UI_GREEN ;;
       fail | red) UI_STYLE=$UI_RED ;;
       info) UI_STYLE=$UI_BLUE ;;
+      yellow) UI_STYLE=$UI_YELLOW ;;
     esac
   fi
 }
@@ -392,13 +393,15 @@ ui_titled() {
   printf '%s\n' "${out[@]}"
 }
 
-# ui_count <problems> <notes> <fine>: the verdict under a sheet of checks,
-# "1 problem · 1 note · 14 fine". A count of none is left out, except fine.
+# ui_count <problems> <notes> <fine> [<updates>]: the verdict under a sheet of
+# checks, "1 problem · 1 note · 14 fine". A count of none is left out, except
+# fine. Updates waiting end it, yellow: "· 2 updates waiting: omamac update".
 ui_count() {
   local parts=() s
   [ "$1" -eq 0 ] || { s=s; [ "$1" -ne 1 ] || s=''; parts+=("$UI_RED$1 problem$s$UI_OFF"); }
   [ "$2" -eq 0 ] || { s=s; [ "$2" -ne 1 ] || s=''; parts+=("$UI_BLUE$2 note$s$UI_OFF"); }
   parts+=("$UI_GREEN$3 fine$UI_OFF")
+  [ "${4:-0}" -eq 0 ] || { s=s; [ "$4" -ne 1 ] || s=''; parts+=("$UI_YELLOW$4 update$s waiting: omamac update$UI_OFF"); }
   local IFS=$'\x1f'
   s="${parts[*]}"
   printf '%s\n' "${s//$'\x1f'/ · }"

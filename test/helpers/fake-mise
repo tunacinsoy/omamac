@@ -18,7 +18,16 @@ case "${1:-}" in
     [ "${T_MISE_WARN:-0}" != 1 ] || echo "mise WARN a warning" >&2
     [ "${2:-} ${3:-}" = "--installed --no-header" ] && [ -n "${4:-}" ] ||
       { echo "fake-mise: use ls --installed --no-header <tool>" >&2; exit 1; }
-    [ ! -e "$state/$4" ] || echo "$4 1.0"
+    # The file may hold the version; 1.0 otherwise.
+    [ ! -e "$state/$4" ] || echo "$4  $(grep . "$state/$4" || echo 1.0)  omamac.toml  latest"
+    ;;
+  outdated)
+    # mise's JSON, an object by tool name: $state/../mise-outdated.json, or
+    # {} when nothing is outdated.
+    [ "${*:2}" = --json ] || { echo "fake-mise: use outdated --json" >&2; exit 1; }
+    [ -z "${T_MISE_OUTDATED_SLEEP:-}" ] || sleep "$T_MISE_OUTDATED_SLEEP"
+    [ "${T_MISE_OUTDATED_FAIL:-0}" != 1 ] || { echo "mise ERROR failed to fetch versions" >&2; exit 1; }
+    if [ -f "$state/../mise-outdated.json" ]; then cat "$state/../mise-outdated.json"; else echo '{}'; fi
     ;;
   upgrade)
     [ "${T_MISE_UPGRADE_FAIL:-0}" != 1 ] || { echo "mise ERROR upgrade failed" >&2; exit 1; }

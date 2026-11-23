@@ -1235,41 +1235,173 @@ dock_record() { plutil -create xml1 "$HOME/.local/state/omamac/dock-before.plist
   [[ "$output" != *"Dock"* ]]
 }
 
-@test "doctor lists your tools under ✓ Your tools, by section" {
+# Your tools and apps (#46's picks 2A 3B 4B): after the checks, a group per
+# kind, each tool with its version and whether a newer one is out, then the
+# apps with the version each reports.
+
+# app_version <bundle> <version>: the app's Info.plist reports that version.
+app_version() {
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/$1/Contents"
+  printf '<?xml version="1.0" encoding="UTF-8"?>\n<plist version="1.0"><dict><key>CFBundleShortVersionString</key><string>%s</string></dict></plist>\n' \
+    "$2" > "$OMAMAC_TEST_APPLICATIONS/$1/Contents/Info.plist"
+}
+
+# have <group>: doctor's plain list from that group's line on.
+have() { printf '%s\n' "$output" | sed -n "/^$1\$/,\$p"; }
+
+@test "doctor lists your tools after the checks, by kind, with versions" {
   healthy_mac
   choose languages 'go rust'
   choose cloud_clis gh
   mise_has go
-  mise_has rust
-  mkdir -p "$OMAMAC_TEST_BREW_PREFIX/Cellar/gh"
+  echo 1.88.0 > "$OMAMAC_TEST_BREW_PREFIX/mise/rust"
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gh
+  echo 2.83.1_1 > "$OMAMAC_TEST_BREW_PREFIX/Cellar/gh/.version"
   run doctor
   [ "$status" -eq 0 ]
-  printf '%s\n' "$output" | grep -A2 -xF '✓ Your tools' | grep -qxF '    Languages: Go, Rust'
-  printf '%s\n' "$output" | grep -qxF '    Cloud CLIs: GitHub CLI'
-  [[ "$output" != *"Coding agents:"* ]]
+  [ "$(have Languages)" = "Languages
+    Go 1.0 (latest)
+    Rust 1.88.0 (latest)
+Cloud CLIs
+    GitHub CLI 2.83.1 (latest)" ]
+  [[ "$output" != *"Coding agents"* ]]
+  [[ "$output" != *"waiting"* ]]
 }
 
 @test "doctor's list leaves out what's gone; the ✗ line names it" {
   healthy_mac
   choose languages 'go rust'
   mise_has go
+  gum_answers leave
   run doctor
   [ "$status" -eq 1 ]
-  printf '%s\n' "$output" | grep -qxF '    Languages: Go'
+  [ "$(have Languages)" = "Languages
+    Go 1.0 (latest)" ]
   [[ "$output" == *"✗ Rust — you chose it, but mise no longer has it"* ]]
 }
 
-@test "doctor lists your apps under ✓ Your apps, by group" {
+@test "doctor says which newer versions are out, and that omamac update brings them" {
   healthy_mac
-  healthy_apps vlc wispr-flow
+  choose languages 'node python'
+  choose coding_agents claude-code
+  echo 24.11.1 > "$OMAMAC_TEST_BREW_PREFIX/mise/node"
+  echo 3.14.0 > "$OMAMAC_TEST_BREW_PREFIX/mise/python"
+  echo '{"python":{"name":"python","requested":"latest","current":"3.14.0","latest":"3.14.2"}}' \
+    > "$OMAMAC_TEST_BREW_PREFIX/mise-outdated.json"
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask claude-code
+  echo 2.1.0 > "$OMAMAC_TEST_BREW_PREFIX/Caskroom/claude-code/.version"
+  echo '{"formulae":[],"casks":[{"name":"claude-code","installed_versions":["2.1.0"],"current_version":"2.2.0,abc"}]}' \
+    > "$OMAMAC_TEST_BREW_PREFIX/outdated.json"
+  : > "$STUB_LOG"
   run doctor
   [ "$status" -eq 0 ]
-  printf '%s\n' "$output" | grep -qxF '    Media: VLC'
-  printf '%s\n' "$output" | grep -qxF '    Wispr Flow'
+  [ "$(have Languages)" = "Languages
+    Node.js 24.11.1 (latest)
+    Python 3.14.0 (3.14.2 is out)
+Coding agents
+    Claude Code CLI 2.1.0 (2.2.0 is out)
+ℹ 2 updates waiting: omamac update" ]
+  # Each lookup once, and Homebrew isn't updated first.
+  [ "$(grep -c '^brew outdated' "$STUB_LOG")" -eq 1 ]
+  grep -qx 'brew outdated --greedy --json=v2' "$STUB_LOG"
+  grep -qx 'brew-env outdated HOMEBREW_NO_AUTO_UPDATE=1' "$STUB_LOG"
+  [ "$(grep -c '^mise outdated' "$STUB_LOG")" -eq 1 ]
+}
+
+@test "doctor: a pinned formula isn't an update waiting" {
+  healthy_mac
+  choose cloud_clis gh
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gh
+  echo '{"formulae":[{"name":"gh","installed_versions":["1.0"],"current_version":"2.0","pinned":true,"pinned_version":"1.0"}],"casks":[]}' \
+    > "$OMAMAC_TEST_BREW_PREFIX/outdated.json"
+  run doctor
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -qxF '    GitHub CLI 1.0 (latest)'
+}
+
+@test "doctor: a failed lookup shows versions only, and doctor's status stays its own" {
+  healthy_mac
+  choose languages go
+  choose cloud_clis gh
+  mise_has go
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gh
+  T_MISE_OUTDATED_FAIL=1 T_BREW_OUTDATED_FAIL=1 run doctor
+  [ "$status" -eq 0 ]
+  [ "$(have Languages)" = "Languages
+    Go 1.0
+Cloud CLIs
+    GitHub CLI 1.0" ]
+  # Output it can't read is a failed lookup too.
+  echo 'not json' > "$OMAMAC_TEST_BREW_PREFIX/outdated.json"
+  run doctor
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -qxF '    Go 1.0 (latest)'
+  printf '%s\n' "$output" | grep -qxF '    GitHub CLI 1.0'
+  # A ✗ elsewhere keeps doctor's 1.
+  rm "$HOME/.config/omamac/starship.toml"
+  T_BREW_OUTDATED_FAIL=1 run doctor
+  [ "$status" -eq 1 ]
+}
+
+@test "doctor: a slow lookup is cut short; its rows show versions only" {
+  healthy_mac
+  choose languages go
+  choose cloud_clis gh
+  mise_has go
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gh
+  SECONDS=0
+  OMAMAC_TEST_DOCTOR_WAIT=1 T_BREW_OUTDATED_SLEEP=30 run doctor
+  [ "$status" -eq 0 ]
+  [ "$SECONDS" -lt 15 ]
+  printf '%s\n' "$output" | grep -qxF '    Go 1.0 (latest)'
+  printf '%s\n' "$output" | grep -qxF '    GitHub CLI 1.0'
+}
+
+@test "doctor lists colima's formulas under Docker" {
+  healthy_mac
+  healthy_colima
+  run doctor
+  [ "$status" -eq 0 ]
+  [ "$(have Docker)" = "Docker
+    colima 1.0 (latest)
+    docker 1.0 (latest)
+    docker-compose 1.0 (latest)
+    docker-buildx 1.0 (latest)
+    lazydocker 1.0 (latest)" ]
+}
+
+@test "doctor lists Docker Desktop with the version the app reports, no newer column" {
+  healthy_mac
+  healthy_desktop
+  app_version Docker.app 4.52.0
+  run doctor
+  [ "$status" -eq 0 ]
+  [ "$(have Docker)" = "Docker
+    Docker Desktop 4.52.0
+    lazydocker 1.0 (latest)" ]
+}
+
+@test "doctor lists your apps one per line, in the catalog's order, with their versions" {
+  healthy_mac
+  healthy_apps vlc wispr-flow
+  choose apps_browsers firefox
+  "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask firefox
+  app_version VLC.app 3.0.21
+  app_version Firefox.app 145.0.1
+  : > "$STUB_LOG"
+  run doctor
+  [ "$status" -eq 0 ]
+  # This Wispr Flow reports no version.
+  [ "$(have Apps)" = "Apps
+    Firefox 145.0.1
+    VLC 3.0.21
+    Wispr Flow" ]
+  # Apps update themselves: no lookup for them.
+  [ -z "$(grep outdated "$STUB_LOG")" ]
 }
 
 # The terminal look (#46): one sheet of every check, the count line, a To fix
-# box with each command once, and What you have. The same checks and exit codes.
+# box with each command once, and Your tools and apps. The same checks and exit codes.
 
 # shown: $output without its colour codes.
 shown() { printf '%s\n' "$output" | uncoloured; }
@@ -1279,18 +1411,45 @@ shown() { printf '%s\n' "$output" | uncoloured; }
   terminal_look
   run doctor
   [ "$status" -eq 0 ]
-  [ "$(shown | sed -n 1,5p)" = "╭───┬───────────────────────┬────────╮
-│   │ Check                 │ Detail │
-├───┼───────────────────────┼────────┤
-│   │ Setup                 │        │
-│ ✓ │ Homebrew              │        │" ]
-  shown | grep -qxF '│   │ Terminal              │        │'
-  shown | grep -qxF '│   │ Theme · Tokyo Night   │        │'
+  [ "$(shown | sed -n 1,6p)" = "╭───┬───────────────────────┬───────────────────────────────────────────────╮
+│   │ Check                 │ Detail                                        │
+├───┼───────────────────────┼───────────────────────────────────────────────┤
+│   │ Setup                 │                                               │
+│ ✓ │ Homebrew              │ installs and updates the tools omamac sets up │
+│ ✓ │ bash 5                │ the shell omamac's scripts run in             │" ]
+  shown | grep -qxF '│   │ Terminal              │                                               │'
+  shown | grep -qxF '│   │ Theme · Tokyo Night   │                                               │'
   # The same 21 checks as the plain text, and nothing to fix.
   [ "$(shown | grep -c '^│ ✓ │')" -eq 21 ]
   shown | grep -qxF '21 fine'
   [[ "$output" != *"To fix"* ]]
   [[ "$output" == *$'\e[1mTheme\e[0m \e[2m· Tokyo Night\e[0m'* ]]
+  # Each fine check says what it is, dim.
+  [[ "$output" == *$'\e[2mlets your shell find Homebrew\'s tools\e[0m'* ]]
+}
+
+@test "terminal look: every fine check says what it is" {
+  healthy_mac
+  healthy_colima
+  healthy_apps vlc
+  choose dock_autohide yes
+  defaults write com.apple.dock autohide -bool true
+  terminal_look
+  run doctor
+  [ "$status" -eq 0 ]
+  [ "$(shown | grep -c '^│ ✓ │')" -eq 26 ]
+  # No ✓ row with an empty Detail.
+  [ -z "$(shown | grep '^│ ✓ │' | grep -E '│ +│$')" ]
+}
+
+@test "doctor's explanations fit the sheet: 45 columns at most" {
+  run "$BASH5" -c "source '$REPO_ROOT/lib/doctor.sh'
+    for what in \"\${!DOCTOR_ABOUT[@]}\"; do
+      v=\${DOCTOR_ABOUT[\$what]}
+      [ \"\${#v}\" -le 45 ] || echo \"\$what: \$v\"
+    done"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }
 
 @test "terminal look: a ✗ in its section, red; To fix says each command once" {
@@ -1302,9 +1461,9 @@ shown() { printf '%s\n' "$output" | uncoloured; }
   terminal_look
   run doctor
   [ "$status" -eq 1 ]
-  shown | grep -qxF '│ ✗ │ Theme files           │ .config/omamac/starship.toml missing    │'
-  # Rust sits under Your picks, after the theme's rows.
-  [[ "$(shown)" == *"│   │ Your picks "*"│ ✗ │ Rust                  │ you chose it, but mise no longer has it │"* ]]
+  shown | grep -qxF '│ ✗ │ Theme files           │ .config/omamac/starship.toml missing          │'
+  # Rust sits under Your tools and apps, after the theme's rows.
+  [[ "$(shown)" == *"│   │ Your tools and apps "*"│ ✗ │ Rust                  │ you chose it, but mise no longer has it       │"* ]]
   [[ "$output" == *$'\e[31myou chose it, but mise no longer has it\e[0m'* ]]
   shown | grep -qxF '2 problems · 19 fine'
   [ "$(shown | sed -n '/To fix/,/╰/p')" = "╭ To fix ─────────────────────────────╮
@@ -1329,21 +1488,48 @@ shown() { printf '%s\n' "$output" | uncoloured; }
   shown | grep -qxF '1 note · 20 fine'
 }
 
-@test "terminal look: What you have is a sheet of your picks, apps and Wispr Flow" {
+@test "terminal look: Your tools and apps is one sheet, a group per kind, with versions" {
   healthy_mac
-  choose languages go
+  choose languages 'go python'
   mise_has go
+  echo 3.14.0 > "$OMAMAC_TEST_BREW_PREFIX/mise/python"
+  echo '{"python":{"name":"python","requested":"latest","current":"3.14.0","latest":"3.14.2"}}' \
+    > "$OMAMAC_TEST_BREW_PREFIX/mise-outdated.json"
   healthy_apps vlc wispr-flow
+  app_version VLC.app 3.0.21
+  app_version "Wispr Flow.app" 1.4.2
   terminal_look
   run doctor
   [ "$status" -eq 0 ]
-  [ "$(shown | sed -n '/^What you have$/,$p')" = "What you have
-╭────────────┬───────────╮
-│ Languages  │ Go        │
-│ Media      │ VLC       │
-│ Wispr Flow │ installed │
-╰────────────┴───────────╯" ]
-  [[ "$output" == *$'\e[1mWhat you have\e[0m'* ]]
+  shown | grep -qxF '22 fine · 1 update waiting: omamac update'
+  [[ "$output" == *$'\e[33m1 update waiting: omamac update\e[0m'* ]]
+  [ "$(shown | sed -n '/^Your tools and apps$/,$p')" = "Your tools and apps
+╭────────────┬────────┬───────────────╮
+│ Languages  │        │               │
+│ Go         │ 1.0    │ latest        │
+│ Python     │ 3.14.0 │ 3.14.2 is out │
+│ Apps       │        │               │
+│ VLC        │ 3.0.21 │               │
+│ Wispr Flow │ 1.4.2  │               │
+╰────────────┴────────┴───────────────╯" ]
+  [[ "$output" == *$'\e[1mYour tools and apps\e[0m'* ]]
+  [[ "$output" == *$'\e[1mLanguages\e[0m'* ]]
+  [[ "$output" == *$'\e[33m3.14.2 is out\e[0m'* ]]
+  [[ "$output" == *$'\e[2mlatest\e[0m'* ]]
+}
+
+@test "terminal look: only apps, no newer column" {
+  healthy_mac
+  healthy_apps vlc
+  app_version VLC.app 3.0.21
+  terminal_look
+  run doctor
+  [ "$status" -eq 0 ]
+  [ "$(shown | sed -n '/^Your tools and apps$/,$p')" = "Your tools and apps
+╭──────┬────────╮
+│ Apps │        │
+│ VLC  │ 3.0.21 │
+╰──────┴────────╯" ]
 }
 
 @test "terminal look: a broken Mac's report fits 80 columns" {
@@ -1358,3 +1544,4 @@ shown() { printf '%s\n' "$output" | uncoloured; }
   [ "$(shown | widest)" -le 80 ]
   [[ "$(shown)" == *"To fix"*"Run the one-liner"* ]]
 }
+

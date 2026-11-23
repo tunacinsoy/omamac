@@ -90,7 +90,7 @@ To skip the questions you don't need:
 
 Sections and names can be mixed: `omamac install cloud-clis go`.
 
-`omamac doctor` checks that everything is healthy, and lists what omamac installed for you, by section (languages, cloud CLIs, coding agents, Docker, then your apps by group). For each problem it says why it matters and how to fix it, and it offers to reinstall a pick that is gone. Every check is a row of one sheet, by section, with a count under it (`1 problem · 1 note · 14 fine`); a yellow To fix box names each command once with what it fixes, and What you have is a sheet of your picks.
+`omamac doctor` checks that everything is healthy, then lists what omamac installed for you, a group per kind: Languages, Cloud CLIs, Coding agents and Docker, each tool with its version and whether a newer one is out (`3.14.2 is out`, or `latest`), then Apps, one per line with the version the app reports (apps update themselves, so no newer column). Finding newer versions never updates Homebrew and waits 10 seconds at most; if it can't tell, the version shows alone. For each problem it says why it matters and how to fix it, and it offers to reinstall a pick that is gone. Every check is a row of one sheet, by section, with a short word on what it is (`bash 5`: the shell omamac's scripts run in) and a count under it (`1 problem · 1 note · 14 fine`, and `· 2 updates waiting: omamac update` when some are); a yellow To fix box names each command once with what it fixes.
 
 ## Themes
 
