@@ -76,7 +76,8 @@ It updates omamac and what omamac installed, nothing else:
 - puts back any core tool, app, language, cloud CLI or coding agent that is missing, and the macOS settings you chose if you changed them;
 - upgrades the core tools, bash, gum, colima and its tools if you chose it, the cloud CLIs and coding agents you chose (the casks among them with `--greedy`) and the languages you chose;
 - upgrades Ghostty, Docker Desktop and your apps only when Homebrew lists them as outdated (they update themselves), and only if your terminal has App Management; otherwise it says what to click and exits 1. Homebrew may ask for your password for some of them;
-- runs `mise prune`, which deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`.
+- runs `mise prune`, which deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`;
+- names any question added since your first run, and the command that asks it, such as `omamac install desktop-widgets`: update itself asks nothing.
 
 `omamac install` adds the apps, languages, cloud CLIs and coding agents you didn't pick before. It also asks again any macOS setting you answered no, and the Docker question if you answered No Docker.
 

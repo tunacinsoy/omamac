@@ -51,6 +51,8 @@ source "$OMAMAC_CHECKOUT/lib/settings.sh"
 source "$OMAMAC_CHECKOUT/lib/dock.sh"
 # shellcheck source=lib/apply.sh
 source "$OMAMAC_CHECKOUT/lib/apply.sh"
+# shellcheck source=lib/add.sh
+source "$OMAMAC_CHECKOUT/lib/add.sh"
 
 OMAMAC_STEP='starting'
 # Labels of apps whose upgrade was skipped on purpose; update finishes, then exits 1.
@@ -223,6 +225,16 @@ update_upgrade_languages() {
   if [[ " ${ids[*]} " == *" ruby "* ]]; then languages_rails; fi
 }
 
+# update_new_questions: name each question with no answer yet. Update asks
+# nothing, so a question added after the first run would wait unseen.
+update_new_questions() {
+  local key command
+  while IFS= read -r key; do
+    command=$(add_command "$key") || command="run the one-liner"
+    ui_info "New question: ${QUESTION_TITLE[$key]}. To answer it: $command."
+  done < <(choices_missing)
+}
+
 update_main() {
   log_start
   update_choices
@@ -232,6 +244,7 @@ update_main() {
   update_upgrade_apps
   update_upgrade_languages
   OMAMAC_STEP='printing the summary'
+  update_new_questions
   # This run may be the one that started colima's service, as install would have.
   local notes=()
   [ "${#DOCKER_NOTES[@]}" -eq 0 ] || notes=("" "${DOCKER_NOTES[@]}" "")
