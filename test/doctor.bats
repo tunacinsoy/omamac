@@ -444,12 +444,12 @@ own_nvim() {
   expect_fail "Your answers" "Run omamac install docker"
 }
 
-@test "saved answers incomplete: one omamac install for every name, the theme apart" {
+@test "saved answers incomplete: one omamac install for every name, a setting and the theme apart" {
   healthy_mac
   sed -i '' -e '/^theme=/d' -e '/^apps_media=/d' -e '/^apps_ai=/d' -e '/^desktop_widgets=/d' "$CHOICES_FILE"
   run doctor
   [ "$status" -eq 1 ]
-  [[ "$output" == *"✗ Your answers — some questions have no answer yet. Fix: Run omamac theme, then omamac install apps desktop-widgets"* ]]
+  [[ "$output" == *"✗ Your answers — some questions have no answer yet. Fix: Run omamac theme, then omamac configure desktop-widgets, then omamac install apps"* ]]
 }
 
 @test "git status takes no lock" {

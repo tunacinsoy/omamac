@@ -11,6 +11,9 @@
 # 6 are 18, 19, 20, 21, 23, 22). Any other entry reads as `json` and its plutil
 # JSON, so uninstall puts it back exactly.
 
+# The five answers, in table order; omamac configure turns each on or off.
+SETTINGS_ANSWERS=(desktops window_margins desktop_widgets dock dock_autohide)
+
 SETTINGS_KEYS_desktops=(
   "com.apple.dock mru-spaces boolean false"
   "NSGlobalDomain AppleSpacesSwitchOnActivate boolean true"
@@ -264,13 +267,17 @@ settings_unit() {
   done
 }
 
+# settings_apply [<answer>…]: set the answers that are yes; with none named,
+# all five. A full run says a ✓ row per answer; omamac configure, which names
+# one, says its own.
 settings_apply() {
-  local answer line d k t v rc unit=()
+  local answer line d k t v rc unit=() answers=("$@")
   SETTINGS_REFUSED=0
   SETTINGS_DOCK=0
   SETTINGS_HOTKEYS=0
   SETTINGS_PUT_BACK=' '
-  for answer in desktops window_margins desktop_widgets dock dock_autohide; do
+  [ "${#answers[@]}" -gt 0 ] || answers=("${SETTINGS_ANSWERS[@]}")
+  for answer in "${answers[@]}"; do
     [ "${CHOICES[$answer]:-}" = yes ] || continue
     unit=()
     while IFS= read -r line; do
@@ -293,7 +300,7 @@ settings_apply() {
       fi
     fi
     if [ "$answer" = dock ]; then dock_apply || { settings_reload; return 1; }; fi
-    ui_ok "${QUESTION_TITLE[$answer]}"
+    [ "$#" -gt 0 ] || ui_ok "${QUESTION_TITLE[$answer]}"
   done
   settings_reload
 }

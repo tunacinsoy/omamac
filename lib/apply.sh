@@ -96,7 +96,7 @@ apply_stage_done() {
       ui_stage_done "${#ids[@]} installed"
       ;;
     macos)
-      for answer in desktops window_margins desktop_widgets dock dock_autohide; do
+      for answer in "${SETTINGS_ANSWERS[@]}"; do
         [ "${CHOICES[$answer]:-}" != yes ] || labels+=("${QUESTION_TITLE[$answer]}")
       done
       if [ "${#labels[@]}" -eq 0 ]; then ui_stage_done "nothing chosen"; else ui_stage_done "$(clis_join "${labels[@]}")"; fi

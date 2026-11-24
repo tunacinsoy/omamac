@@ -60,7 +60,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
 @test "offers only unpicked options" {
   choose languages node
   gum_answers "" ""
-  run omamac_install
+  run omamac_install languages cloud-clis
   [ "$status" -eq 0 ]
   [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
   [[ "$(prompts | sed -n 1p)" == *"--label-delimiter=: Ruby on Rails:ruby Go:go Python:python Elixir:elixir Rust:rust Java:java" ]]
@@ -72,7 +72,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   choose languages 'ruby node go python elixir rust java'
   choose coding_agents 'claude-code codex'
   gum_answers "" opencode yes
-  run omamac_install
+  run omamac_install cloud-clis coding-agents
   [ "$status" -eq 0 ]
   [ "$(prompts | wc -l | tr -d ' ')" = 3 ]
   [[ "$(prompts | sed -n 1p)" == *"Terraform:terraform" ]]
@@ -106,7 +106,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   before=$(choices_stamp)
   gum_answers "" ""
   sleep 1.1
-  run omamac_install
+  run omamac_install languages cloud-clis
   [ "$status" -eq 0 ]
   [[ "$output" == *"Nothing picked, so nothing changed."* ]]
   run ! grep -q '^gum confirm' "$STUB_LOG"
@@ -118,7 +118,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   before=$(choices_stamp)
   gum_answers go "" no
   sleep 1.1
-  run omamac_install
+  run omamac_install languages cloud-clis
   [ "$status" -eq 0 ]
   [[ "$output" == *"Languages: Go"* ]]
   [[ "$output" != *"Cloud CLIs:"* ]]
@@ -136,7 +136,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   (cd "$HOME" && "$OMAMAC_TEST_BREW_PREFIX/bin/mise" install node)
   : > "$STUB_LOG"
   gum_answers "rust go" aws yes
-  run omamac_install
+  run omamac_install languages cloud-clis
   [ "$status" -eq 0 ]
   [[ "$output" == *"Languages: Go, Rust"* ]]
   [[ "$output" == *"Cloud CLIs: AWS CLI"* ]]
@@ -186,7 +186,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
 
 @test "a failing step names itself and says to run omamac update" {
   gum_answers go "" yes
-  T_MISE_FAIL=1 run omamac_install
+  T_MISE_FAIL=1 run omamac_install languages cloud-clis
   [ "$status" -eq 1 ]
   [[ "$output" == *"omamac stopped while installing your languages."* ]]
   [[ "$output" == *"Fix the problem and run omamac update."* ]]
@@ -196,47 +196,16 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   # The adoption check lists casks as soon as VLC is picked.
   choose apps_media ""
   gum_answers vlc
-  T_BREW_LIST_FAIL=1 run omamac_install
+  T_BREW_LIST_FAIL=1 run omamac_install apps
   [ "$status" -eq 1 ]
   [[ "$output" == *"Fix the problem and run omamac install again."* ]]
   [[ "$output" != *"omamac update"* ]]
 }
 
-@test "desktops no: asked again; yes applies" {
-  choose desktops no
-  gum_answers "" "" yes yes
-  run omamac_install
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Desktops as workspaces"* ]]
-  grep -qx 'desktops=yes' "$CHOICES_FILE"
-  [ "$(defaults read com.apple.dock mru-spaces)" = 0 ]
-  [ "$(defaults read NSGlobalDomain AppleSpacesSwitchOnActivate)" = 1 ]
-}
-
-@test "desktops yes: not asked" {
-  gum_answers "" ""
-  run omamac_install
-  [[ "$(prompts)" != *"desktops"* ]]
-  [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
-}
-
-@test "answer no again: nothing changes" {
-  choose desktops no
-  before=$(choices_stamp)
-  gum_answers "" "" no
-  sleep 1.1
-  run omamac_install
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Nothing picked, so nothing changed."* ]]
-  grep -qx 'desktops=no' "$CHOICES_FILE"
-  [ "$(choices_stamp)" = "$before" ]
-  run ! grep -q '^defaults write' "$STUB_LOG"
-}
-
 @test "install asks Docker only when the answer is none" {
   choose docker colima
   gum_answers "" ""
-  run omamac_install
+  run omamac_install languages cloud-clis docker
   [ "$status" -eq 0 ]
   [[ "$(prompts)" != *"How should Docker run?"* ]]
   [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
@@ -247,7 +216,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   before=$(choices_stamp)
   gum_answers "" "" none
   sleep 1.1
-  run omamac_install
+  run omamac_install languages cloud-clis docker
   [ "$status" -eq 0 ]
   [[ "$output" == *"Nothing picked, so nothing changed."* ]]
   grep -qx 'docker=none' "$CHOICES_FILE"
@@ -257,7 +226,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
 @test "install: picking colima replaces none and installs it" {
   choose docker none
   gum_answers "" "" colima yes
-  run omamac_install
+  run omamac_install languages cloud-clis docker
   [ "$status" -eq 0 ]
   [[ "$(prompts)" == *"How should Docker run?"* ]]
   [[ "$output" == *"Docker: colima"* ]]
@@ -270,7 +239,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
 @test "install: Docker Desktop is named as installed" {
   choose docker none
   gum_answers go "" docker-desktop yes
-  run omamac_install
+  run omamac_install languages cloud-clis docker
   [ "$status" -eq 0 ]
   [[ "$output" == *"Docker: Docker Desktop"* ]]
   [[ "$output" == *"Installed: Go, Docker Desktop"* ]]
@@ -281,7 +250,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   choose apps_media spotify
   choose wispr_flow no
   gum_answers "" no "" ""
-  run omamac_install
+  run omamac_install apps languages cloud-clis
   [ "$status" -eq 0 ]
   [ "$(prompts | wc -l | tr -d ' ')" = 4 ]
   [ "$(prompts | sed -n 1p)" = "gum choose --no-limit --header Media --label-delimiter=: VLC:vlc" ]
@@ -293,7 +262,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   choose apps_media spotify
   rm -rf "$OMAMAC_TEST_BREW_PREFIX/Caskroom/vlc" "$OMAMAC_TEST_APPLICATIONS/VLC.app"
   gum_answers vlc "" "" yes
-  run omamac_install
+  run omamac_install apps languages cloud-clis
   [ "$status" -eq 0 ]
   [[ "$output" == *"Media: VLC"* ]]
   grep -qx 'apps_media=spotify vlc' "$CHOICES_FILE"
@@ -308,7 +277,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   choose apps_communication 'whatsapp telegram signal discord slack'
   rm -rf "$OMAMAC_TEST_BREW_PREFIX/Caskroom/zoom" "$OMAMAC_TEST_APPLICATIONS/zoom.us.app"
   gum_answers zoom "" "" no
-  run omamac_install
+  run omamac_install apps languages cloud-clis
   [ "$status" -eq 0 ]
   [[ "$output" == *"Communication: Zoom"* ]]
   [[ "$output" == *"ℹ Homebrew asks for your password once more, after you confirm, for: Zoom."* ]]
@@ -320,7 +289,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   choose apps_screen_recording ''
   rm -rf "$OMAMAC_TEST_BREW_PREFIX/Caskroom/cap" "$OMAMAC_TEST_APPLICATIONS/Cap.app"
   gum_answers cap "" "" yes
-  run omamac_install
+  run omamac_install apps languages cloud-clis
   [ "$status" -eq 0 ]
   [[ "$output" == *"Installed: Cap"$'\n'*"Cap: allow Screen Recording, and Camera and Microphone if you use them."* ]]
 }
@@ -336,7 +305,7 @@ by_hand() { # <cask> <App.app>
   choose apps_media spotify
   by_hand vlc VLC.app
   gum_answers vlc yes "" "" yes
-  run omamac_install
+  run omamac_install apps languages cloud-clis
   [ "$status" -eq 0 ]
   [[ "$output" == *"Homebrew can take it over"*"Media: VLC"* ]]
   grep -qx 'apps_media=spotify vlc' "$CHOICES_FILE"
@@ -350,7 +319,7 @@ by_hand() { # <cask> <App.app>
   by_hand vlc VLC.app
   rm -rf "$OMAMAC_TEST_BREW_PREFIX/Caskroom/visual-studio-code" "$OMAMAC_TEST_APPLICATIONS/Visual Studio Code.app"
   gum_answers vlc no vscode "" "" yes
-  run omamac_install
+  run omamac_install apps languages cloud-clis
   [ "$status" -eq 0 ]
   [[ "$output" == *"Developer: VS Code"* ]]
   [[ "$output" != *"Media: VLC"* ]]
@@ -363,7 +332,7 @@ by_hand() { # <cask> <App.app>
   choose apps_media spotify
   by_hand vlc VLC.app
   gum_answers vlc yes "" "" yes
-  T_BREW_FAIL_CASK=vlc run omamac_install
+  T_BREW_FAIL_CASK=vlc run omamac_install apps languages cloud-clis
   [ "$status" -eq 1 ]
   [[ "$output" == *"omamac stopped while handing VLC to Homebrew."* ]]
   grep -qx 'apps_media=spotify vlc' "$CHOICES_FILE"
@@ -374,7 +343,7 @@ by_hand() { # <cask> <App.app>
   choose wispr_flow no
   by_hand wispr-flow "Wispr Flow.app"
   gum_answers yes yes "" "" yes
-  run omamac_install
+  run omamac_install apps languages cloud-clis
   [ "$status" -eq 0 ]
   grep -qx 'brew install --cask --adopt wispr-flow' "$STUB_LOG"
   grep -qx 'wispr_flow=yes' "$CHOICES_FILE"
@@ -385,7 +354,7 @@ by_hand() { # <cask> <App.app>
   by_hand vlc VLC.app
   before=$(choices_stamp)
   gum_answers vlc no "" ""
-  run omamac_install
+  run omamac_install apps languages cloud-clis
   [ "$status" -eq 0 ]
   [[ "$output" == *"Nothing picked, so nothing changed."* ]]
   [ "$(choices_stamp)" = "$before" ]
@@ -396,7 +365,7 @@ by_hand() { # <cask> <App.app>
   choose wispr_flow no
   by_hand wispr-flow "Wispr Flow.app"
   gum_answers yes no "" ""
-  run omamac_install
+  run omamac_install apps languages cloud-clis
   [ "$status" -eq 0 ]
   [[ "$output" == *"Nothing picked, so nothing changed."* ]]
   grep -qx 'wispr_flow=no' "$CHOICES_FILE"
@@ -406,7 +375,7 @@ by_hand() { # <cask> <App.app>
   choose apps_media ''
   rm -rf "$OMAMAC_TEST_BREW_PREFIX/Caskroom/vlc" "$OMAMAC_TEST_APPLICATIONS/VLC.app"
   gum_answers "spotify vlc" "" "" yes
-  run omamac_install
+  run omamac_install apps languages cloud-clis
   [ "$status" -eq 0 ]
   [[ "$output" != *"Let Homebrew take over"* ]]
   [ -z "$(prompts | grep 'Let Homebrew take over')" ]
@@ -415,45 +384,10 @@ by_hand() { # <cask> <App.app>
 @test "install adopt: an app already from Homebrew is asked nothing" {
   choose apps_media spotify
   gum_answers vlc "" "" yes
-  run omamac_install
+  run omamac_install apps languages cloud-clis
   [ "$status" -eq 0 ]
   [[ "$output" != *"Let Homebrew take over"* ]]
   [ -z "$(prompts | grep 'Let Homebrew take over')" ]
-}
-
-@test "dock no: asked again; yes cleans the Dock" {
-  choose dock no
-  dock_seed "file:///System/Applications/Mail.app/" "file:///Applications/Foo.app/"
-  gum_answers "" "" yes yes
-  run omamac_install
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Dock cleanup"* ]]
-  grep -qx 'dock=yes' "$CHOICES_FILE"
-  grep -q '^defaults export com.apple.dock' "$STUB_LOG"
-  grep -q '^defaults import com.apple.dock' "$STUB_LOG"
-}
-
-@test "dock yes: not asked" {
-  gum_answers "" ""
-  run omamac_install
-  [[ "$(prompts)" != *"Clean up the Dock?"* ]]
-  [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
-}
-
-@test "dock auto-hide no: asked again; yes applies" {
-  choose dock_autohide no
-  gum_answers "" "" yes yes
-  run omamac_install
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Dock auto-hide"* ]]
-  grep -qx 'dock_autohide=yes' "$CHOICES_FILE"
-  [ "$(defaults read com.apple.dock autohide)" = 1 ]
-}
-
-@test "dock auto-hide yes: not asked" {
-  gum_answers "" ""
-  run omamac_install
-  [[ "$(prompts)" != *"Hide the Dock"* ]]
 }
 
 @test "install languages: asks only that section, only the unpicked" {
@@ -495,7 +429,7 @@ by_hand() { # <cask> <App.app>
   gum_answers
   run omamac_install go nope
   [ "$status" -eq 2 ]
-  [[ "$output" == *"omamac doesn't know 'nope'. Name a section (apps, languages, cloud-clis, coding-agents, docker, macos) or what to install, such as go, docker-desktop, vscode."* ]]
+  [[ "$output" == *"omamac doesn't know 'nope'. Name a section (apps, languages, cloud-clis, coding-agents, docker) or what to install, such as go, docker-desktop, vscode."* ]]
   [ -z "$(prompts)" ]
   [ "$(choices_stamp)" = "$before" ]
 }
@@ -518,38 +452,6 @@ by_hand() { # <cask> <App.app>
   grep -qx 'docker=colima' "$CHOICES_FILE"
 }
 
-@test "install dock-autohide: a macOS setting by its uninstall name" {
-  choose dock_autohide no
-  gum_answers yes
-  run omamac_install dock-autohide
-  [ "$status" -eq 0 ]
-  grep -qx 'dock_autohide=yes' "$CHOICES_FILE"
-}
-
-# update names a question added after the first run, and sends the user here.
-@test "a new question answered no in its section: the no is saved, nothing applied" {
-  sed -i '' '/^desktop_widgets=/d' "$CHOICES_FILE"
-  gum_answers no
-  run omamac_install macos
-  [ "$status" -eq 0 ]
-  [ "$(prompts)" = "gum confirm --default=false Hide widgets on the desktop?" ]
-  [[ "$output" == *"Nothing picked, so nothing changed."* ]]
-  grep -qx 'desktop_widgets=no' "$CHOICES_FILE"
-  run ! grep -q '^defaults write' "$STUB_LOG"
-}
-
-@test "a new question by its name, no at Install?: the no is saved, not the other picks" {
-  sed -i '' '/^desktop_widgets=/d' "$CHOICES_FILE"
-  gum_answers no
-  run omamac_install desktop-widgets go
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Stopped. Nothing else was changed."* ]]
-  grep -qx 'desktop_widgets=no' "$CHOICES_FILE"
-  grep -qx 'languages=' "$CHOICES_FILE"
-  run ! grep -qE '^(defaults write|brew install|mise install)' "$STUB_LOG"
-  [ ! -e "$HOME/.config/omamac" ]
-}
-
 @test "a new app group answered with nothing: saved as none" {
   sed -i '' '/^apps_media=/d' "$CHOICES_FILE"
   gum_answers ""
@@ -562,25 +464,16 @@ by_hand() { # <cask> <App.app>
 @test "add_command: every question has a command that asks it" {
   run "$BASH5" -c "set -Eeuo pipefail
     OMAMAC_CHECKOUT='$REPO_ROOT'
-    for f in paths ui questions choices clis core apps add; do source '$REPO_ROOT/lib/'\$f.sh; done
+    for f in paths ui questions choices clis core apps settings add; do source '$REPO_ROOT/lib/'\$f.sh; done
     for k in \"\${QUESTION_KEYS[@]}\"; do echo \"\$k: \$(add_command \"\$k\")\"; done"
   [ "$status" -eq 0 ]
   [[ "$output" == *"theme: omamac theme"* ]]
   [[ "$output" == *"apps_ai: omamac install apps"* ]]
-  [[ "$output" == *"desktop_widgets: omamac install desktop-widgets"* ]]
+  [[ "$output" == *"desktop_widgets: omamac configure desktop-widgets"* ]]
+  [[ "$output" == *"dock: omamac configure dock"* ]]
   [[ "$output" == *"cloud_clis: omamac install cloud-clis"* ]]
   [[ "$output" == *"docker: omamac install docker"* ]]
   [ "$(grep -c ': omamac ' <<< "$output")" -eq 19 ]
-}
-
-@test "install desktop-widgets: hides them" {
-  choose desktop_widgets no
-  gum_answers yes
-  run omamac_install desktop-widgets
-  [ "$status" -eq 0 ]
-  grep -qx 'desktop_widgets=yes' "$CHOICES_FILE"
-  [ "$(defaults read com.apple.WindowManager StandardHideWidgets)" = 1 ]
-  [ "$(defaults read com.apple.WindowManager StageManagerHideWidgets)" = 1 ]
 }
 
 @test "install a section and an id together: one question, one Install?" {
@@ -618,6 +511,89 @@ by_hand() { # <cask> <App.app>
     for id in \$(question_values languages); do [ -n \"\${LANGUAGE_COMMANDS[\$id]:-}\" ] || echo \"no commands: \$id\"; done"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
+}
+
+# With nothing named, install asks which section, then for Apps which group.
+@test "no name: the menu offers only the sections with something left" {
+  gum_answers languages ""
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [ "$(prompts | sed -n 1p)" = "gum choose --header What do you want to install? --label-delimiter=: Languages:languages Cloud CLIs:cloud-clis" ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
+  [[ "$(prompts | sed -n 2p)" == *"Programming languages"* ]]
+}
+
+@test "no name: a section picked from the menu installs like the section" {
+  gum_answers cloud-clis aws yes
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 3 ]
+  [[ "$(prompts | sed -n 2p)" == *"Cloud command-line tools"* ]]
+  grep -qx 'cloud_clis=aws' "$CHOICES_FILE"
+  grep -qx 'languages=' "$CHOICES_FILE"
+}
+
+@test "no name: Apps asks the group, then only that group" {
+  choose apps_media spotify
+  choose wispr_flow no
+  choose apps_developer ''
+  gum_answers apps apps_media ""
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [ "$(prompts | sed -n 1p)" = "gum choose --header What do you want to install? --label-delimiter=: Apps:apps Languages:languages Cloud CLIs:cloud-clis" ]
+  [ "$(prompts | sed -n 2p)" = "gum choose --header Which apps? --label-delimiter=: Media:apps_media Developer:apps_developer Wispr Flow:wispr_flow" ]
+  [ "$(prompts | sed -n 3p)" = "gum choose --no-limit --header Media --label-delimiter=: VLC:vlc" ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 3 ]
+}
+
+@test "no name: Wispr Flow from the Apps menu asks only it" {
+  choose wispr_flow no
+  choose apps_media spotify
+  gum_answers apps wispr_flow no
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [ "$(prompts | sed -n 3p)" = "gum confirm --default=false Install Wispr Flow for voice dictation?" ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 3 ]
+}
+
+@test "no name: one app group left is asked straight away" {
+  choose languages 'ruby node go python elixir rust java'
+  choose cloud_clis 'azure aws gcloud gh terraform'
+  choose apps_media spotify
+  gum_answers ""
+  run omamac_install
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "gum choose --no-limit --header Media --label-delimiter=: VLC:vlc" ]
+}
+
+@test "no name: Docker is offered only at No Docker" {
+  choose docker none
+  gum_answers ""
+  run omamac_install
+  [[ "$(prompts | sed -n 1p)" == *"Languages:languages Cloud CLIs:cloud-clis Docker:docker" ]]
+}
+
+@test "no name: Esc at the menu stops, nothing saved" {
+  before=$(choices_stamp)
+  gum_answers "exit 1"
+  run omamac_install
+  [ "$status" -eq 130 ]
+  [ "$(choices_stamp)" = "$before" ]
+}
+
+@test "install a setting name or macos: points to configure, asks nothing, exit 2" {
+  before=$(choices_stamp)
+  for name in desktops window-margins desktop-widgets dock dock-autohide; do
+    gum_answers
+    run --separate-stderr omamac_install go "$name"
+    [ "$status" -eq 2 ]
+    [[ "$stderr" == *"$name is a macOS setting: run omamac configure $name."* ]]
+  done
+  run --separate-stderr omamac_install macos
+  [ "$status" -eq 2 ]
+  [[ "$stderr" == *"The macOS settings moved: run omamac configure."* ]]
+  [ -z "$(prompts)" ]
+  [ "$(choices_stamp)" = "$before" ]
 }
 
 # The terminal look (#46): an Adds sheet of only the additions, the same

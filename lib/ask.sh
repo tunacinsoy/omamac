@@ -146,3 +146,14 @@ ask_choose() {
   # shellcheck disable=SC2034 # read by the caller
   ASK_PICKED=$out
 }
+
+# ask_choose_one <header> <Label:value>…: as ask_choose, but a list of one is
+# not asked: ASK_PICKED is its value.
+ask_choose_one() {
+  if [ "$#" -eq 2 ]; then
+    # shellcheck disable=SC2034 # read by the caller
+    ASK_PICKED=${2##*:}
+    return 0
+  fi
+  ask_choose "$@"
+}

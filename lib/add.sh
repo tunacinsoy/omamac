@@ -1,13 +1,15 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2034 # OMAMAC_STEP is read by bin/omamac's ERR trap
 # shellcheck disable=SC2004 # CHOICES is associative (lib/choices.sh), so $key is needed
-# omamac install: add apps, languages, CLIs and more to the saved
-# answers, then apply. Sourced after lib/ask.sh, lib/log.sh, lib/apps.sh and lib/apply.sh.
-# update.sh sources it with no lib/ask.sh, for add_command only.
+# omamac install: add apps, languages, CLIs, coding agents or Docker to the
+# saved answers, then apply. Software only: the macOS settings are omamac
+# configure's (lib/configure.sh). Sourced after lib/ask.sh, lib/log.sh,
+# lib/apps.sh, lib/settings.sh and lib/apply.sh. update.sh sources it with no
+# lib/ask.sh, for add_command only.
 
 # The questions omamac install asks again, with only their unpicked options.
-ADD_KEYS=("${APPS_KEYS[@]}" wispr_flow languages cloud_clis coding_agents desktops window_margins desktop_widgets dock dock_autohide docker)
-ADD_SECTIONS=(apps languages cloud-clis coding-agents docker macos)
+ADD_KEYS=("${APPS_KEYS[@]}" wispr_flow languages cloud_clis coding_agents docker)
+ADD_SECTIONS=(apps languages cloud-clis coding-agents docker)
 
 # add_section <name>: the questions of one section of omamac install, one per line.
 # Returns 1 when the name isn't a section.
@@ -18,17 +20,25 @@ add_section() {
     cloud-clis) echo cloud_clis ;;
     coding-agents) echo coding_agents ;;
     docker) echo docker ;;
-    macos) printf '%s\n' desktops window_margins desktop_widgets dock dock_autohide ;;
     *) return 1 ;;
   esac
 }
 
-# add_command <key>: the command that asks that question: a yes/no question
-# by its own name, any other by its section, the theme by omamac theme.
-# Returns 1 for a key neither asks.
+# add_section_label <section>: its name in install's menu.
+add_section_label() {
+  local keys=()
+  [ "$1" != apps ] || { echo Apps; return 0; }
+  mapfile -t keys < <(add_section "$1")
+  echo "${QUESTION_TITLE[${keys[0]}]}"
+}
+
+# add_command <key>: the command that asks that question: a macOS setting by
+# omamac configure, a yes/no question by its own name, any other by its
+# section, the theme by omamac theme. Returns 1 for a key none asks.
 add_command() {
   local section keys=()
   [ "$1" != theme ] || { echo "omamac theme"; return 0; }
+  [[ " ${SETTINGS_ANSWERS[*]} " != *" $1 "* ]] || { echo "omamac configure ${1//_/-}"; return 0; }
   [[ " ${ADD_KEYS[*]} " == *" $1 "* ]] || return 1
   [ "${QUESTION_KIND[$1]}" != yesno ] || { echo "omamac install ${1//_/-}"; return 0; }
   for section in "${ADD_SECTIONS[@]}"; do
@@ -76,6 +86,56 @@ add_targets() {
   for key in "${ADD_KEYS[@]}"; do
     [[ " ${keys[*]} " != *" $key "* ]] || ADD_ASK+=("$key")
   done
+}
+
+# add_left <key>: succeeds when that question still has something to add: a
+# yes/no not yet yes, Docker at none, or a multi with an unpicked option.
+add_left() {
+  local v had=() values=()
+  case ${QUESTION_KIND[$1]} in
+    yesno) [ "${CHOICES[$1]:-}" != yes ]; return ;;
+    single) [ "${CHOICES[$1]:-none}" = none ]; return ;;
+  esac
+  read -ra had <<< "${CHOICES[$1]:-}"
+  # Read every value first: returning mid-read would leave question_values
+  # writing into a closed pipe.
+  mapfile -t values < <(question_values "$1")
+  for v in "${values[@]}"; do
+    if [[ " ${had[*]} " != *" $v "* ]]; then return 0; fi
+  done
+  return 1
+}
+
+# add_menu: omamac install with nothing named asks which section, then for
+# Apps which group, offering only those with something left; a list of one is
+# not asked. Sets ADD_ASK to the questions to ask.
+add_menu() {
+  local section key keys=() options=()
+  ADD_ASK=()
+  for section in "${ADD_SECTIONS[@]}"; do
+    mapfile -t keys < <(add_section "$section")
+    for key in "${keys[@]}"; do
+      if add_left "$key"; then
+        options+=("$(add_section_label "$section"):$section")
+        break
+      fi
+    done
+  done
+  if [ "${#options[@]}" -eq 0 ]; then
+    ui_info "You've picked everything omamac offers here."
+    exit 0
+  fi
+  ask_choose_one "What do you want to install?" "${options[@]}"
+  mapfile -t keys < <(add_section "$ASK_PICKED")
+  if [ "$ASK_PICKED" = apps ]; then
+    options=()
+    for key in "${keys[@]}"; do
+      if add_left "$key"; then options+=("${QUESTION_TITLE[$key]}:$key"); fi
+    done
+    ask_choose_one "Which apps?" "${options[@]}"
+    keys=("$ASK_PICKED")
+  fi
+  ADD_ASK=("${keys[@]}")
 }
 
 # add_pick_ids: turn ADD_IDS into picks, as if their questions had been
@@ -179,21 +239,24 @@ add_done() {
 }
 
 # add_run [<section or id>…]: CHOICES is loaded (bin/omamac did that). Ask
-# every question, only the sections named, or nothing for the ids named; show
+# the section picked from the menu, only the sections named, or nothing for
+# the ids named; show
 # the additions, and save and apply them only after "Install?" is yes, so a no
 # changes nothing.
 add_run() {
   local key v had=() new=() left=() lines=() labels=() names=() apps=() allow=() joined asked=''
   local -A picks=() declined=()
-  local ask=("${ADD_KEYS[@]}") unanswered
+  local ask=() unanswered
   # update names a question added after the first run, and sends the user here.
   # A no, or a no at Install?, is still its answer, so it is saved, or update
   # would name the question again every time.
   unanswered=$(choices_missing)
   if [ "$#" -gt 0 ]; then
     add_targets "$@"
-    ask=(${ADD_ASK[@]+"${ADD_ASK[@]}"})
+  else
+    add_menu
   fi
+  ask=(${ADD_ASK[@]+"${ADD_ASK[@]}"})
   OMAMAC_STEP='asking the questions'
   for key in ${ask[@]+"${ask[@]}"}; do
     if [ "${QUESTION_KIND[$key]}" = yesno ]; then

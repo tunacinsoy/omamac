@@ -243,7 +243,7 @@ user_tile() {
   in_lib "$CHOOSE; dock_restore"
   [ "$status" -ne 0 ]
   [[ "$output" == *"✗ omamac's saved Dock (~/.local/state/omamac/dock-before.plist) is damaged, so your Dock was left as it is."* ]]
-  [[ "$output" == *"✗ Fix: delete that file, then run omamac uninstall dock again."* ]]
+  [[ "$output" == *"✗ Fix: delete that file, then run omamac configure dock off again."* ]]
   [ "$(count 'defaults import')" -eq 0 ]
   [ -f "$RECORD" ]
 }
