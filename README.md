@@ -62,7 +62,7 @@ curl -fsSL https://raw.githubusercontent.com/tunacinsoy/omamac/main/boot.sh | ba
     <td><code>Azure CLI</code> <code>AWS CLI</code> <code>Google Cloud</code> <code>GitHub CLI</code> <code>Terraform</code></td>
   </tr>
   <tr>
-    <td><b>Leaves your own setup alone</b><br><sub>One line added to your config files, never a rewrite; uninstall puts settings back. <a href="docs/what-it-changes.md">What it changes.</a></sub></td>
+    <td><b>Leaves your own setup alone</b><br><sub>One line added to your config files, never a rewrite; your earlier settings come back when you turn omamac's off. <a href="docs/what-it-changes.md">What it changes.</a></sub></td>
     <td>🛡️ <sub>safe to try</sub></td>
   </tr>
 </table>

@@ -59,10 +59,10 @@ desktops_on() {
 
 DOCK_RECORD_REL=.local/state/omamac/dock-before.plist
 
-# vm_exp_safe: no line of the output holds a prompt test/vm.exp would answer,
-# so configure's on and off run in the VM with none.
+# vm_exp_safe: no line of the output holds a prompt test/vm.exp would answer
+# or fail on, so configure's on and off run in the VM with none.
 vm_exp_safe() {
-  run ! grep -E '(Remove|Let Homebrew take over|Also remove) [^?]*\?|Install\?|[Pp]assword:' <<< "$output"
+  run ! grep -E '(Remove|Let Homebrew take over|Also remove) [^?]*\?|Install\?|[Pp]assword:|\([yY]/[nN]\)|\[[yY]/[nN]\]' <<< "$(printf '%s\n' "$output" | uncoloured)"
 }
 
 @test "no setting: the menu shows each setting with its state" {
@@ -252,7 +252,7 @@ vm_exp_safe() {
   gum_answers
   T_DEFAULTS_FAIL=NSGlobalDomain:AppleSpacesSwitchOnActivate run omamac_configure desktops off
   [ "$status" -ne 0 ]
-  [[ "$output" == *"Fix the problem and run omamac configure again."* ]]
+  [[ "$output" == *"Fix the problem and run omamac configure desktops off again."* ]]
   grep -qx 'desktops=yes' "$CHOICES_FILE"
   [[ "$(cat "$(REC)")" != *mru-spaces* ]]
   grep -q '^killall Dock' "$STUB_LOG"
@@ -390,6 +390,7 @@ file://${OMAMAC_TEST_APPLICATIONS// /%20}/Ghostty.app/" ]
   [[ "$stderr" == *"Usage: omamac <command>"* ]]
   run --separate-stderr omamac_configure dock on now
   [ "$status" -eq 2 ]
+  [[ "$stderr" == *"Usage: omamac <command>"* ]]
   [ -z "$(prompts)" ]
 }
 
@@ -429,6 +430,21 @@ shown() { printf '%s\n' "$output" | uncoloured; }
   [[ "$(shown)" == "╭ Turns off "*"│ Setting    Desktops as workspaces "*"│ Puts back  your earlier Spaces, app-switching, Ctrl 1–6 and Reduce motion "* ]]
   [ "$(shown | tail -1)" = "  ✓ Desktops as workspaces off" ]
   [ "$(shown | widest)" -le 80 ]
+}
+
+@test "terminal look: on and off with no question print nothing vm.exp answers" {
+  dock_seed file:///System/Applications/Mail.app/
+  settings_on dock
+  desktops_on
+  gum_answers
+  terminal_look
+  for args in "dock off" "desktops off" "dock-autohide on" "window-margins on" "window-margins off"; do
+    # shellcheck disable=SC2086 # two words
+    run omamac_configure $args
+    [ "$status" -eq 0 ]
+    vm_exp_safe
+  done
+  [ -z "$(prompts)" ]
 }
 
 @test "terminal look: dock-autohide on says what changes, then one row" {

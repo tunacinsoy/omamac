@@ -23,11 +23,11 @@ ask_need_tty() {
   exit 1
 }
 
-# ask_broken <what>: gum failed some other way. Under omamac <command>
-# (bin/omamac sets OMAMAC_CMD), that command is what to run again.
+# ask_broken <what>: gum failed some other way. Under bin/omamac (which sets
+# OMAMAC_CMD, empty for omamac's own menu), that command is what to run again.
 ask_broken() {
-  if [ -n "${OMAMAC_CMD:-}" ]; then
-    ui_fail "omamac couldn't ask about $1. Run omamac $OMAMAC_CMD again."
+  if [ -n "${OMAMAC_CMD+set}" ]; then
+    ui_fail "omamac couldn't ask about $1. Run omamac${OMAMAC_CMD:+ $OMAMAC_CMD} again."
   else
     ui_fail "omamac couldn't ask about $1. Run the one-liner again."
   fi

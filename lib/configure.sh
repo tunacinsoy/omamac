@@ -143,5 +143,7 @@ configure_run() {
     ui_info "$title is already $want."
     exit 0
   fi
+  # A failure from here names this exact change, not the menu.
+  OMAMAC_CMD="configure ${key//_/-} $want"
   if [ "$want" = on ]; then configure_on "$key"; else configure_off "$key"; fi
 }

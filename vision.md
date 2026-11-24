@@ -178,7 +178,7 @@ Five yes/no questions, each applied with `defaults`:
 - *Desktop widgets:* widgets are hidden from the desktop (the Weather and other widgets a new Mac shows).
 - *Dock:* Apple's preinstalled apps and the Downloads stack are removed from the Dock (not from the Mac), apps the user pinned stay, the apps omamac installed are added after them in catalog order, and suggested and recent apps are turned off so Apple's apps don't creep back. Scriptable with `dockutil` (a Homebrew formula) or `defaults`.
 - *Dock auto-hide:* the Dock hides when not in use, leaving more of a 14-inch screen for work.
-- The user's previous values, including the full Dock layout, are saved first; `omamac uninstall` restores them. `omamac doctor` reports any that drifted.
+- The user's previous values, including the full Dock layout, are saved first; `omamac configure <setting> off` restores them. `omamac doctor` reports any that drifted.
 - If macOS refuses a setting from Terminal (Reduce motion can be protected), omamac doesn't fail; the end-of-run summary gives the one click instead.
 - Creating desktops and assigning apps to them stay manual: macOS has no supported way to script either. The "After install" page (`docs/after-install.md`, linked from the README) says to make six desktops in Mission Control, each with a purpose (browser and chat, code and terminal, documents, monitoring, …), the opinion omakub and Omarchy share, then Assign To from each app's Dock menu.
 
@@ -263,8 +263,8 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - Installs are tested only in throwaway VMs, acting as an end user; the development Mac never runs omamac before Gate B.
 - Gate B is a factory reset of the Mac followed by a real user run-through from the README. No manual tool trials before it.
 - On the development Mac, repos live under `~/git-repos`.
-- omamac is opinionated about the experience: it applies the desktop settings itself (fixed desktop order, jump to the app's desktop, Reduce motion), asked as one question, previous values restored on uninstall. App-to-desktop assignment stays a README step.
-- On opt-in, omamac removes Apple's preinstalled apps from the Dock (never uninstalls them) and puts the apps it installed there; the previous Dock is restored on uninstall.
+- omamac is opinionated about the experience: it applies the desktop settings itself (fixed desktop order, jump to the app's desktop, Reduce motion), asked as one question, previous values restored when the setting is turned off (`omamac configure desktops off`). App-to-desktop assignment stays a README step.
+- On opt-in, omamac removes Apple's preinstalled apps from the Dock (never uninstalls them) and puts the apps it installed there; the previous Dock is restored when the cleanup is turned off (`omamac configure dock off`).
 - In the terminal, Ctrl bindings carry over from omawsl unchanged; no Ctrl ↔ ⌘ remapping.
 - omamac works in harmony with Homebrew: Homebrew is the only record of what's installed, omamac records only the user's choices. Whatever omamac offers and the user picks, omamac owns for its whole life (install, update notices, updates, uninstall) through Homebrew commands, including things Homebrew already had before they were picked. omamac never touches what the user installed with Homebrew outside omamac and never rebuilds what Homebrew does.
 - Apps from the catalog that the user installed by hand are detected and offered to Homebrew for adoption (`brew install --cask --adopt`); on yes omamac owns them, on no they are left untouched.
@@ -315,7 +315,7 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - Bootstrap is bash 3.2-safe; everything after the re-run requires Homebrew bash 5.
 - The user's zsh stays the login shell.
 - Desktop apps come only from Homebrew casks; no Mac App Store (`mas`) in v1.
-- Subcommands: install, update, theme, doctor, uninstall.
+- Subcommands: install, update, theme, doctor, uninstall, configure; `omamac` alone asks which.
 - Saved choices live in `~/.local/state/omamac/choices.env`.
 - Testing a branch uses the one-liner with `<branch>` in the `boot.sh` URL and `OMAMAC_REF=<branch>`; `test/vm.sh` uses the commit SHA in the URL. Reason: `main`'s `boot.sh` can't test a branch that changes `boot.sh`, and the Phase 1 PR has no `main` `boot.sh` at all.
 - Logs live in `~/.local/state/omamac/logs/` (newest 10).

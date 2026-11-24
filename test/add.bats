@@ -452,6 +452,19 @@ by_hand() { # <cask> <App.app>
   grep -qx 'docker=colima' "$CHOICES_FILE"
 }
 
+@test "a new question by its name, no at Install?: the no is saved, not the other picks" {
+  sed -i '' '/^wispr_flow=/d' "$CHOICES_FILE"
+  rm -rf "$OMAMAC_TEST_BREW_PREFIX/Caskroom/wispr-flow" "$OMAMAC_TEST_APPLICATIONS/Wispr Flow.app"
+  gum_answers no
+  run omamac_install wispr-flow go
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Stopped. Nothing else was changed."* ]]
+  grep -qx 'wispr_flow=no' "$CHOICES_FILE"
+  grep -qx 'languages=' "$CHOICES_FILE"
+  run ! grep -qE '^(brew install|mise install)' "$STUB_LOG"
+  [ ! -e "$HOME/.config/omamac" ]
+}
+
 @test "a new app group answered with nothing: saved as none" {
   sed -i '' '/^apps_media=/d' "$CHOICES_FILE"
   gum_answers ""

@@ -38,7 +38,7 @@ With no name, it asks which section (only the ones with something left to add), 
 
 ## omamac uninstall
 
-With no name, it asks which section (only the ones with something omamac installed), then what in it, with Nothing first. It takes the same names as `install`, one at a time. See [Uninstalling](uninstalling.md).
+With no name, it asks which section (only the ones with something omamac installed), then what in it, with Nothing first. It takes the same names as `install` (not the sections), one at a time. See [Uninstalling](uninstalling.md).
 
 ## omamac configure
 

@@ -23,7 +23,7 @@ omamac() { "$BASH5" "$REPO_ROOT/bin/omamac" "$@"; }
 menu_look() {
   install_fake_brew
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install gum
-  export OMAMAC_TEST_UI_TERMINAL=1
+  export OMAMAC_TEST_UI_TERMINAL=1 TMPDIR="$BATS_TEST_TMPDIR"
   : > "$STUB_LOG"
 }
 
@@ -46,6 +46,25 @@ menu_look() {
     [[ "$output" == *"omamac doesn't know your answers. Fix: run the one-liner."* ]]
   done
   [ "$(grep -c '^gum choose' "$STUB_LOG")" -eq 4 ]
+  # doctor reports and exits 1 on the missing answers; update stops on the
+  # checkout it can't pull, with its own fix.
+  gum_answers doctor
+  run omamac
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Your answers"* ]]
+  gum_answers update
+  run omamac
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"check your internet connection"* ]]
+}
+
+@test "no args in a terminal: a broken prompt says to run omamac again" {
+  menu_look
+  gum_answers "exit 3"
+  run omamac
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"omamac couldn't ask about What do you want to do?. Run omamac again."* ]]
+  [[ "$output" != *"one-liner"* ]]
 }
 
 @test "no args in a terminal: Change a macOS setting opens configure's menu" {
