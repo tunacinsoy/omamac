@@ -23,12 +23,12 @@ fi
 omamac uninstall vlc
 [[ $(dock_urls persistent-apps) == "file:///Applications/Ghostty.app/" ]]
 [[ $(< ~/.local/state/omamac/dock-added) == Ghostty.app ]]
-# Uninstalling the cleanup puts the Dock from before back.
-omamac uninstall dock
+# Turning the cleanup off puts the Dock from before back.
+omamac configure dock off
 [[ $(dock_urls persistent-apps) == "$(< ~/dock-before-apps)" ]]
 [[ $(dock_urls persistent-others) == "$(< ~/dock-before-others)" ]]
-# Uninstalling auto-hide takes the setting away (it was unset before).
-omamac uninstall dock-autohide
+# Turning auto-hide off takes the setting away (it was unset before).
+omamac configure dock-autohide off
 if defaults read com.apple.dock autohide; then
   exit 1
 fi

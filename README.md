@@ -62,7 +62,7 @@ curl -fsSL https://raw.githubusercontent.com/tunacinsoy/omamac/main/boot.sh | ba
     <td><code>Azure CLI</code> <code>AWS CLI</code> <code>Google Cloud</code> <code>GitHub CLI</code> <code>Terraform</code></td>
   </tr>
   <tr>
-    <td><b>Leaves your own setup alone</b><br><sub>One line added to your config files, never a rewrite; uninstall puts settings back. <a href="docs/what-it-changes.md">What it changes.</a></sub></td>
+    <td><b>Leaves your own setup alone</b><br><sub>One line added to your config files, never a rewrite; your earlier settings come back when you turn omamac's off. <a href="docs/what-it-changes.md">What it changes.</a></sub></td>
     <td>🛡️ <sub>safe to try</sub></td>
   </tr>
 </table>
@@ -90,13 +90,18 @@ curl -fsSL https://raw.githubusercontent.com/tunacinsoy/omamac/main/boot.sh | ba
 
 ## Your daily commands
 
+Type `omamac` and it asks what you want. Each command below asks what it needs, too.
+
 <table>
   <tr><td width="42%"><code>omamac theme</code></td><td>Switch the look everywhere (<a href="docs/themes.md">how</a>)</td></tr>
   <tr><td><code>omamac update</code></td><td>Update omamac, your tools and apps (<a href="docs/updating.md">how</a>)</td></tr>
-  <tr><td><code>omamac install</code></td><td>Add something you skipped</td></tr>
-  <tr><td><code>omamac uninstall</code></td><td>Remove something, settings put back (<a href="docs/uninstalling.md">how</a>)</td></tr>
+  <tr><td><code>omamac install</code></td><td>Add an app, language or tool you skipped</td></tr>
+  <tr><td><code>omamac uninstall</code></td><td>Remove one, cleanly (<a href="docs/uninstalling.md">how</a>)</td></tr>
+  <tr><td><code>omamac configure</code></td><td>Turn a macOS setting on or off, such as Dock auto-hide</td></tr>
   <tr><td><code>omamac doctor</code></td><td>Check that everything's healthy (<code>--all</code> for every check)</td></tr>
 </table>
+
+<sub>Not sure which one? <a href="docs/commands.md">Commands</a> lists what each takes.</sub>
 
 ## Good to know
 
@@ -133,6 +138,6 @@ A short checklist: open Ghostty, allow a few permissions, make six desktops, set
 
 ## Docs
 
-[Install](docs/install.md) · [After install](docs/after-install.md) · [Updating](docs/updating.md) · [Themes](docs/themes.md) · [herdr](docs/herdr.md) · [Uninstalling](docs/uninstalling.md) · [What it changes](docs/what-it-changes.md) · [Testing changes](docs/testing-changes.md) · [Contributing](CONTRIBUTING.md)
+[Install](docs/install.md) · [After install](docs/after-install.md) · [Commands](docs/commands.md) · [Updating](docs/updating.md) · [Themes](docs/themes.md) · [herdr](docs/herdr.md) · [Uninstalling](docs/uninstalling.md) · [What it changes](docs/what-it-changes.md) · [Testing changes](docs/testing-changes.md) · [Contributing](CONTRIBUTING.md)
 
 <p align="center"><sub>Inspired by <a href="https://github.com/basecamp/omakub">Omakub</a> · made for macOS on Apple Silicon</sub></p>

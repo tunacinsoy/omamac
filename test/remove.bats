@@ -81,7 +81,7 @@ snapshot() {
   gum_answers
   run --separate-stderr omamac_uninstall php
   [ "$status" -eq 2 ]
-  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, claude-code, codex, copilot-cli, antigravity-cli, opencode, brave, chrome, firefox, whatsapp, telegram, signal, discord, slack, zoom, spotify, vlc, cap, dropbox, google-drive, vscode, claude, chatgpt, copilot, antigravity, raycast, obsidian, wispr-flow, desktops, window-margins, desktop-widgets, colima, docker-desktop, dock, dock-autohide."* ]]
+  [[ "$stderr" == *"omamac can't remove 'php'. It can remove: ruby, node, go, python, elixir, rust, java, azure, aws, gcloud, gh, terraform, claude-code, codex, copilot-cli, antigravity-cli, opencode, brave, chrome, firefox, whatsapp, telegram, signal, discord, slack, zoom, spotify, vlc, cap, dropbox, google-drive, vscode, claude, chatgpt, copilot, antigravity, raycast, obsidian, wispr-flow, colima, docker-desktop."* ]]
   [ -z "$(prompts)" ]
 }
 
@@ -211,16 +211,47 @@ snapshot() {
   [ "$(snapshot)" = "$before" ]
 }
 
-@test "no name: Nothing first, then the chosen labels" {
+@test "no name: the section, then Nothing first and what's in it" {
   languages node go
   choose cloud_clis terraform
   before=$(snapshot)
-  gum_answers none
+  gum_answers languages none
   sleep 1.1
   run omamac_uninstall
   [ "$status" -eq 0 ]
-  [ "$(prompts)" = "gum choose --header What should omamac remove? --label-delimiter=: Nothing:none Node.js:node Go:go Terraform:terraform" ]
+  [ "$(prompts)" = "gum choose --header What do you want to remove? --label-delimiter=: Languages:languages Cloud CLIs:cloud-clis
+gum choose --header What should omamac remove? --label-delimiter=: Nothing:none Node.js:node Go:go" ]
   [ "$(snapshot)" = "$before" ]
+}
+
+@test "no name, one section: its list straight away" {
+  languages node go
+  gum_answers none
+  run omamac_uninstall
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "gum choose --header What should omamac remove? --label-delimiter=: Nothing:none Node.js:node Go:go" ]
+}
+
+@test "no name: settings answered yes are not offered" {
+  choose desktops yes
+  choose dock yes
+  gum_answers
+  run omamac_uninstall
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"omamac installed nothing you can remove."* ]]
+  [ -z "$(prompts)" ]
+}
+
+@test "a setting name points to configure, asks nothing, exit 2" {
+  choose dock_autohide yes
+  for name in desktops window-margins desktop-widgets dock dock-autohide; do
+    gum_answers
+    run --separate-stderr omamac_uninstall "$name"
+    [ "$status" -eq 2 ]
+    [[ "$stderr" == *"$name is a macOS setting: run omamac configure $name."* ]]
+  done
+  [ -z "$(prompts)" ]
+  grep -qx 'dock_autohide=yes' "$CHOICES_FILE"
 }
 
 @test "no name: the pick is removed" {
@@ -246,107 +277,6 @@ snapshot() {
   [ "$status" -eq 2 ]
   [[ "$stderr" == *"Usage: omamac <command>"* ]]
   [ -z "$(prompts)" ]
-}
-
-# desktops_on: what a first run with desktops=yes left.
-desktops_on() {
-  mkdir -p "$T_DEFAULTS_DIR"
-  defaults write com.apple.Accessibility ReduceMotionEnabled -int 0
-  "$BASH5" -c "
-    set -Eeuo pipefail
-    OMAMAC_CHECKOUT='$REPO_ROOT'
-    source '$REPO_ROOT/lib/paths.sh'; source '$REPO_ROOT/lib/ui.sh'
-    source '$REPO_ROOT/lib/questions.sh'; source '$REPO_ROOT/lib/choices.sh'
-    source '$REPO_ROOT/lib/core.sh'; source '$REPO_ROOT/lib/apps.sh'
-    source '$REPO_ROOT/lib/settings.sh'; source '$REPO_ROOT/lib/dock.sh'
-    CHOICES[desktops]=yes; settings_apply" > /dev/null
-  choose desktops yes
-  : > "$STUB_LOG"
-}
-
-REC() { echo "$HOME/.local/state/omamac/macos-settings.tsv"; }
-
-@test "uninstall desktops" {
-  desktops_on
-  gum_answers yes
-  run omamac_uninstall desktops
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Desktops as workspaces: your earlier Spaces, app-switching, Ctrl 1–6 and Reduce motion settings"* ]]
-  grep -qx 'gum confirm --default=false Remove Desktops as workspaces?' "$STUB_LOG"
-  grep -qx 'desktops=no' "$CHOICES_FILE"
-  [ ! -e "$(REC)" ]
-  run defaults read com.apple.dock mru-spaces
-  [ "$status" -ne 0 ]
-  # The clean Mac had no Ctrl 1–6 entries; none is left, and macOS reloads.
-  [ "$(plutil -extract AppleSymbolicHotKeys raw "$T_DEFAULTS_DIR/com.apple.symbolichotkeys.plist")" = "" ]
-  grep -qx 'activateSettings -u' "$STUB_LOG"
-  [ "$(defaults read com.apple.Accessibility ReduceMotionEnabled)" = 0 ]
-}
-
-@test "uninstall window-margins maps the name" {
-  choose window_margins yes
-  defaults write com.apple.WindowManager EnableTiledWindowMargins -bool true
-  mkdir -p "$(dirname "$(REC)")"
-  printf 'com.apple.WindowManager\tEnableTiledWindowMargins\tabsent\n' > "$(REC)"
-  gum_answers yes
-  run omamac_uninstall window-margins
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Window margins: your earlier window-margin setting"* ]]
-  grep -qx 'window_margins=no' "$CHOICES_FILE"
-  [ ! -e "$(REC)" ]
-  run defaults read com.apple.WindowManager EnableTiledWindowMargins
-  [ "$status" -ne 0 ]
-}
-
-@test "uninstall desktop-widgets maps the name" {
-  choose desktop_widgets yes
-  defaults write com.apple.WindowManager StandardHideWidgets -bool true
-  defaults write com.apple.WindowManager StageManagerHideWidgets -bool true
-  mkdir -p "$(dirname "$(REC)")"
-  printf 'com.apple.WindowManager\tStandardHideWidgets\tabsent\ncom.apple.WindowManager\tStageManagerHideWidgets\tboolean\tfalse\n' > "$(REC)"
-  gum_answers yes
-  run omamac_uninstall desktop-widgets
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Desktop widgets: your earlier desktop-widget settings"* ]]
-  grep -qx 'desktop_widgets=no' "$CHOICES_FILE"
-  [ ! -e "$(REC)" ]
-  run defaults read com.apple.WindowManager StandardHideWidgets
-  [ "$status" -ne 0 ]
-  [ "$(defaults read com.apple.WindowManager StageManagerHideWidgets)" = 0 ]
-}
-
-@test "not set by omamac" {
-  gum_answers
-  run omamac_uninstall desktops
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Desktops as workspaces isn't set by omamac."* ]]
-  [ -z "$(prompts)" ]
-}
-
-@test "no-name menu offers settings answered yes" {
-  choose languages node
-  choose window_margins yes
-  gum_answers none
-  run omamac_uninstall
-  [ "$status" -eq 0 ]
-  [ "$(prompts)" = "gum choose --header What should omamac remove? --label-delimiter=: Nothing:none Node.js:node Window margins:window-margins" ]
-}
-
-@test "a failed restore leaves the answer yes and the rest recorded" {
-  desktops_on
-  gum_answers yes
-  T_DEFAULTS_FAIL=NSGlobalDomain:AppleSpacesSwitchOnActivate run omamac_uninstall desktops
-  [ "$status" -ne 0 ]
-  grep -qx 'desktops=yes' "$CHOICES_FILE"
-  [[ "$(cat "$(REC)")" != *mru-spaces* ]]
-  grep -q '^killall Dock' "$STUB_LOG"
-  [[ "$(cat "$(REC)")" == *AppleSpacesSwitchOnActivate* ]]
-  [[ "$(cat "$(REC)")" == *ReduceMotionEnabled* ]]
-  gum_answers yes
-  run omamac_uninstall desktops
-  [ "$status" -eq 0 ]
-  grep -qx 'desktops=no' "$CHOICES_FILE"
-  [ ! -e "$(REC)" ]
 }
 
 # colonized: what a colima run leaves: five formulas, both links, the service,
@@ -823,15 +753,15 @@ brew uninstall --cask --zap vlc" ]
   [ -z "$(prompts)" ]
 }
 
-@test "no name: the chosen apps come after the settings" {
-  choose window_margins yes
+@test "no name: Apps and Docker are sections too" {
   choose apps_media vlc
   choose wispr_flow yes
   choose docker docker-desktop
-  gum_answers none
+  gum_answers apps none
   run omamac_uninstall
   [ "$status" -eq 0 ]
-  [ "$(prompts)" = "gum choose --header What should omamac remove? --label-delimiter=: Nothing:none Window margins:window-margins VLC:vlc Wispr Flow:wispr-flow Docker Desktop:docker-desktop" ]
+  [ "$(prompts)" = "gum choose --header What do you want to remove? --label-delimiter=: Apps:apps Docker:docker
+gum choose --header What should omamac remove? --label-delimiter=: Nothing:none VLC:vlc Wispr Flow:wispr-flow" ]
 }
 
 @test "no name: a picked app is removed" {
@@ -858,76 +788,6 @@ dock_on() {
 app_url() { echo "file://${OMAMAC_TEST_APPLICATIONS// /%20}/$1/"; }
 
 DOCK_RECORD_REL=.local/state/omamac/dock-before.plist
-
-@test "uninstall dock puts the Dock back and show-recents" {
-  dock_seed file:///System/Applications/Mail.app/ file:///Applications/Things.app/ \
-    -- "file://$HOME/Downloads/"
-  apps=$(dock_urls persistent-apps)
-  others=$(dock_urls persistent-others)
-  dock_on
-  [ "$(defaults read com.apple.dock show-recents)" = 0 ]
-  gum_answers yes
-  run omamac_uninstall dock
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Dock cleanup: your Dock goes back to how it was before omamac cleaned it. Changes you made to it since are undone."* ]]
-  grep -qx 'gum confirm --default=false Remove Dock cleanup?' "$STUB_LOG"
-  [[ "$output" == *"✓ Dock cleanup is removed"* ]]
-  [ "$(dock_urls persistent-apps)" = "$apps" ]
-  [ "$(dock_urls persistent-others)" = "$others" ]
-  run defaults read com.apple.dock show-recents
-  [ "$status" -ne 0 ]
-  [ ! -e "$HOME/$DOCK_RECORD_REL" ]
-  grep -qx 'dock=no' "$CHOICES_FILE"
-}
-
-@test "uninstall dock: no changes nothing" {
-  dock_seed file:///System/Applications/Mail.app/
-  dock_on
-  cp "$T_DEFAULTS_DIR/com.apple.dock.plist" "$BATS_TEST_TMPDIR/after.plist"
-  gum_answers no
-  run omamac_uninstall dock
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Nothing was removed."* ]]
-  cmp "$T_DEFAULTS_DIR/com.apple.dock.plist" "$BATS_TEST_TMPDIR/after.plist"
-  [ "$(defaults read com.apple.dock show-recents)" = 0 ]
-  [ -f "$HOME/$DOCK_RECORD_REL" ]
-  grep -qx 'dock=yes' "$CHOICES_FILE"
-}
-
-@test "uninstall dock with no record puts show-recents back only" {
-  dock_on
-  rm "$HOME/$DOCK_RECORD_REL"
-  gum_answers yes
-  run omamac_uninstall dock
-  [ "$status" -eq 0 ]
-  run ! grep -q '^defaults import' "$STUB_LOG"
-  run defaults read com.apple.dock show-recents
-  [ "$status" -ne 0 ]
-  grep -qx 'dock=no' "$CHOICES_FILE"
-}
-
-@test "uninstall dock: not set by omamac" {
-  gum_answers
-  run omamac_uninstall dock
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Dock cleanup isn't set by omamac."* ]]
-  [ -z "$(prompts)" ]
-}
-
-@test "uninstall dock-autohide maps the name" {
-  choose dock_autohide yes
-  defaults write com.apple.dock autohide -bool true
-  mkdir -p "$(dirname "$(REC)")"
-  printf 'com.apple.dock\tautohide\tabsent\n' > "$(REC)"
-  gum_answers yes
-  run omamac_uninstall dock-autohide
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Dock auto-hide: your earlier Dock auto-hide setting"* ]]
-  grep -qx 'gum confirm --default=false Remove Dock auto-hide?' "$STUB_LOG"
-  run defaults read com.apple.dock autohide
-  [ "$status" -ne 0 ]
-  grep -qx 'dock_autohide=no' "$CHOICES_FILE"
-}
 
 @test "uninstall vlc with dock=yes takes its tile out" {
   app_run apps_media vlc vlc
@@ -962,21 +822,12 @@ DOCK_RECORD_REL=.local/state/omamac/dock-before.plist
   grep -qx 'docker=none' "$CHOICES_FILE"
 }
 
-@test "no name: the menu offers both Dock answers" {
-  choose dock yes
-  choose dock_autohide yes
-  gum_answers none
-  run omamac_uninstall
-  [ "$status" -eq 0 ]
-  [ "$(prompts)" = "gum choose --header What should omamac remove? --label-delimiter=: Nothing:none Dock cleanup:dock Dock auto-hide:dock-autohide" ]
-}
-
 @test "every name omamac uninstall takes is one thing only" {
   run "$BASH5" -c "source '$REPO_ROOT/lib/questions.sh'
     for k in \"\${QUESTION_KEYS[@]}\"; do
       case \${QUESTION_KIND[\$k]} in multi) question_values \"\$k\" ;; esac
     done
-    echo wispr-flow desktops window-margins desktop-widgets colima docker-desktop dock dock-autohide | tr ' ' '\n'"
+    echo wispr-flow colima docker-desktop | tr ' ' '\n'"
   [ "$status" -eq 0 ]
   [ -z "$(sort <<< "$output" | uniq -d)" ]
 }
@@ -1090,13 +941,3 @@ gum confirm --default=false Remove Docker Desktop?" ]
   vm_exp_safe
 }
 
-@test "terminal look: uninstall desktops names what it puts back" {
-  desktops_on
-  gum_answers yes
-  terminal_look
-  run omamac_uninstall desktops
-  [ "$status" -eq 0 ]
-  [[ "$(shown)" == "╭ Removes "*"│ Setting    Desktops as workspaces "*"│ Puts back  your earlier Spaces, app-switching, Ctrl 1–6 and Reduce motion "* ]]
-  [ "$(shown | tail -1)" = "  ✓ Desktops as workspaces removed" ]
-  grep -qx 'gum confirm --default=false Remove Desktops as workspaces?' "$STUB_LOG"
-}

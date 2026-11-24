@@ -144,7 +144,7 @@ dock_put_back() {
   # A damaged record reads as no arrays, which would empty the Dock.
   if ! plutil -lint -s "$OMAMAC_DOCK_RECORD" > /dev/null 2>&1; then
     ui_fail "omamac's saved Dock (~/.local/state/omamac/dock-before.plist) is damaged, so your Dock was left as it is."
-    ui_fail "Fix: delete that file, then run omamac uninstall dock again."
+    ui_fail "Fix: delete that file, then run omamac configure dock off again."
     return 1
   fi
   defaults export com.apple.dock "$f" || return 1

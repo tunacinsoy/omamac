@@ -283,7 +283,7 @@ choose() { sed -i '' "s/^$1=.*/$1=$2/" "$CHOICES_FILE"; }
   run update
   [ "$status" -eq 0 ]
   [[ "$output" == *"New question: Media. To answer it: omamac install apps."* ]]
-  [[ "$output" == *"New question: Desktop widgets. To answer it: omamac install desktop-widgets."* ]]
+  [[ "$output" == *"New question: Desktop widgets. To answer it: omamac configure desktop-widgets."* ]]
   [[ "$output" == *"New question: Docker. To answer it: omamac install docker."* ]]
   [ "$(grep -c 'New question' <<< "$output")" -eq 3 ]
   [[ "$output" == *"omamac and your tools are up to date."* ]]
@@ -300,7 +300,7 @@ choose() { sed -i '' "s/^$1=.*/$1=$2/" "$CHOICES_FILE"; }
   run update
   [ "$status" -eq 0 ]
   [[ "$output" == *"New question: Wispr Flow. To answer it: omamac install wispr-flow."* ]]
-  [[ "$output" == *"New question: Dock auto-hide. To answer it: omamac install dock-autohide."* ]]
+  [[ "$output" == *"New question: Dock auto-hide. To answer it: omamac configure dock-autohide."* ]]
   [[ "$output" == *"New question: Coding agents. To answer it: omamac install coding-agents."* ]]
   [[ "$output" != *"one-liner"* ]]
   [ "$(grep -c 'New question' <<< "$output")" -eq 18 ]

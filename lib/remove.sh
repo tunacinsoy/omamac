@@ -1,10 +1,10 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2034 # OMAMAC_STEP is read by bin/omamac's ERR trap
 # shellcheck disable=SC2004 # CHOICES is associative (lib/choices.sh), so $key is needed
-# omamac uninstall: remove one language, cloud CLI, coding agent, setting, Docker or app.
-# Sourced after lib/ask.sh, lib/log.sh, lib/core.sh, lib/apps.sh,
-# lib/languages.sh, lib/clis.sh, lib/docker.sh, lib/appmanagement.sh,
-# lib/settings.sh and lib/dock.sh.
+# omamac uninstall: remove one language, cloud CLI, coding agent, Docker or
+# app. Software only: the macOS settings are omamac configure's. Sourced after
+# lib/ask.sh, lib/log.sh, lib/core.sh, lib/apps.sh, lib/languages.sh,
+# lib/clis.sh, lib/docker.sh, lib/appmanagement.sh, lib/dock.sh and lib/add.sh.
 
 # The questions whose picks omamac uninstall can remove.
 REMOVE_KEYS=(languages cloud_clis coding_agents)
@@ -21,54 +21,6 @@ remove_box() {
 # remove_done <plain sentence> <label> <detail>: the result, one row.
 remove_done() {
   if ui_term; then ui_row ok "$2" "$3"; else ui_ok "$1"; fi
-}
-
-# remove_setting <name>: put a desktop, window-margin, desktop-widget or Dock
-# auto-hide setting back. The answer is saved no last, so a failure leaves it
-# yes and the rest recorded.
-remove_setting() {
-  local key=desktops title
-  case $1 in
-    window-margins) key=window_margins ;;
-    desktop-widgets) key=desktop_widgets ;;
-    dock-autohide) key=dock_autohide ;;
-  esac
-  title=${QUESTION_TITLE[$key]}
-  if [ "${CHOICES[$key]:-}" != yes ]; then
-    ui_info "$title isn't set by omamac."
-    exit 0
-  fi
-  remove_box "$title: $(settings_what "$key")" "Setting"$'\t'"$title" "Puts back"$'\t'"$(settings_what "$key")"
-  if ! ask_yes "Remove $title?"; then
-    ui_info "Nothing was removed."
-    exit 0
-  fi
-  log_start
-  settings_uninstall "$key"
-  CHOICES[$key]=no
-  OMAMAC_STEP='saving your answers'
-  choices_save "$OMAMAC_CHOICES_FILE"
-  remove_done "$title is removed" "$title" removed
-}
-
-# remove_dock: put the Dock and show-recents back. The answer is saved no
-# last, so a failure leaves it yes for a rerun to finish.
-remove_dock() {
-  local title=${QUESTION_TITLE[dock]}
-  if [ "${CHOICES[dock]:-}" != yes ]; then
-    ui_info "$title isn't set by omamac."
-    exit 0
-  fi
-  remove_box "$title: your Dock goes back to how it was before omamac cleaned it. Changes you made to it since are undone." \
-    "Setting"$'\t'"$title" "Puts back"$'\t'"your Dock as it was before omamac cleaned it; changes you made to it since are undone"
-  ask_yes "Remove $title?" || { ui_info "Nothing was removed."; exit 0; }
-  log_start
-  dock_restore || return
-  settings_uninstall dock
-  CHOICES[dock]=no
-  OMAMAC_STEP='saving your answers'
-  choices_save "$OMAMAC_CHOICES_FILE"
-  remove_done "$title is removed" "$title" removed
 }
 
 # remove_app_management_ok <app path> <name>: Homebrew replaces the app
@@ -211,6 +163,46 @@ remove_docker() {
   else remove_done "Docker Desktop is removed" "Docker Desktop" removed; fi
 }
 
+# remove_section_options <section>: what omamac installed in that section of
+# install's menu, as "Label:id" lines.
+remove_section_options() {
+  local key v ids=()
+  case $1 in
+    apps) while IFS= read -r v; do echo "$(apps_label "$v"):$v"; done < <(apps_chosen) ;;
+    docker)
+      case ${CHOICES[docker]:-none} in
+        colima) echo "colima:colima" ;;
+        docker-desktop) echo "$(question_label docker docker-desktop):docker-desktop" ;;
+      esac
+      ;;
+    *)
+      key=$(add_section "$1")
+      read -ra ids <<< "${CHOICES[$key]:-}"
+      for v in "${ids[@]}"; do echo "$(question_label "$key" "$v"):$v"; done
+      ;;
+  esac
+}
+
+# remove_menu: omamac uninstall with nothing named asks which section, then
+# what in it, with Nothing first so Enter alone removes nothing. Only sections
+# with something omamac installed are offered; one is not asked. Sets
+# ASK_PICKED to the id; exits 0 on Nothing or when there is nothing.
+remove_menu() {
+  local section sections=() options=()
+  for section in "${ADD_SECTIONS[@]}"; do
+    mapfile -t options < <(remove_section_options "$section")
+    [ "${#options[@]}" -eq 0 ] || sections+=("$(add_section_label "$section"):$section")
+  done
+  if [ "${#sections[@]}" -eq 0 ]; then
+    ui_info "omamac installed nothing you can remove."
+    exit 0
+  fi
+  ask_choose_one "What do you want to remove?" "${sections[@]}"
+  mapfile -t options < <(remove_section_options "$ASK_PICKED")
+  ask_choose "What should omamac remove?" "Nothing:none" "${options[@]}"
+  [ "$ASK_PICKED" != none ] || exit 0
+}
+
 # remove_refuse_core <name>: stop when name is a core tool. bin/omamac calls it
 # before loading the answers, so it works without them too.
 remove_refuse_core() {
@@ -231,31 +223,10 @@ remove_run() {
   local name=${1:-} key='' k v label status tool joined list ids=() options=() tools=() all=() apps=()
   OMAMAC_STEP='checking what to remove'
   if [ "$#" -eq 0 ]; then
-    for k in "${REMOVE_KEYS[@]}"; do
-      read -ra ids <<< "${CHOICES[$k]:-}"
-      for v in "${ids[@]}"; do options+=("$(question_label "$k" "$v"):$v"); done
-    done
-    [ "${CHOICES[desktops]:-}" != yes ] || options+=("${QUESTION_TITLE[desktops]}:desktops")
-    [ "${CHOICES[window_margins]:-}" != yes ] || options+=("${QUESTION_TITLE[window_margins]}:window-margins")
-    [ "${CHOICES[desktop_widgets]:-}" != yes ] || options+=("${QUESTION_TITLE[desktop_widgets]}:desktop-widgets")
-    [ "${CHOICES[dock]:-}" != yes ] || options+=("${QUESTION_TITLE[dock]}:dock")
-    [ "${CHOICES[dock_autohide]:-}" != yes ] || options+=("${QUESTION_TITLE[dock_autohide]}:dock-autohide")
-    while IFS= read -r v; do options+=("$(apps_label "$v"):$v"); done < <(apps_chosen)
-    case ${CHOICES[docker]:-none} in
-      colima) options+=("colima:colima") ;;
-      docker-desktop) options+=("$(question_label docker docker-desktop):docker-desktop") ;;
-    esac
-    if [ "${#options[@]}" -eq 0 ]; then
-      ui_info "omamac installed nothing you can remove."
-      exit 0
-    fi
-    ask_choose "What should omamac remove?" "Nothing:none" "${options[@]}"
-    [ "$ASK_PICKED" != none ] || exit 0
+    remove_menu
     name=$ASK_PICKED
   fi
   case $name in
-    desktops | window-margins | desktop-widgets | dock-autohide) remove_setting "$name"; return ;;
-    dock) remove_dock; return ;;
     colima | docker-desktop) remove_docker "$name"; return ;;
   esac
   mapfile -t apps < <(apps_ids)
@@ -268,7 +239,7 @@ remove_run() {
     all+=("${ids[@]}")
   done
   if [ -z "$key" ]; then
-    ui_fail "omamac can't remove '$name'. It can remove: $(clis_join "${all[@]}" "${apps[@]}" desktops window-margins desktop-widgets colima docker-desktop dock dock-autohide)."
+    ui_fail "omamac can't remove '$name'. It can remove: $(clis_join "${all[@]}" "${apps[@]}" colima docker-desktop)."
     exit 2
   fi
   label=$(question_label "$key" "$name")

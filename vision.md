@@ -1,6 +1,6 @@
 # omamac — vision
 
-Status: living document · Owner: Tuna Cinsoy · Started Nov 9, 2026 · Updated Nov 19, 2026
+Status: living document · Owner: Tuna Cinsoy · Started Nov 9, 2026 · Updated Nov 24, 2026
 
 What omamac is, who it's for and why, in as much detail as we have today.
 
@@ -70,15 +70,16 @@ What that means in practice:
 
 **A Dock that holds your apps.** A fresh Mac's Dock is full of Apple's own apps (Mail, Safari, Maps, Photos, Notes, Calendar, Contacts, Music, TV and more) that pull the user into Apple's ecosystem whether they use them or not. If the user opts in, omamac clears them and the Downloads stack out of the Dock and puts the apps omamac installed there instead. The Apple apps are **not uninstalled**: they stay in Applications and open as usual from Spotlight, they just stop taking up the Dock. The result, left to right: Finder, apps the user pinned themselves, omamac's apps (Ghostty, the catalog apps in catalog order, then Docker Desktop), Trash. Finder and Trash always stay, since macOS doesn't allow removing them.
 
-**Afterwards,** the user manages everything through one command, `omamac`:
+**Afterwards,** the user manages everything through one command, `omamac`. The first run both installs and configures; afterwards, installing and configuring are separate commands. The user never has to remember a name: `omamac` alone asks what they want to do (install, remove, change a setting, switch the theme, update or check), and each command asks what it needs when nothing is named after it. Names are shortcuts for those who know them.
 
-- `omamac install` — add more tools or apps later, using the same questions. It only adds. `omamac install <section>` asks only that section (`languages`, `apps`…), and `omamac install <name>…` asks nothing but "Install?" (`omamac install go rust`), with the names `omamac uninstall` takes.
+- `omamac install` — add software later: apps, languages, cloud CLIs, coding agents, Docker. It only adds, and only software. With nothing named, it asks which section, and for Apps which group, then only that question; it never walks the first run's questions again. `omamac install <section>` asks only that section (`languages`, `apps`…), and `omamac install <name>…` asks nothing but "Install?" (`omamac install go rust`), with the names `omamac uninstall` takes.
+- `omamac configure` — turn one of the macOS settings on or off (desktops, window margins, desktop widgets, Dock cleanup, Dock auto-hide). With nothing named, it lists them with their state; `omamac configure dock-autohide` asks only about that one, and `omamac configure dock-autohide on|off` asks nothing. Off puts back the values from before omamac changed them, as uninstall does for software.
 - `omamac update` — update omamac and everything it installed: pull omamac's code (`git pull --ff-only` on `main`), run any migrations not yet applied (`migrations/<unix-ts>.sh`, last applied saved in `~/.local/state/omamac/version`), regenerate `~/.config/omamac/`, then `brew upgrade` the user's chosen formulas and casks and `mise upgrade` the chosen languages. Apps update themselves, so omamac upgrades one only when Homebrew lists it as outdated, without `--greedy`. The same model as omawsl, written fresh.
 - `omamac theme` — switch the theme everywhere at once.
 - `omamac doctor` — check that everything is healthy and explain anything that isn't (see below).
-- `omamac uninstall <thing>` — remove one thing omamac installed, safely, putting the Mac back the way it was before that thing. With nothing named, it asks what to remove. Core tools (Ghostty, herdr, starship…) can't be uninstalled one by one: omamac says they're part of the core and stops.
+- `omamac uninstall <thing>` — remove one thing omamac installed, safely, putting the Mac back the way it was before that thing. With nothing named, it asks which section, then what to remove. Core tools (Ghostty, herdr, starship…) can't be uninstalled one by one: omamac says they're part of the core and stops.
 
-To change an earlier answer (for example colima → Docker Desktop), the user uninstalls one and installs the other. There is no separate "edit answers" command.
+To change an earlier software answer (for example colima → Docker Desktop), the user uninstalls one and installs the other. A setting answer changes with `omamac configure`. There is no general "edit answers" command.
 
 **Known v1 gap: omamac can't remove itself.** Uninstall works per thing, so in v1 nothing removes the core tools, omamac's include lines, its generated files or the checkout. This goes against the principle "uninstall restores the previous state"; it is accepted for v1 to keep the scope down, and removing omamac itself is in the Backlog.
 
@@ -177,7 +178,7 @@ Five yes/no questions, each applied with `defaults`:
 - *Desktop widgets:* widgets are hidden from the desktop (the Weather and other widgets a new Mac shows).
 - *Dock:* Apple's preinstalled apps and the Downloads stack are removed from the Dock (not from the Mac), apps the user pinned stay, the apps omamac installed are added after them in catalog order, and suggested and recent apps are turned off so Apple's apps don't creep back. Scriptable with `dockutil` (a Homebrew formula) or `defaults`.
 - *Dock auto-hide:* the Dock hides when not in use, leaving more of a 14-inch screen for work.
-- The user's previous values, including the full Dock layout, are saved first; `omamac uninstall` restores them. `omamac doctor` reports any that drifted.
+- The user's previous values, including the full Dock layout, are saved first; `omamac configure <setting> off` restores them. `omamac doctor` reports any that drifted.
 - If macOS refuses a setting from Terminal (Reduce motion can be protected), omamac doesn't fail; the end-of-run summary gives the one click instead.
 - Creating desktops and assigning apps to them stay manual: macOS has no supported way to script either. The "After install" page (`docs/after-install.md`, linked from the README) says to make six desktops in Mission Control, each with a purpose (browser and chat, code and terminal, documents, monitoring, …), the opinion omakub and Omarchy share, then Assign To from each app's Dock menu.
 
@@ -262,8 +263,8 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - Installs are tested only in throwaway VMs, acting as an end user; the development Mac never runs omamac before Gate B.
 - Gate B is a factory reset of the Mac followed by a real user run-through from the README. No manual tool trials before it.
 - On the development Mac, repos live under `~/git-repos`.
-- omamac is opinionated about the experience: it applies the desktop settings itself (fixed desktop order, jump to the app's desktop, Reduce motion), asked as one question, previous values restored on uninstall. App-to-desktop assignment stays a README step.
-- On opt-in, omamac removes Apple's preinstalled apps from the Dock (never uninstalls them) and puts the apps it installed there; the previous Dock is restored on uninstall.
+- omamac is opinionated about the experience: it applies the desktop settings itself (fixed desktop order, jump to the app's desktop, Reduce motion), asked as one question, previous values restored when the setting is turned off (`omamac configure desktops off`). App-to-desktop assignment stays a README step.
+- On opt-in, omamac removes Apple's preinstalled apps from the Dock (never uninstalls them) and puts the apps it installed there; the previous Dock is restored when the cleanup is turned off (`omamac configure dock off`).
 - In the terminal, Ctrl bindings carry over from omawsl unchanged; no Ctrl ↔ ⌘ remapping.
 - omamac works in harmony with Homebrew: Homebrew is the only record of what's installed, omamac records only the user's choices. Whatever omamac offers and the user picks, omamac owns for its whole life (install, update notices, updates, uninstall) through Homebrew commands, including things Homebrew already had before they were picked. omamac never touches what the user installed with Homebrew outside omamac and never rebuilds what Homebrew does.
 - Apps from the catalog that the user installed by hand are detected and offered to Homebrew for adoption (`brew install --cask --adopt`); on yes omamac owns them, on no they are left untouched.
@@ -279,9 +280,10 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - One admin password prompt per run, kept valid until the run ends and never stored; all questions come before any install. Exception: the casks that need the password (Docker Desktop, Zoom, Google Drive). Homebrew resets sudo and asks again, so omamac installs them in one Homebrew step right after "Install?", in the open, says so before "Install?", and never bypasses the reset.
 - The v1 scope stays as described in this document.
 - Xcode is not offered in v1.
-- No "edit answers" command: change an answer by uninstalling one thing and installing another.
+- No general "edit answers" command: change a software answer by uninstalling one thing and installing another, and a macOS setting with `omamac configure`.
+- `install` and `uninstall` are for software only; the macOS settings are `omamac configure`'s. A setting name given to install or uninstall points to configure and changes nothing.
 - Answer files are for tests only; users answer interactively.
-- `omamac uninstall` works per thing and restores the Mac to how it was before that thing; with nothing named, it asks what to remove. Core tools can't be uninstalled one by one (omamac says so and stops). omamac can't remove itself in v1: a known gap, in the Backlog.
+- `omamac uninstall` works per thing and restores the Mac to how it was before that thing; with nothing named, it asks which section, then what to remove. Core tools can't be uninstalled one by one (omamac says so and stops). omamac can't remove itself in v1: a known gap, in the Backlog.
 - omamac never touches git identity, SSH keys or GitHub login; the README covers them.
 - App Management for Ghostty is a manual README step; omamac checks for it before changing any installed app and stops with the click if it's missing.
 - Dock on opt-in: Finder, the user's own pinned apps, omamac's apps (Ghostty, the catalog apps in catalog order, then Docker Desktop), Trash. Apple's apps and the Downloads stack leave the Dock.
@@ -313,7 +315,7 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - Bootstrap is bash 3.2-safe; everything after the re-run requires Homebrew bash 5.
 - The user's zsh stays the login shell.
 - Desktop apps come only from Homebrew casks; no Mac App Store (`mas`) in v1.
-- Subcommands: install, update, theme, doctor, uninstall.
+- Subcommands: install, update, theme, doctor, uninstall, configure; `omamac` alone asks which.
 - Saved choices live in `~/.local/state/omamac/choices.env`.
 - Testing a branch uses the one-liner with `<branch>` in the `boot.sh` URL and `OMAMAC_REF=<branch>`; `test/vm.sh` uses the commit SHA in the URL. Reason: `main`'s `boot.sh` can't test a branch that changes `boot.sh`, and the Phase 1 PR has no `main` `boot.sh` at all.
 - Logs live in `~/.local/state/omamac/logs/` (newest 10).
@@ -457,3 +459,4 @@ One line per decision: date, question, answer, who decided. Move the item out of
 - 2026-11-23 — Doctor, second round (draft page picks 1B 2B 3A) — by default four area lines (omamac, Terminal, Theme, macOS), a problem shown under its area with its fix, then tools with "latest" or "<new> is out" and apps with their version; `omamac doctor --all` lists every check with a plain name, one sentence on what it is, and a See line pointing to where it lives on the Mac, ending with one link to the README's "What it changes". Replaces the earlier 1B (every check by default) — Tuna
 - 2026-11-23 — README redesign (approved draft) — the README follows omawsl's: short and visual (logo, hero, What you get, See it, daily commands, Good to know); all long detail moves to `docs/` pages (install, after-install, updating, themes, herdr, uninstalling, what-it-changes, testing-changes); `omamac doctor --all` now links `docs/what-it-changes.md` — Tuna
 - 2026-11-23 — First release — 0.1.0, not v1: v1 waits for more polish and product marketing; 0.1.0 is tagged after the README redesign so people who find it see the new page — Tuna
+- 2026-11-24 — `omamac configure` and menus (#60) — the macOS settings leave `install` and `uninstall` (software only) for a new `omamac configure [<setting> [on|off]]`; `omamac` alone asks what to do, and install and uninstall ask the section first, so no name has to be remembered; old setting names point to configure, no alias; ships as 0.2.0, since commands that worked in 0.1.0 change — Tuna (how: Claude)

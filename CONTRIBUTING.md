@@ -70,7 +70,7 @@ test/vm.sh <branch> full
 test/vm.sh <branch> colima
 ```
 
-`full` picks every app, language, cloud CLI, coding agent and macOS setting, a theme other than the default, and Docker Desktop, then uninstalls every pick and checks the Dock and settings are back. Docker is one choice, so `colima` covers the other.
+`full` picks every app, language, cloud CLI, coding agent and macOS setting, a theme other than the default, and Docker Desktop, then uninstalls every pick, turns every setting off with `omamac configure`, and checks the Dock and settings are back. Docker is one choice, so `colima` covers the other.
 
 A fixture may have a `<name>.brew-passwords`, one digit: how many more times per command Homebrew itself asks for the password. Homebrew resets sudo before a cask step that needs it (Docker Desktop's links in `/usr/local`, Zoom's and Google Drive's installers), so omamac's one prompt doesn't cover it. `test/vm.sh` lets the one-liner and the steps type that many more. A `<name>.steps-passwords`, also one digit, sets the steps' count on its own, for steps that uninstall several apps whose casks ask: all of a steps file is one count.
 

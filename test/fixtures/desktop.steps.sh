@@ -30,9 +30,9 @@ if [[ $before != "$after" ]]; then
   diff <(print -r -- "$before") <(print -r -- "$after")
   exit 1
 fi
-omamac uninstall desktops
-omamac uninstall window-margins
-omamac uninstall desktop-widgets
+omamac configure desktops off
+omamac configure window-margins off
+omamac configure desktop-widgets off
 # The four keys the clean Mac lacked are gone; Reduce motion is back to 0.
 if defaults read com.apple.dock mru-spaces; then exit 1; fi
 if defaults read NSGlobalDomain AppleSpacesSwitchOnActivate; then exit 1; fi
@@ -51,11 +51,18 @@ choices=$(< ~/.local/state/omamac/choices.env)
 [[ $'\n'$choices$'\n' == *$'\n'desktops=no$'\n'* ]]
 [[ $'\n'$choices$'\n' == *$'\n'window_margins=no$'\n'* ]]
 [[ $'\n'$choices$'\n' == *$'\n'desktop_widgets=no$'\n'* ]]
-# Uninstalling again changes nothing and asks nothing.
+# configure turns a setting back on, then off, with no question.
+omamac configure window-margins on
+[[ $(defaults read com.apple.WindowManager EnableTiledWindowMargins) == 1 ]]
+grep -q EnableTiledWindowMargins $rec
+omamac configure window-margins off
+if defaults read com.apple.WindowManager EnableTiledWindowMargins; then exit 1; fi
+[[ ! -e $rec ]]
+# Turning them off again changes nothing and asks nothing.
 before=$(fp)
-omamac uninstall desktops
-omamac uninstall window-margins
-omamac uninstall desktop-widgets
+omamac configure desktops off
+omamac configure window-margins off
+omamac configure desktop-widgets off
 after=$(fp)
 if [[ $before != "$after" ]]; then
   diff <(print -r -- "$before") <(print -r -- "$after")

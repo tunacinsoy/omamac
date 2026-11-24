@@ -52,22 +52,28 @@ source "$OMAMAC_CHECKOUT/lib/add.sh"
 source "$OMAMAC_CHECKOUT/lib/remove.sh"
 # shellcheck source=lib/doctor.sh
 source "$OMAMAC_CHECKOUT/lib/doctor.sh"
+# shellcheck source=lib/configure.sh
+source "$OMAMAC_CHECKOUT/lib/configure.sh"
+# shellcheck source=lib/menu.sh
+source "$OMAMAC_CHECKOUT/lib/menu.sh"
 
 OMAMAC_STEP='starting'
 OMAMAC_CMD=''
 
-# The ERR trap for install and uninstall. Not for doctor: it returns 1 on a ✗.
+# The ERR trap for install, uninstall, configure and theme. Not for doctor: it returns 1 on a ✗.
 omamac_failed() {
   # With set -E the trap also runs inside ( … ) and $( … ); let only the main shell speak.
   [ "$BASHPID" -eq "$$" ] || exit 1
-  # Once install has saved the picks, running it again wouldn't offer them.
+  # Once install has saved the picks, or configure a yes, running it again
+  # wouldn't offer them; update applies what is saved.
+  local saved=${ADD_SAVED:-}${CONFIGURE_SAVED:-}
   if ui_term; then
-    if [ "$OMAMAC_CMD" = install ] && [ -n "${ADD_SAVED:-}" ]; then ui_stopped "run omamac update"
+    if [ -n "$saved" ]; then ui_stopped "run omamac update"
     else ui_stopped "run omamac $OMAMAC_CMD again"; fi
     exit 1
   fi
   ui_fail "omamac stopped while $OMAMAC_STEP."
-  if [ "$OMAMAC_CMD" = install ] && [ -n "${ADD_SAVED:-}" ]; then
+  if [ -n "$saved" ]; then
     ui_fail "Fix the problem and run omamac update."
   else
     ui_fail "Fix the problem and run omamac $OMAMAC_CMD again."
@@ -91,14 +97,22 @@ omamac_usage() {
   cat <<'USAGE'
 Usage: omamac <command>
 
-  install     Add tools and apps: all questions, one section
-              (apps, languages, cloud-clis, coding-agents, docker,
-              macos), or what you name, such as: install go rust
-  update      Update omamac and what it installed
+With no command, omamac asks what you want to do. Each command
+asks what it needs when you name nothing after it.
+
+  install     Add apps, languages, cloud CLIs, coding agents or
+              Docker: a section (apps, languages, cloud-clis,
+              coding-agents, docker) or names: install go rust
+  uninstall   Remove one thing omamac installed: uninstall vlc
+  configure   Turn a macOS setting on or off (desktops,
+              window-margins, desktop-widgets, dock, dock-autohide):
+              configure dock-autohide on
   theme       Switch the theme everywhere
+  update      Update omamac and what it installed
   doctor      Check that everything is healthy; doctor --all
               shows every check and what it is
-  uninstall   Remove one thing omamac installed
+
+All of them: docs/commands.md
 USAGE
 }
 
@@ -144,7 +158,12 @@ omamac_update() {
 }
 
 omamac_main() {
-  local cmd=${1:-help}
+  # No command: the menu where it can ask, the usage text anywhere else.
+  if [ "$#" -eq 0 ]; then
+    if ui_term && ask_has_tty; then menu_run; else omamac_usage; fi
+    return
+  fi
+  local cmd=$1 name
   case "$cmd" in
     help | -h | --help) omamac_usage ;;
     doctor)
@@ -160,6 +179,7 @@ omamac_main() {
     install)
       OMAMAC_CMD=install
       trap omamac_failed ERR
+      for name in "${@:2}"; do configure_refuse "$name"; done
       omamac_choices
       shift
       add_run "$@"
@@ -171,9 +191,19 @@ omamac_main() {
       fi
       OMAMAC_CMD=uninstall
       trap omamac_failed ERR
-      [ "$#" -lt 2 ] || remove_refuse_core "$2"
+      [ "$#" -lt 2 ] || { remove_refuse_core "$2"; configure_refuse "$2"; }
       omamac_choices
       remove_run "${@:2}"
+      ;;
+    configure)
+      if [ "$#" -gt 3 ] || { [ "$#" -eq 3 ] && [ "$3" != on ] && [ "$3" != off ]; }; then
+        omamac_usage >&2
+        return 2
+      fi
+      OMAMAC_CMD=configure
+      trap omamac_failed ERR
+      omamac_choices
+      configure_run "${@:2}"
       ;;
     theme)
       if [ "$#" -gt 2 ]; then

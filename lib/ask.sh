@@ -23,11 +23,11 @@ ask_need_tty() {
   exit 1
 }
 
-# ask_broken <what>: gum failed some other way. Under omamac <command>
-# (bin/omamac sets OMAMAC_CMD), that command is what to run again.
+# ask_broken <what>: gum failed some other way. Under bin/omamac (which sets
+# OMAMAC_CMD, empty for omamac's own menu), that command is what to run again.
 ask_broken() {
-  if [ -n "${OMAMAC_CMD:-}" ]; then
-    ui_fail "omamac couldn't ask about $1. Run omamac $OMAMAC_CMD again."
+  if [ -n "${OMAMAC_CMD+set}" ]; then
+    ui_fail "omamac couldn't ask about $1. Run omamac${OMAMAC_CMD:+ $OMAMAC_CMD} again."
   else
     ui_fail "omamac couldn't ask about $1. Run the one-liner again."
   fi
@@ -145,4 +145,15 @@ ask_choose() {
   [ "$status" -eq 0 ] || ask_broken "$header"
   # shellcheck disable=SC2034 # read by the caller
   ASK_PICKED=$out
+}
+
+# ask_choose_one <header> <Label:value>…: as ask_choose, but a list of one is
+# not asked: ASK_PICKED is its value.
+ask_choose_one() {
+  if [ "$#" -eq 2 ]; then
+    # shellcheck disable=SC2034 # read by the caller
+    ASK_PICKED=${2##*:}
+    return 0
+  fi
+  ask_choose "$@"
 }

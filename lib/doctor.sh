@@ -331,7 +331,7 @@ doctor_check_settings() {
     doctor_report info "$what" "skipped, your saved answers can't be read"
     return 0
   fi
-  for answer in desktops window_margins desktop_widgets dock dock_autohide; do
+  for answer in "${SETTINGS_ANSWERS[@]}"; do
     [ "${CHOICES[$answer]:-}" = yes ] || continue
     # Without the record, update never cleaned the Dock, so there is nothing to check.
     if [ "$answer" = dock ] && [ ! -f "$OMAMAC_DOCK_RECORD" ]; then
