@@ -1,6 +1,6 @@
 # Keeping it up to date
 
-How `omamac update` keeps your Mac current, how to add what you skipped, and how to check that everything is healthy.
+How `omamac update` keeps your Mac current, how to add what you skipped, how to change a macOS setting, and how to check that everything is healthy. Which command does what: [Commands](commands.md).
 
 [← Back to the README](../README.md)
 
@@ -17,22 +17,32 @@ It updates omamac and what omamac installed, nothing else:
 - upgrades the core tools, bash, gum, colima and its tools if you chose it, the cloud CLIs and coding agents you chose (the casks among them with `--greedy`) and the languages you chose;
 - upgrades Ghostty, Docker Desktop and your apps only when Homebrew lists them as outdated (they update themselves), and only if your terminal has App Management; otherwise it says what to click and exits 1. Homebrew may ask for your password for some of them;
 - runs `mise prune`, which deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`;
-- names any question added since your first run, and the command that asks it, such as `omamac install desktop-widgets`: update itself asks nothing.
+- names any question added since your first run, and the command that asks it, such as `omamac install apps` or `omamac configure desktop-widgets`: update itself asks nothing.
 
 ## omamac install
 
-`omamac install` adds the apps, languages, cloud CLIs and coding agents you didn't pick before. It also asks again:
+`omamac install` adds the apps, languages, cloud CLIs, coding agents or Docker you didn't pick before. It's for software only: macOS settings are `omamac configure`'s (below).
 
-- any macOS setting you answered no;
-- the Docker question, if you answered No Docker.
+With no name, it asks what you want to install: Apps, Languages, Cloud CLIs, Coding agents or Docker, only the ones with something left (Docker only if you answered No Docker). For Apps it then asks which group. Then it asks only that question, shows what it adds, and asks "Install?".
 
-To skip the questions you don't need:
+If you know what you want:
 
-- `omamac install languages` asks only that section's question. The sections are `apps`, `languages`, `cloud-clis`, `coding-agents`, `docker` and `macos` (the five macOS settings).
-- `omamac install go rust` asks nothing but "Install?". It takes the same names as `omamac uninstall`: `go`, `docker-desktop`, `vscode`, `dock-autohide` and the rest (see [Uninstalling](uninstalling.md)).
+- `omamac install languages` asks only that section's question. The sections are `apps` (every app group), `languages`, `cloud-clis`, `coding-agents` and `docker`.
+- `omamac install go rust` asks nothing but "Install?". It takes the same names as `omamac uninstall`: `go`, `docker-desktop`, `vscode`, `wispr-flow` and the rest (see [Commands](commands.md)).
 - A name you already picked is skipped.
 - Docker takes one choice: to switch from Docker Desktop to colima, uninstall it first.
 - Sections and names can be mixed: `omamac install cloud-clis go`.
+
+## omamac configure
+
+`omamac configure` turns one of the five macOS settings on or off: desktops as workspaces, window margins, desktop widgets, Dock cleanup and Dock auto-hide.
+
+- With no name, it lists them, each with whether it's on or off. Pick one, and it shows what changes and asks "Turn on …?" or "Turn off …?".
+- `omamac configure dock-autohide` asks only about that one.
+- `omamac configure dock-autohide on` (or `off`) asks nothing.
+- On sets only that setting. Off puts back the values you had before omamac changed them; for Dock cleanup, your Dock goes back to how it was before the cleanup.
+
+The names are `desktops`, `window-margins`, `desktop-widgets`, `dock` and `dock-autohide`. What each one changes: [What it changes](what-it-changes.md#macos-settings).
 
 ## omamac doctor
 

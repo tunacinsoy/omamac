@@ -6,7 +6,7 @@ Remove one thing you picked, or undo omamac by hand.
 
 ## omamac uninstall
 
-`omamac uninstall <name>` removes one thing you picked, after asking. With no name, it asks what to remove.
+`omamac uninstall <name>` removes one thing you picked, after asking. With no name, it asks which section (Apps, Languages, Cloud CLIs, Coding agents or Docker), then what in it.
 
 A yellow Removes box shows what goes (the app, Homebrew's cask, its data only if you say yes) before the questions.
 
@@ -28,8 +28,10 @@ A yellow Removes box shows what goes (the app, Homebrew's cask, its data only if
 
 ### macOS settings
 
-- `omamac uninstall desktops`, `window-margins`, `desktop-widgets` and `dock-autohide` put the earlier values back and turn the answer to no.
-- `omamac uninstall dock` puts the Dock back to how it was before the cleanup. Changes you made to it since are undone, and suggested and recent apps come back.
+Settings aren't uninstalled: turn them off with `omamac configure` (see [Keeping it up to date](updating.md#omamac-configure)).
+
+- `omamac configure desktops off`, and the same for `window-margins`, `desktop-widgets` and `dock-autohide`, puts the earlier values back.
+- `omamac configure dock off` puts the Dock back to how it was before the cleanup. Changes you made to it since are undone, and suggested and recent apps come back.
 
 ### Docker
 
@@ -44,7 +46,7 @@ To change an earlier answer, for example colima to Docker Desktop, uninstall one
 
 **omamac can't remove itself or its core tools yet.** To undo the rest by hand, in Terminal (not Ghostty, which is removed):
 
-1. Remove your picks and put the macOS settings back with `omamac uninstall`, while omamac is still there.
+1. Remove your picks with `omamac uninstall`, and turn the macOS settings off with `omamac configure`, while omamac is still there.
 2. If omamac installed them: `brew uninstall gum bash starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd lazygit tree-sitter-cli jq` and `brew uninstall --cask ghostty`.
 3. Delete the two lines ending in `# added by omamac`, and the line naming `~/.config/omamac/ghostty.conf` from your Ghostty config.
 4. Delete the three folders (`~/.config/omamac`, `~/.local/share/omamac`, `~/.local/state/omamac`) and `~/.config/mise/conf.d/omamac.toml`, and `~/.config/nvim` if omamac made it (it holds `lua/plugins/omamac.lua`).

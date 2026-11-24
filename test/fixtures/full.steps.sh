@@ -106,11 +106,11 @@ for a in "${agents[@]}"; do
   omamac uninstall "${a%%:*}"
   [[ ! -e /opt/homebrew/bin/${a#*:} ]]
 done
-omamac uninstall dock
-omamac uninstall dock-autohide
-omamac uninstall desktops
-omamac uninstall window-margins
-omamac uninstall desktop-widgets
+omamac configure dock off
+omamac configure dock-autohide off
+omamac configure desktops off
+omamac configure window-margins off
+omamac configure desktop-widgets off
 choices=$(< ~/.local/state/omamac/choices.env)
 for line in apps_browsers= apps_communication= apps_media= apps_screen_recording= apps_storage= \
   apps_developer= apps_ai= apps_productivity= wispr_flow=no desktops=no window_margins=no \
