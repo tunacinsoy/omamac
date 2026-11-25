@@ -1,10 +1,14 @@
-# shellcheck shell=bash
+# shellcheck shell=bash disable=SC2034 # CHOICES_RETIRED_DRAG is read by lib/settings.sh
 # The saved answers in choices.env. Sourced after lib/questions.sh.
 # The file is read as data, line by line, and checked against the question
 # table. It is never sourced: a value like $(…) must not run.
 
 declare -gA CHOICES=()
 CHOICES_HEADER="# omamac's saved answers. omamac reads this file as data; it is never run."
+# A three_finger_drag answer, from the hour three-finger drag was on main
+# before tap to drag replaced it: settings_retire_drag acts on it. Empty when
+# the file has none.
+CHOICES_RETIRED_DRAG=''
 
 # choices_normalise <key> <value>: prints the value as saved (multi in table
 # order); returns 1 if it isn't a valid answer.
@@ -35,6 +39,7 @@ choices_load() {
   local file=$1 line key value normal problem n=0
   local shown=${file/#"$HOME"/\~}
   CHOICES=()
+  CHOICES_RETIRED_DRAG=''
   [ -e "$file" ] || return 0
   if [ ! -f "$file" ] || [ ! -r "$file" ]; then
     echo "omamac can't read $shown. Fix: move it aside and run the one-liner again." >&2
@@ -51,7 +56,9 @@ choices_load() {
       problem="it isn't one key=value of lowercase letters, digits and dashes"
     else
       key=${BASH_REMATCH[1]} value=${BASH_REMATCH[2]}
-      if [ -z "${QUESTION_KIND[$key]:-}" ]; then
+      if [ "$key" = three_finger_drag ] && [[ $value == yes || $value == no ]]; then
+        CHOICES_RETIRED_DRAG=$value
+      elif [ -z "${QUESTION_KIND[$key]:-}" ]; then
         problem="omamac has no question '$key'"
       elif [ -n "${CHOICES[$key]+set}" ]; then
         problem="'$key' is there twice"

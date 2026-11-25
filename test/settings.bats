@@ -539,3 +539,75 @@ com.apple.WindowManager${TAB}StageManagerHideWidgets${TAB}absent" ]
   [[ "$(cat "$REC")" != *AppleSymbolicHotKeys* ]]
   [ "$(hotkey_xml 118)" = absent ]
 }
+
+# A saved three_finger_drag answer, from before tap to drag replaced it, with
+# the swipes three-finger drag moved, as on a Mac that ran it.
+retired_drag_mac() {
+  local d f="$HOME/.local/state/omamac/choices.env"
+  mkdir -p "${f%/*}"
+  sed -e '/^tap_to_drag=/d' -e "s/^tap_to_click=.*/tap_to_click=yes\\
+three_finger_drag=$1/" "$REPO_ROOT/test/fixtures/bare.env" > "$f"
+  : > "$REC"
+  for d in com.apple.AppleMultitouchTrackpad com.apple.driver.AppleBluetoothMultitouch.trackpad; do
+    seed "$d" Dragging boolean false
+    seed "$d" TrackpadThreeFingerDrag boolean true
+    seed "$d" TrackpadThreeFingerHorizSwipeGesture integer 0
+    seed "$d" TrackpadThreeFingerVertSwipeGesture integer 0
+    seed "$d" TrackpadFourFingerHorizSwipeGesture integer 2
+    printf '%s\t%s\t%s\n' "$d" Dragging 'boolean	true' "$d" TrackpadThreeFingerDrag 'boolean	false' \
+      "$d" TrackpadThreeFingerHorizSwipeGesture 'integer	2' "$d" TrackpadThreeFingerVertSwipeGesture absent >> "$REC"
+  done
+}
+
+@test "a saved three-finger drag yes: swipes put back, now tap to drag, the line gone" {
+  local d f="$HOME/.local/state/omamac/choices.env"
+  retired_drag_mac yes
+  in_lib 'choices_load "$OMAMAC_CHOICES_FILE"; settings_retire_drag; echo "DRAG ${CHOICES[tap_to_drag]}"; settings_apply tap_to_drag'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DRAG yes"* ]]
+  [[ "$output" == *"Three-finger drag is now tap to drag"* ]]
+  ! grep -q three_finger_drag "$f"
+  grep -qx 'tap_to_drag=yes' "$f"
+  in_lib 'choices_load "$OMAMAC_CHOICES_FILE"'
+  [ "$status" -eq 0 ]
+  for d in com.apple.AppleMultitouchTrackpad com.apple.driver.AppleBluetoothMultitouch.trackpad; do
+    [ "$(value $d TrackpadThreeFingerHorizSwipeGesture)" = 2 ]
+    [ "$(value $d TrackpadThreeFingerVertSwipeGesture)" = absent ]
+    # Never recorded, so omamac didn't change it: left alone.
+    [ "$(value $d TrackpadFourFingerHorizSwipeGesture)" = 2 ]
+    [ "$(value $d Dragging)" = 1 ]
+    [ "$(value $d TrackpadThreeFingerDrag)" = 0 ]
+  done
+  ! grep -q SwipeGesture "$REC"
+  # The values from before omamac stay, so off puts them back.
+  grep -qx "com.apple.AppleMultitouchTrackpad${TAB}Dragging${TAB}boolean${TAB}true" "$REC"
+  in_lib 'choices_load "$OMAMAC_CHOICES_FILE"; settings_uninstall tap_to_drag'
+  [ "$status" -eq 0 ]
+  [ "$(value com.apple.AppleMultitouchTrackpad Dragging)" = 1 ]
+  [ "$(value com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag)" = 0 ]
+}
+
+@test "a saved three-finger drag no: the line goes, tap to drag stays unanswered" {
+  local f="$HOME/.local/state/omamac/choices.env"
+  retired_drag_mac no
+  : > "$REC"
+  rm -f "$REC"
+  in_lib 'choices_load "$OMAMAC_CHOICES_FILE"; settings_retire_drag; echo "SET ${CHOICES[tap_to_drag]+set}."'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"SET ."* ]]
+  [[ "$output" != *"tap to drag"* ]]
+  ! grep -q three_finger_drag "$f"
+  ! grep -q tap_to_drag "$f"
+}
+
+@test "no three-finger drag line: the answers file is left alone" {
+  local f="$HOME/.local/state/omamac/choices.env"
+  mkdir -p "${f%/*}"
+  cp "$REPO_ROOT/test/fixtures/bare.env" "$f"
+  touch -t 202001010000 "$f"
+  before=$(stat -f %m "$f")
+  in_lib 'choices_load "$OMAMAC_CHOICES_FILE"; settings_retire_drag'
+  [ "$status" -eq 0 ]
+  [ "$(stat -f %m "$f")" = "$before" ]
+  [[ "$(stub_calls)" != *activateSettings* ]]
+}
