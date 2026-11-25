@@ -9,6 +9,8 @@ setup_sandbox() {
   export HOME="$BATS_TEST_TMPDIR/home"
   # herdr and starship read these; a developer's own must not reach the tests.
   unset HERDR_CONFIG_PATH STARSHIP_CONFIG
+  # Nor may their HOMEBREW_CACHE: the download rows read the sandbox cache.
+  unset HOMEBREW_CACHE
   export STUB_DIR="$BATS_TEST_TMPDIR/stubs"
   export STUB_LOG="$BATS_TEST_TMPDIR/stub.log"
   export OMAMAC_TEST_BREW_PREFIX="$BATS_TEST_TMPDIR/opt/homebrew"
@@ -75,7 +77,11 @@ terminal_look() {
 }
 
 # uncoloured: stdin without its colour codes.
-uncoloured() { perl -pe 's/\e\[[0-9;]*m//g'; }
+# A row a spinner drew and cleared (\r\e[K) is gone, as on a terminal.
+uncoloured() { perl -pe 's/^.*\r\e\[K//; s/\e\[[0-9;]*m//g'; }
+# drawn: $output without its colour codes, every row a spinner drew kept.
+# shellcheck disable=SC2154 # bats sets output
+drawn() { printf '%s\n' "$output" | perl -pe 's/\e\[[0-9;]*m//g'; }
 
 # widest: the widest line of stdin, in columns, colour codes left out.
 widest() { perl -CS -ne 's/\e\[[0-9;]*m//g; chomp; $m = length if length > $m; END { print $m + 0, "\n" }'; }

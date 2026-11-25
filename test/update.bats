@@ -698,3 +698,14 @@ shown() { printf '%s\n' "$output" | uncoloured; }
   [ "$status" -eq 1 ]
   [[ "$(shown)" == *"╭ Stopped"*"│ While  updating omamac's code "*"│ Fix    check your internet connection, or run git -C "*"├"* ]]
 }
+
+@test "terminal look: an app's upgrade shows its download on the stage's row, then the ✓ row" {
+  ghostty_app
+  ghostty_outdated
+  terminal_look
+  T_BREW_DOWNLOAD_MIB=4 run update
+  [ "$status" -eq 0 ]
+  [[ "$(drawn)" == *"App upgrades     Upgrading Ghostty · 4.0 MB"* ]]
+  shown | grep -qxF "7/7 ✓ App upgrades    Ghostty"
+  [ "$(shown | widest)" -le 80 ]
+}

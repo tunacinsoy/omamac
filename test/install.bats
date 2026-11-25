@@ -102,9 +102,10 @@ snapshot() {
   [ "$after" = "$before" ]
   run grep -rnE '/etc/|/Library/' "$REPO_ROOT/install.sh" "$REPO_ROOT/lib"
   # Only comment lines may match, Ghostty's own folder under $HOME, VS Code's
-  # settings under $HOME, which omamac only reads, and macOS's activateSettings,
-  # which omamac only runs.
-  [ -z "$(grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' <<< "$output" | grep -vF -e '$HOME/Library/Application Support/com.mitchellh.ghostty' -e 'OMAMAC_VSCODE_SETTINGS="$HOME/Library/Application Support/Code/User/settings.json"' -e 'OMAMAC_ACTIVATE_SETTINGS=${OMAMAC_TEST_ACTIVATE_SETTINGS:-/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings}')" ]
+  # settings under $HOME, which omamac only reads, Homebrew's download cache,
+  # whose file sizes omamac only reads, and macOS's activateSettings, which
+  # omamac only runs.
+  [ -z "$(grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' <<< "$output" | grep -vF -e '$HOME/Library/Application Support/com.mitchellh.ghostty' -e 'OMAMAC_VSCODE_SETTINGS="$HOME/Library/Application Support/Code/User/settings.json"' -e 'UI_BREW_DOWNLOADS=${HOMEBREW_CACHE:-$HOME/Library/Caches/Homebrew}/downloads' -e 'OMAMAC_ACTIVATE_SETTINGS=${OMAMAC_TEST_ACTIVATE_SETTINGS:-/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings}')" ]
 }
 
 @test "never-touch: colima leaves ~/.docker/config.json alone" {
