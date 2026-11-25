@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2034 # OMAMAC_STEP is read by bin/omamac's ERR trap, CONFIGURE_SAVED by omamac_failed
 # shellcheck disable=SC2004 # CHOICES is associative (lib/choices.sh), so $key is needed
-# omamac configure: turn one of the five macOS settings on or off. Sourced
+# omamac configure: turn one of the seven macOS settings on or off. Sourced
 # after lib/ask.sh, lib/log.sh, lib/settings.sh, lib/dock.sh and lib/add.sh.
 
 # configure_key <name>: the answer a setting name stands for (its key with
@@ -44,6 +44,8 @@ configure_does() {
     desktop_widgets) echo "widgets leave the desktop and Stage Manager" ;;
     dock) echo "Apple's apps and Downloads leave the Dock (not your Mac), the apps omamac installs take their place, and suggested and recent apps turn off" ;;
     dock_autohide) echo "the Dock hides when you're not using it" ;;
+    tap_to_click) echo "a tap on the trackpad clicks" ;;
+    three_finger_drag) echo "three fingers on the trackpad drag, and swiping between desktops and to Mission Control moves to four fingers" ;;
   esac
 }
 

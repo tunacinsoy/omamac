@@ -155,10 +155,10 @@ snapshot() {
   fresh_answers yes
   run install
   [ "$status" -eq 0 ]
-  [ "$(prompts | wc -l | tr -d ' ')" = 20 ]
+  [ "$(prompts | wc -l | tr -d ' ')" = 22 ]
   grep -qx 'apps_browsers=brave firefox' "$CHOICES_FILE"
   grep -qx 'docker=none' "$CHOICES_FILE"
-  [ "$(grep -c '=' "$CHOICES_FILE")" = 19 ]
+  [ "$(grep -c '=' "$CHOICES_FILE")" = 21 ]
   [ -e "$HOME/.config/omamac/zshrc" ]
   [[ "$output" == *"Theme: Tokyo Night"* ]]
 }
@@ -231,7 +231,7 @@ snapshot() {
   [ "$(prompts | wc -l | tr -d ' ')" = 2 ]
   grep -qx 'docker=docker-desktop' "$CHOICES_FILE"
   grep -qx 'apps_media=vlc' "$CHOICES_FILE"
-  [ "$(grep -c '=' "$CHOICES_FILE")" = 19 ]
+  [ "$(grep -c '=' "$CHOICES_FILE")" = 21 ]
 }
 
 @test "no on a re-run keeps the saved answers and says nothing about asking again" {

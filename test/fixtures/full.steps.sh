@@ -7,9 +7,14 @@ dock_urls() {
   { defaults read com.apple.dock "$1" 2>/dev/null || true; } |
     sed -n 's/^ *"_CFURLString" = "\{0,1\}\([^"]*\)"\{0,1\};$/\1/p'
 }
+# dread <domain> <key>: defaults read; a currentHost:<domain> is that domain
+# for this Mac only, as lib/settings.sh names it.
+dread() {
+  if [[ $1 == currentHost:* ]]; then defaults -currentHost read "${1#currentHost:}" "$2"; else defaults read "$1" "$2"; fi
+}
 settings_now() {
   while read -r domain key _; do
-    now=$(defaults read "$domain" "$key" 2>/dev/null) || now=absent
+    now=$(dread "$domain" "$key" 2>/dev/null) || now=absent
     print -r -- "$domain $key $now"
   done < ~/settings-before
 }
@@ -111,10 +116,12 @@ omamac configure dock-autohide off
 omamac configure desktops off
 omamac configure window-margins off
 omamac configure desktop-widgets off
+omamac configure tap-to-click off
+omamac configure three-finger-drag off
 choices=$(< ~/.local/state/omamac/choices.env)
 for line in apps_browsers= apps_communication= apps_media= apps_screen_recording= apps_storage= \
   apps_developer= apps_ai= apps_productivity= wispr_flow=no desktops=no window_margins=no \
-  desktop_widgets=no dock=no dock_autohide=no languages= cloud_clis= coding_agents= docker=none; do
+  desktop_widgets=no dock=no dock_autohide=no tap_to_click=no three_finger_drag=no languages= cloud_clis= coding_agents= docker=none; do
   [[ $'\n'$choices$'\n' == *$'\n'$line$'\n'* ]]
 done
 

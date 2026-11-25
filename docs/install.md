@@ -35,7 +35,7 @@ Everything else is asked first, and only what you pick is installed. Nothing is 
 - desktop apps (AI apps among them) and Wispr Flow;
 - languages, cloud CLIs and coding agents for the terminal;
 - Docker (colima or Docker Desktop);
-- five macOS settings: desktops as workspaces, window margins, desktop widgets, Dock cleanup, Dock auto-hide.
+- seven macOS settings: desktops as workspaces, window margins, desktop widgets, Dock cleanup, Dock auto-hide, Tap to click, three-finger drag.
 
 Tools and apps come from Homebrew; languages come from mise.
 

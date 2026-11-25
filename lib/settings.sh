@@ -1,18 +1,21 @@
 # shellcheck shell=bash disable=SC2034 # OMAMAC_STEP is read by the caller's ERR trap; SETTINGS_REFUSED by install_summary
 # The macOS settings behind the yes/no answers `desktops`, `window_margins`,
-# `desktop_widgets`, `dock` and `dock_autohide`.
+# `desktop_widgets`, `dock`, `dock_autohide`, `tap_to_click` and
+# `three_finger_drag`.
 # Sourced after lib/ui.sh, lib/questions.sh and lib/choices.sh, before lib/dock.sh
 # (settings_apply calls its dock_apply) and lib/apply.sh.
 # Each key is "domain key type value"; the type is the word `defaults read-type`
-# gives (boolean or integer).
+# gives (boolean or integer). A domain written currentHost:<domain> is that
+# domain for this Mac only (`defaults -currentHost`), where System Settings
+# keeps part of Tap to click.
 # The Ctrl 1–6 shortcuts are entries of one nested dictionary, so their key is
 # a plutil key path, read and written through an exported copy as lib/dock.sh
 # does the Dock. Type `hotkey` is the shortcut on, its value the key code (1 to
 # 6 are 18, 19, 20, 21, 23, 22). Any other entry reads as `json` and its plutil
 # JSON, so uninstall puts it back exactly.
 
-# The five answers, in table order; omamac configure turns each on or off.
-SETTINGS_ANSWERS=(desktops window_margins desktop_widgets dock dock_autohide)
+# The seven answers, in table order; omamac configure turns each on or off.
+SETTINGS_ANSWERS=(desktops window_margins desktop_widgets dock dock_autohide tap_to_click three_finger_drag)
 
 SETTINGS_KEYS_desktops=(
   "com.apple.dock mru-spaces boolean false"
@@ -39,9 +42,33 @@ SETTINGS_KEYS_dock=(
 SETTINGS_KEYS_dock_autohide=(
   "com.apple.dock autohide boolean true"
 )
+# The built-in trackpad, a Bluetooth one, and this Mac's mouse setting: the
+# three keys System Settings writes.
+SETTINGS_KEYS_tap_to_click=(
+  "com.apple.AppleMultitouchTrackpad Clicking boolean true"
+  "com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking boolean true"
+  "currentHost:NSGlobalDomain com.apple.mouse.tapBehavior integer 1"
+)
+# What System Settings writes for three-finger drag, on both trackpads: tap
+# to drag goes off (dragging is one choice), and the three-finger swipes
+# between desktops and to Mission Control move to four fingers.
+SETTINGS_KEYS_three_finger_drag=(
+  "com.apple.AppleMultitouchTrackpad Dragging boolean false"
+  "com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag boolean true"
+  "com.apple.AppleMultitouchTrackpad TrackpadThreeFingerHorizSwipeGesture integer 0"
+  "com.apple.AppleMultitouchTrackpad TrackpadThreeFingerVertSwipeGesture integer 0"
+  "com.apple.AppleMultitouchTrackpad TrackpadFourFingerHorizSwipeGesture integer 2"
+  "com.apple.AppleMultitouchTrackpad TrackpadFourFingerVertSwipeGesture integer 2"
+  "com.apple.driver.AppleBluetoothMultitouch.trackpad Dragging boolean false"
+  "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag boolean true"
+  "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerHorizSwipeGesture integer 0"
+  "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerVertSwipeGesture integer 0"
+  "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadFourFingerHorizSwipeGesture integer 2"
+  "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadFourFingerVertSwipeGesture integer 2"
+)
 SETTINGS_REFUSED=0
 SETTINGS_DOCK=0
-SETTINGS_HOTKEYS=0
+SETTINGS_ACTIVATE=0
 SETTINGS_UNMET=()
 SETTINGS_PUT_BACK=' '
 
@@ -51,12 +78,23 @@ settings_keys() {
   printf '%s\n' "${_keys[@]}"
 }
 
+# settings_defaults <command> <domain> <arg>…: defaults, with -currentHost
+# for a currentHost: domain.
+settings_defaults() {
+  local cmd=$1 d=$2
+  shift 2
+  case $d in
+    currentHost:*) defaults -currentHost "$cmd" "${d#currentHost:}" "$@" ;;
+    *) defaults "$cmd" "$d" "$@" ;;
+  esac
+}
+
 # settings_read <domain> <key>: "<type> <value>" or "absent". Returns 3 when
 # the domain refuses to be read, 1 on any other error.
 settings_read() {
   local out type
   [ "$1" != com.apple.symbolichotkeys ] || { settings_hotkey_read "$1" "$2"; return; }
-  if ! out=$(defaults read "$1" "$2" 2>&1); then
+  if ! out=$(settings_defaults read "$1" "$2" 2>&1); then
     case $out in
       *'Could not write domain'*) return 3 ;;
       *'does not exist'* | *'Could not find key'* | *'not found'*) echo absent ;;
@@ -64,7 +102,7 @@ settings_read() {
     esac
     return 0
   fi
-  type=$(defaults read-type "$1" "$2") || return 1
+  type=$(settings_defaults read-type "$1" "$2") || return 1
   case $type in
     *boolean) [ "$out" = 1 ] && echo "boolean true" || echo "boolean false" ;;
     *integer) echo "integer $out" ;;
@@ -81,7 +119,7 @@ settings_write() {
     json) settings_hotkey_put "$1" "$2" "$4"; return ;;
   esac
   [ "$3" != boolean ] || flag=-bool
-  if ! out=$(defaults write "$1" "$2" "$flag" "$4" 2>&1); then
+  if ! out=$(settings_defaults write "$1" "$2" "$flag" "$4" 2>&1); then
     case $out in
       *'Could not write domain'*) return 3 ;;
       *) echo "$out" >&2; return 1 ;;
@@ -156,6 +194,8 @@ settings_label() {
     StandardHideWidgets | StageManagerHideWidgets) echo "Desktop widgets" ;;
     show-recents) echo "Suggested and recent apps" ;;
     autohide) echo "Dock auto-hide" ;;
+    Clicking | com.apple.mouse.tapBehavior) echo "Tap to click" ;;
+    Dragging | TrackpadThreeFingerDrag | Trackpad*SwipeGesture) echo "Three-finger drag" ;;
     *) echo "$1" ;;
   esac
 }
@@ -176,7 +216,7 @@ settings_recorded() {
 settings_note() {
   local label
   if settings_recorded "$1" "$2"; then
-    # Once per label per run (Reduce motion is two keys).
+    # Once per label per run (Reduce motion is two keys, Tap to click three).
     label=$(settings_label "$2")
     case $SETTINGS_PUT_BACK in *"|$label|"*) return 0 ;; esac
     SETTINGS_PUT_BACK+="|$label| "
@@ -205,7 +245,8 @@ settings_one() {
 settings_changed() {
   case $1 in
     com.apple.dock | NSGlobalDomain) SETTINGS_DOCK=1 ;;
-    com.apple.symbolichotkeys) SETTINGS_HOTKEYS=1 ;;
+    # The shortcuts and the trackpad: read again through activateSettings.
+    com.apple.symbolichotkeys | com.apple.AppleMultitouchTrackpad | com.apple.driver.AppleBluetoothMultitouch.trackpad | currentHost:NSGlobalDomain) SETTINGS_ACTIVATE=1 ;;
   esac
 }
 
@@ -217,7 +258,7 @@ settings_restore() {
   if [ "$3" = absent ] && [ "$1" = com.apple.symbolichotkeys ]; then
     settings_hotkey_put "$1" "$2" ''
   elif [ "$3" = absent ]; then
-    if ! out=$(defaults delete "$1" "$2" 2>&1); then
+    if ! out=$(settings_defaults delete "$1" "$2" 2>&1); then
       case $out in
         *'Could not write domain'*) return 3 ;;
         *'does not exist'* | *'Could not find key'* | *'not found'*) ;;
@@ -268,13 +309,13 @@ settings_unit() {
 }
 
 # settings_apply [<answer>…]: set the answers that are yes; with none named,
-# all five. A full run says a ✓ row per answer; omamac configure, which names
+# all seven. A full run says a ✓ row per answer; omamac configure, which names
 # one, says its own.
 settings_apply() {
   local answer line d k t v rc unit=() answers=("$@")
   SETTINGS_REFUSED=0
   SETTINGS_DOCK=0
-  SETTINGS_HOTKEYS=0
+  SETTINGS_ACTIVATE=0
   SETTINGS_PUT_BACK=' '
   [ "${#answers[@]}" -gt 0 ] || answers=("${SETTINGS_ANSWERS[@]}")
   for answer in "${answers[@]}"; do
@@ -307,18 +348,18 @@ settings_apply() {
 
 # settings_reload: make what was written take effect, once per run.
 settings_reload() {
-  settings_hotkeys_reload
+  settings_activate
   settings_dock_restart
 }
 
-settings_hotkeys_reload() {
-  [ "$SETTINGS_HOTKEYS" -eq 1 ] || return 0
-  # Without this, macOS reads the shortcuts only at the next login. It is a
-  # private tool, so its absence or failure is only logged.
+settings_activate() {
+  [ "$SETTINGS_ACTIVATE" -eq 1 ] || return 0
+  # Without this, macOS reads the shortcuts and Tap to click only at the next
+  # login. It is a private tool, so its absence or failure is only logged.
   if [ -x "$OMAMAC_ACTIVATE_SETTINGS" ]; then
     "$OMAMAC_ACTIVATE_SETTINGS" -u >> "${OMAMAC_LOG:-/dev/null}" 2>&1 || echo "settings: activateSettings -u failed" >> "${OMAMAC_LOG:-/dev/null}"
   else
-    echo "settings: no $OMAMAC_ACTIVATE_SETTINGS; the shortcuts work after the next login" >> "${OMAMAC_LOG:-/dev/null}"
+    echo "settings: no $OMAMAC_ACTIVATE_SETTINGS; the shortcuts and Tap to click work after the next login" >> "${OMAMAC_LOG:-/dev/null}"
   fi
 }
 
@@ -338,6 +379,8 @@ settings_what() {
     desktops) echo "your earlier Spaces, app-switching, Ctrl 1–6 and Reduce motion settings" ;;
     desktop_widgets) echo "your earlier desktop-widget settings" ;;
     dock_autohide) echo "your earlier Dock auto-hide setting" ;;
+    tap_to_click) echo "your earlier Tap to click setting" ;;
+    three_finger_drag) echo "your earlier dragging and three-finger swipe settings" ;;
     *) echo "your earlier window-margin setting" ;;
   esac
 }
@@ -374,7 +417,7 @@ settings_drop() {
 settings_uninstall() {
   local d k t v before rc refused=0 unit_recorded=0
   SETTINGS_DOCK=0
-  SETTINGS_HOTKEYS=0
+  SETTINGS_ACTIVATE=0
   while read -r d k t v; do
     before=$(settings_before "$d" "$k") || continue
     case $d in com.apple.universalaccess | com.apple.Accessibility) unit_recorded=1 ;; esac

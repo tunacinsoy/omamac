@@ -294,6 +294,87 @@ com.apple.Accessibility${TAB}ReduceMotionEnabled${TAB}integer${TAB}0" ]
   [ ! -e "$REC" ]
 }
 
+@test "Tap to click: both trackpads and this Mac's key, read again once, no Dock restart" {
+  seed com.apple.AppleMultitouchTrackpad Clicking boolean false
+  in_lib 'CHOICES[tap_to_click]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ Tap to click"* ]]
+  [ "$(value com.apple.AppleMultitouchTrackpad Clicking)" = 1 ]
+  [ "$(value com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking)" = 1 ]
+  [ "$(defaults -currentHost read NSGlobalDomain com.apple.mouse.tapBehavior)" = 1 ]
+  # The global domain itself is left alone.
+  [ "$(value NSGlobalDomain com.apple.mouse.tapBehavior)" = absent ]
+  [ "$(cat "$REC")" = "com.apple.AppleMultitouchTrackpad${TAB}Clicking${TAB}boolean${TAB}false
+com.apple.driver.AppleBluetoothMultitouch.trackpad${TAB}Clicking${TAB}absent
+currentHost:NSGlobalDomain${TAB}com.apple.mouse.tapBehavior${TAB}absent" ]
+  [ "$(grep -c '^activateSettings -u$' "$STUB_LOG")" -eq 1 ]
+  [[ "$(stub_calls)" != *killall* ]]
+  : > "$STUB_LOG"
+  in_lib 'CHOICES[tap_to_click]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [[ "$(stub_calls)" != *"defaults write"* ]]
+  [[ "$(stub_calls)" != *"defaults -currentHost write"* ]]
+  [[ "$(stub_calls)" != *activateSettings* ]]
+}
+
+@test "Tap to click changed by the user: put back once, the record kept" {
+  in_lib 'CHOICES[tap_to_click]=yes; settings_apply'
+  cp "$REC" "$BATS_TEST_TMPDIR/rec.before"
+  seed com.apple.AppleMultitouchTrackpad Clicking boolean false
+  defaults -currentHost write NSGlobalDomain com.apple.mouse.tapBehavior -int 0
+  in_lib 'CHOICES[tap_to_click]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [ "$(grep -c 'Put back: Tap to click' <<< "$output")" -eq 1 ]
+  cmp "$REC" "$BATS_TEST_TMPDIR/rec.before"
+}
+
+@test "turning Tap to click off puts each key back" {
+  seed com.apple.AppleMultitouchTrackpad Clicking boolean false
+  in_lib 'CHOICES[tap_to_click]=yes; settings_apply'
+  : > "$STUB_LOG"
+  in_lib 'settings_uninstall tap_to_click'
+  [ "$status" -eq 0 ]
+  [ "$(value com.apple.AppleMultitouchTrackpad Clicking)" = 0 ]
+  [ "$(value com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking)" = absent ]
+  run defaults -currentHost read NSGlobalDomain com.apple.mouse.tapBehavior
+  [ "$status" -ne 0 ]
+  [ ! -e "$REC" ]
+  [ "$(grep -c '^activateSettings -u$' "$STUB_LOG")" -eq 1 ]
+}
+
+@test "doctor's check: Tap to click changed on this Mac only is named" {
+  in_lib 'CHOICES[tap_to_click]=yes; settings_apply'
+  defaults -currentHost write NSGlobalDomain com.apple.mouse.tapBehavior -int 0
+  in_lib 'settings_check tap_to_click; echo "UNMET ${SETTINGS_UNMET[*]}"'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"UNMET Tap to click"* ]]
+}
+
+@test "three-finger drag: what System Settings writes, on both trackpads" {
+  local d
+  seed com.apple.AppleMultitouchTrackpad Dragging boolean true
+  seed com.apple.AppleMultitouchTrackpad TrackpadThreeFingerHorizSwipeGesture integer 2
+  in_lib 'CHOICES[three_finger_drag]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ Three-finger drag"* ]]
+  for d in com.apple.AppleMultitouchTrackpad com.apple.driver.AppleBluetoothMultitouch.trackpad; do
+    [ "$(value $d Dragging)" = 0 ]
+    [ "$(value $d TrackpadThreeFingerDrag)" = 1 ]
+    [ "$(value $d TrackpadThreeFingerHorizSwipeGesture)" = 0 ]
+    [ "$(value $d TrackpadThreeFingerVertSwipeGesture)" = 0 ]
+    [ "$(value $d TrackpadFourFingerHorizSwipeGesture)" = 2 ]
+    [ "$(value $d TrackpadFourFingerVertSwipeGesture)" = 2 ]
+  done
+  [ "$(wc -l < "$REC" | tr -d ' ')" -eq 12 ]
+  [ "$(grep -c '^activateSettings -u$' "$STUB_LOG")" -eq 1 ]
+  in_lib 'settings_uninstall three_finger_drag'
+  [ "$status" -eq 0 ]
+  [ "$(value com.apple.AppleMultitouchTrackpad Dragging)" = 1 ]
+  [ "$(value com.apple.AppleMultitouchTrackpad TrackpadThreeFingerHorizSwipeGesture)" = 2 ]
+  [ "$(value com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag)" = absent ]
+  [ ! -e "$REC" ]
+}
+
 @test "fake-defaults export then import round-trips a plist" {
   export T_DEFAULTS_DIR="${T_DEFAULTS_DIR:-$BATS_TEST_TMPDIR/defaults}"
   mkdir -p "$T_DEFAULTS_DIR"
@@ -422,7 +503,7 @@ com.apple.WindowManager${TAB}StageManagerHideWidgets${TAB}absent" ]
   export OMAMAC_TEST_ACTIVATE_SETTINGS="$BATS_TEST_TMPDIR/none"
   in_lib 'OMAMAC_LOG="$HOME/log"; CHOICES[desktops]=yes; settings_apply'
   [ "$status" -eq 0 ]
-  grep -q 'the shortcuts work after the next login' "$HOME/log"
+  grep -q 'the shortcuts and Tap to click work after the next login' "$HOME/log"
   in_lib 'settings_uninstall desktops'
   export OMAMAC_TEST_ACTIVATE_SETTINGS="$STUB_DIR/activateSettings"
   stub activateSettings 'exit 1'

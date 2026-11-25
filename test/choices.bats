@@ -31,9 +31,9 @@ expect_bad() {
   [[ "$output" == *"Fix: Delete that line"* ]]
 }
 
-@test "the table has the 19 keys in the vision's order" {
+@test "the table has the 21 keys in the vision's order" {
   in_lib 'echo "${QUESTION_KEYS[*]}"'
-  [ "$output" = "theme apps_browsers apps_communication apps_media apps_screen_recording apps_storage apps_developer apps_ai apps_productivity wispr_flow desktops window_margins desktop_widgets dock dock_autohide languages cloud_clis coding_agents docker" ]
+  [ "$output" = "theme apps_browsers apps_communication apps_media apps_screen_recording apps_storage apps_developer apps_ai apps_productivity wispr_flow desktops window_margins desktop_widgets dock dock_autohide tap_to_click three_finger_drag languages cloud_clis coding_agents docker" ]
 }
 
 @test "every key has a kind, a text and a title" {
@@ -73,7 +73,7 @@ no" ]
 @test "a missing file has no answers" {
   in_lib 'choices_load "$FILE"; choices_missing | wc -l'
   [ "$status" -eq 0 ]
-  [ "${output// /}" = 19 ]
+  [ "${output// /}" = 21 ]
 }
 
 @test "reads a full file" {
