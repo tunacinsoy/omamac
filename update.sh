@@ -125,7 +125,7 @@ update_upgrade() {
     out=$("$OMAMAC_BREW_PREFIX/bin/brew" outdated --formula --quiet "${installed[@]}" 2>>"$OMAMAC_LOG") || true
     [ -z "$out" ] || { mapfile -t chosen <<< "$out"; UPDATE_TOOLS+=("${chosen[@]##*/}"); }
   fi
-  ui_run "Upgrading your tools" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade "${installed[@]}"
+  ui_run_download closed "Upgrading your tools" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade "${installed[@]}"
 }
 
 # update_upgrade_casks: the chosen CLIs that are casks and installed, in one
@@ -146,7 +146,7 @@ update_upgrade_casks() {
     list=$("$OMAMAC_BREW_PREFIX/bin/brew" outdated --cask --greedy --quiet "${names[@]}" 2>>"$OMAMAC_LOG") || true
     [ -z "$list" ] || { mapfile -t casks <<< "$list"; UPDATE_TOOLS+=("${casks[@]}"); }
   fi
-  ui_run "Upgrading the CLIs that are casks" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask --greedy "${names[@]}"
+  ui_run_download closed "Upgrading the CLIs that are casks" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask --greedy "${names[@]}"
 }
 
 # update_upgrade_apps: upgrade the apps Homebrew manages and lists as outdated:
@@ -201,7 +201,7 @@ update_upgrade_apps() {
         else
           OMAMAC_STEP="upgrading $label"
           [ "$said" -eq 1 ] || { ui_info "Homebrew may ask for your password."; said=1; }
-          ui_run_open "Upgrading $label" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask "$cask"
+          ui_run_download open "Upgrading $label" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask "$cask"
           UPDATE_APPS+=("$label")
         fi
         ;;
@@ -221,7 +221,7 @@ update_upgrade_apps() {
   label=$(apps_step_labels "${pids[@]}")
   OMAMAC_STEP="upgrading $label"
   apps_password_say "${pids[@]}"
-  ui_run_open "Upgrading $label" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask "${pcasks[@]}"
+  ui_run_download open "Upgrading $label" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask "${pcasks[@]}"
   UPDATE_APPS+=("$label")
 }
 

@@ -106,6 +106,102 @@ ui_run() {
   return "$status"
 }
 
+# Homebrew downloads into this folder, to <hash>--<file>.incomplete until done.
+UI_BREW_DOWNLOADS=${HOMEBREW_CACHE:-$HOME/Library/Caches/Homebrew}/downloads
+
+# ui_run_download <closed|open> <title> <cmd…>: a Homebrew command that may
+# download, its output in the log. In the terminal look its row says how much
+# has come and how fast ("Upgrading Zoom · 142 MB · 3.1 MB/s"): a big app from
+# a slow server then reads as slow, not stuck. closed is ui_run's spinner row,
+# for the whole command. open, for a command that may ask for the password
+# (ui_run_open), draws the row only while the download runs and clears it
+# before Homebrew installs, so no row sits on a password prompt. Homebrew gives
+# no total, so there is no percentage. Plain text: ui_run or ui_run_open.
+ui_run_download() {
+  local mode=$1 title=$2 name=$2 pid status=0 tick=0 seen=0 drawn=0 done=0
+  local start now bytes old_t old_b detail line LC_ALL=en_US.UTF-8
+  local frames=(⣾ ⣽ ⣻ ⢿ ⡿ ⣟ ⣯ ⣷) samples=()
+  shift 2
+  if ! ui_term; then
+    if [ "$mode" = open ]; then ui_run_open "$title" "$@"; else ui_run "$title" "$@"; fi
+    return
+  fi
+  [ "$mode" = closed ] || ui_step "$title"
+  _ui_lead
+  local lead=$REPLY
+  [ -z "$UI_STAGE_NAME" ] || printf -v title '%-*s %s' "$UI_NAME" "$UI_STAGE_NAME" "$title"
+  start=$EPOCHSECONDS
+  # A background command's input would be /dev/null; <&0 keeps the terminal's.
+  "$@" <&0 >>"$OMAMAC_LOG" 2>&1 &
+  pid=$!
+  while kill -0 "$pid" 2>/dev/null; do
+    _ui_download_bytes "$start"
+    bytes=$REPLY
+    now=${EPOCHREALTIME/[.,]/}
+    detail=''
+    if [ -n "$bytes" ]; then
+      seen=1
+      samples+=("$now $bytes")
+      # The speed over the last two seconds.
+      while [ "${#samples[@]}" -gt 1 ] && [ $((now - ${samples[1]%% *})) -ge 2000000 ]; do
+        samples=("${samples[@]:1}")
+      done
+      _ui_size "$bytes"
+      detail=" · $REPLY"
+      read -r old_t old_b <<< "${samples[0]}"
+      if [ $((now - old_t)) -ge 500000 ] && [ "$bytes" -ge "$old_b" ]; then
+        # Tenths of a MB/s: bytes per µs × 10⁶, in units of 2²⁰ bytes, × 10.
+        REPLY=$(((bytes - old_b) * 10000000 / ((now - old_t) * 1048576)))
+        detail+=" · $((REPLY / 10)).$((REPLY % 10)) MB/s"
+      fi
+    else
+      samples=()
+    fi
+    if [ "$mode" = open ]; then
+      # Downloads come first; once they are done, Homebrew may ask for the password.
+      if [ "$done" -eq 0 ] && [ "$seen" -eq 1 ] && [ -z "$bytes" ]; then
+        done=1
+        [ "$drawn" -eq 0 ] || { printf '\r\e[K'; drawn=0; }
+      fi
+      [ "$done" -eq 0 ] && [ -n "$bytes" ] || { sleep 0.2; continue; }
+    fi
+    line="$lead$UI_BLUE${frames[tick % ${#frames[@]}]}$UI_OFF $title"
+    # 80 columns: the speed goes first, then the size.
+    [ $((${#lead} + 2 + ${#title} + ${#detail})) -le "$UI_WIDTH" ] || detail=${detail% · *}
+    [ $((${#lead} + 2 + ${#title} + ${#detail})) -le "$UI_WIDTH" ] || detail=''
+    printf '\r\e[K%s%s%s%s' "$line" "$UI_DIM" "$detail" "$UI_OFF"
+    drawn=1 tick=$((tick + 1))
+    sleep 0.2
+  done
+  wait "$pid" || status=$?
+  [ "$drawn" -eq 0 ] || printf '\r\e[K'
+  [ "$status" -eq 0 ] || { UI_LAST_FAIL="$name didn't finish"; ui_show_failure; }
+  return "$status"
+}
+
+# _ui_download_bytes <since>: REPLY is how many bytes Homebrew's downloads
+# started since <since> (epoch seconds) have come so far; empty when none runs.
+_ui_download_bytes() {
+  local files=("$UI_BREW_DOWNLOADS"/*.incomplete) out m z total=0 any=0
+  REPLY=''
+  [ -e "${files[0]}" ] || return 0
+  # A file can finish between the glob and stat; it isn't running then.
+  out=$(stat -f '%m %z' "${files[@]}" 2>/dev/null) || true
+  while read -r m z; do
+    [ -n "$z" ] && [ "$m" -ge "$1" ] || continue
+    total=$((total + z)) any=1
+  done <<< "$out"
+  [ "$any" -eq 0 ] || REPLY=$total
+}
+
+# _ui_size <bytes>: REPLY is it as people read it: "4.2 MB", "142 MB", "1.3 GB".
+_ui_size() {
+  local tenths=$(($1 * 10 / 1048576))
+  if [ "$tenths" -lt 100 ]; then REPLY="$((tenths / 10)).$((tenths % 10)) MB"
+  elif [ "$tenths" -lt 10240 ]; then REPLY="$((tenths / 10)) MB"
+  else tenths=$(($1 * 10 / 1073741824)); REPLY="$((tenths / 10)).$((tenths % 10)) GB"; fi
+}
+
 # --- The kit's internals. Each sets REPLY or UI_LINES rather than printing,
 # so no subshell runs per cell.
 
