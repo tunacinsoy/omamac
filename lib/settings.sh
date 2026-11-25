@@ -110,6 +110,19 @@ settings_read() {
   esac
 }
 
+# settings_same <current> <type> <value>: the current value is the wanted
+# one. macOS keeps some trackpad switches as integers on one Mac and booleans
+# on another (Dragging), and a -bool write can leave an integer, so 0 and 1
+# count as false and true.
+settings_same() {
+  [ "$1" != "$2 $3" ] || return 0
+  [ "$2" = boolean ] || return 1
+  case "$1 $3" in
+    'integer 1 true' | 'integer 0 false') return 0 ;;
+  esac
+  return 1
+}
+
 # settings_write <domain> <key> <type> <value>: returns 3 when the domain is
 # protected, 1 on any other error.
 settings_write() {
@@ -234,7 +247,7 @@ settings_one() {
   OMAMAC_STEP="setting $k in $d"
   cur=$(settings_read "$d" "$k") || rc=$?
   [ "$rc" -eq 0 ] || return "$rc"
-  [ "$cur" != "$t $v" ] || return 0
+  ! settings_same "$cur" "$t" "$v" || return 0
   settings_write "$d" "$k" "$t" "$v" || return $?
   settings_changed "$d"
   # No record line, no change: uninstall could not put the value back.
@@ -283,7 +296,7 @@ settings_unit() {
   done
   for i in "${!lines[@]}"; do
     read -r d k t v <<< "${lines[$i]}"
-    [ "${cur[$i]}" != "$t $v" ] || continue
+    ! settings_same "${cur[$i]}" "$t" "$v" || continue
     rc=0
     settings_write "$d" "$k" "$t" "$v" || rc=$?
     if [ "$rc" -ne 0 ]; then
@@ -460,7 +473,7 @@ settings_check() {
       SETTINGS_REFUSED=1
       continue
     fi
-    [ "$rc" -ne 0 ] || [ "$cur" != "$t $v" ] || continue
+    [ "$rc" -ne 0 ] || ! settings_same "$cur" "$t" "$v" || continue
     label=$(settings_label "$k")
     case " ${SETTINGS_UNMET[*]:-} " in *" $label "*) ;; *) SETTINGS_UNMET+=("$label") ;; esac
   done < <(settings_keys "$1")

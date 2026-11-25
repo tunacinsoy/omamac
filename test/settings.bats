@@ -350,6 +350,24 @@ currentHost:NSGlobalDomain${TAB}com.apple.mouse.tapBehavior${TAB}absent" ]
   [[ "$output" == *"UNMET Tap to click"* ]]
 }
 
+@test "a trackpad switch macOS keeps as an integer counts as the boolean" {
+  # A clean Mac keeps Dragging as integer 0, and a -bool write can leave it so.
+  seed com.apple.AppleMultitouchTrackpad Dragging integer 0
+  seed com.apple.driver.AppleBluetoothMultitouch.trackpad Dragging integer 1
+  in_lib 'CHOICES[three_finger_drag]=yes; settings_apply'
+  [ "$status" -eq 0 ]
+  [[ "$(stub_calls)" != *"defaults write com.apple.AppleMultitouchTrackpad Dragging"* ]]
+  ! grep -q "^com.apple.AppleMultitouchTrackpad${TAB}Dragging" "$REC"
+  grep -qx "com.apple.driver.AppleBluetoothMultitouch.trackpad${TAB}Dragging${TAB}integer${TAB}1" "$REC"
+  seed com.apple.driver.AppleBluetoothMultitouch.trackpad Dragging integer 0
+  in_lib 'settings_check three_finger_drag; echo "UNMET ${SETTINGS_UNMET[*]:-}"'
+  [[ "$output" == *"UNMET "* ]]
+  [[ "$output" != *"UNMET Three"* ]]
+  in_lib 'settings_uninstall three_finger_drag'
+  [ "$status" -eq 0 ]
+  [ "$(cat "$T_DEFAULTS_DIR/com.apple.driver.AppleBluetoothMultitouch.trackpad/Dragging")" = "integer 1" ]
+}
+
 @test "three-finger drag: what System Settings writes, on both trackpads" {
   local d
   seed com.apple.AppleMultitouchTrackpad Dragging boolean true
