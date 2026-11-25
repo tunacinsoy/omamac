@@ -117,11 +117,11 @@ omamac configure desktops off
 omamac configure window-margins off
 omamac configure desktop-widgets off
 omamac configure tap-to-click off
-omamac configure three-finger-drag off
+omamac configure tap-to-drag off
 choices=$(< ~/.local/state/omamac/choices.env)
 for line in apps_browsers= apps_communication= apps_media= apps_screen_recording= apps_storage= \
   apps_developer= apps_ai= apps_productivity= wispr_flow=no desktops=no window_margins=no \
-  desktop_widgets=no dock=no dock_autohide=no tap_to_click=no three_finger_drag=no languages= cloud_clis= coding_agents= docker=none; do
+  desktop_widgets=no dock=no dock_autohide=no tap_to_click=no tap_to_drag=no languages= cloud_clis= coding_agents= docker=none; do
   [[ $'\n'$choices$'\n' == *$'\n'$line$'\n'* ]]
 done
 

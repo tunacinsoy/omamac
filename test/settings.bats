@@ -351,45 +351,46 @@ currentHost:NSGlobalDomain${TAB}com.apple.mouse.tapBehavior${TAB}absent" ]
 }
 
 @test "a trackpad switch macOS keeps as an integer counts as the boolean" {
-  # A clean Mac keeps Dragging as integer 0, and a -bool write can leave it so.
-  seed com.apple.AppleMultitouchTrackpad Dragging integer 0
-  seed com.apple.driver.AppleBluetoothMultitouch.trackpad Dragging integer 1
-  in_lib 'CHOICES[three_finger_drag]=yes; settings_apply'
+  # A clean Mac keeps Dragging as an integer, and a -bool write can leave it so.
+  seed com.apple.AppleMultitouchTrackpad Dragging integer 1
+  seed com.apple.driver.AppleBluetoothMultitouch.trackpad Dragging integer 0
+  in_lib 'CHOICES[tap_to_drag]=yes; settings_apply'
   [ "$status" -eq 0 ]
   [[ "$(stub_calls)" != *"defaults write com.apple.AppleMultitouchTrackpad Dragging"* ]]
   ! grep -q "^com.apple.AppleMultitouchTrackpad${TAB}Dragging" "$REC"
-  grep -qx "com.apple.driver.AppleBluetoothMultitouch.trackpad${TAB}Dragging${TAB}integer${TAB}1" "$REC"
-  seed com.apple.driver.AppleBluetoothMultitouch.trackpad Dragging integer 0
-  in_lib 'settings_check three_finger_drag; echo "UNMET ${SETTINGS_UNMET[*]:-}"'
+  grep -qx "com.apple.driver.AppleBluetoothMultitouch.trackpad${TAB}Dragging${TAB}integer${TAB}0" "$REC"
+  seed com.apple.driver.AppleBluetoothMultitouch.trackpad Dragging integer 1
+  in_lib 'settings_check tap_to_drag; echo "UNMET ${SETTINGS_UNMET[*]:-}"'
   [[ "$output" == *"UNMET "* ]]
-  [[ "$output" != *"UNMET Three"* ]]
-  in_lib 'settings_uninstall three_finger_drag'
+  [[ "$output" != *"UNMET Tap"* ]]
+  in_lib 'settings_uninstall tap_to_drag'
   [ "$status" -eq 0 ]
-  [ "$(cat "$T_DEFAULTS_DIR/com.apple.driver.AppleBluetoothMultitouch.trackpad/Dragging")" = "integer 1" ]
+  [ "$(cat "$T_DEFAULTS_DIR/com.apple.driver.AppleBluetoothMultitouch.trackpad/Dragging")" = "integer 0" ]
 }
 
-@test "three-finger drag: what System Settings writes, on both trackpads" {
+@test "tap to drag: dragging without Drag Lock, on both trackpads" {
   local d
-  seed com.apple.AppleMultitouchTrackpad Dragging boolean true
-  seed com.apple.AppleMultitouchTrackpad TrackpadThreeFingerHorizSwipeGesture integer 2
-  in_lib 'CHOICES[three_finger_drag]=yes; settings_apply'
+  seed com.apple.AppleMultitouchTrackpad Dragging boolean false
+  seed com.apple.AppleMultitouchTrackpad DragLock boolean true
+  seed com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag boolean true
+  in_lib 'CHOICES[tap_to_drag]=yes; settings_apply'
   [ "$status" -eq 0 ]
-  [[ "$output" == *"✓ Three-finger drag"* ]]
+  [[ "$output" == *"✓ Tap to drag"* ]]
   for d in com.apple.AppleMultitouchTrackpad com.apple.driver.AppleBluetoothMultitouch.trackpad; do
-    [ "$(value $d Dragging)" = 0 ]
-    [ "$(value $d TrackpadThreeFingerDrag)" = 1 ]
-    [ "$(value $d TrackpadThreeFingerHorizSwipeGesture)" = 0 ]
-    [ "$(value $d TrackpadThreeFingerVertSwipeGesture)" = 0 ]
-    [ "$(value $d TrackpadFourFingerHorizSwipeGesture)" = 2 ]
-    [ "$(value $d TrackpadFourFingerVertSwipeGesture)" = 2 ]
+    [ "$(value $d Dragging)" = 1 ]
+    [ "$(value $d DragLock)" = 0 ]
+    [ "$(value $d TrackpadThreeFingerDrag)" = 0 ]
   done
-  [ "$(wc -l < "$REC" | tr -d ' ')" -eq 12 ]
+  # The swipes are left alone.
+  [[ "$(stub_calls)" != *SwipeGesture* ]]
+  [ "$(wc -l < "$REC" | tr -d ' ')" -eq 6 ]
   [ "$(grep -c '^activateSettings -u$' "$STUB_LOG")" -eq 1 ]
-  in_lib 'settings_uninstall three_finger_drag'
+  in_lib 'settings_uninstall tap_to_drag'
   [ "$status" -eq 0 ]
-  [ "$(value com.apple.AppleMultitouchTrackpad Dragging)" = 1 ]
-  [ "$(value com.apple.AppleMultitouchTrackpad TrackpadThreeFingerHorizSwipeGesture)" = 2 ]
-  [ "$(value com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag)" = absent ]
+  [ "$(value com.apple.AppleMultitouchTrackpad Dragging)" = 0 ]
+  [ "$(value com.apple.AppleMultitouchTrackpad DragLock)" = 1 ]
+  [ "$(value com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag)" = 1 ]
+  [ "$(value com.apple.driver.AppleBluetoothMultitouch.trackpad Dragging)" = absent ]
   [ ! -e "$REC" ]
 }
 

@@ -9,22 +9,16 @@ hotkey() { defaults export com.apple.symbolichotkeys - | plutil -extract "AppleS
 dread() {
   if [[ $1 == currentHost:* ]]; then defaults -currentHost read "${1#currentHost:}" "$2"; else defaults read "$1" "$2"; fi
 }
-# The trackpad keys of Tap to click and three-finger drag, "domain key value".
+# The trackpad keys of Tap to click and tap to drag, "domain key value".
 trackpad='com.apple.AppleMultitouchTrackpad Clicking 1
 com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking 1
 currentHost:NSGlobalDomain com.apple.mouse.tapBehavior 1
-com.apple.AppleMultitouchTrackpad Dragging 0
-com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag 1
-com.apple.AppleMultitouchTrackpad TrackpadThreeFingerHorizSwipeGesture 0
-com.apple.AppleMultitouchTrackpad TrackpadThreeFingerVertSwipeGesture 0
-com.apple.AppleMultitouchTrackpad TrackpadFourFingerHorizSwipeGesture 2
-com.apple.AppleMultitouchTrackpad TrackpadFourFingerVertSwipeGesture 2
-com.apple.driver.AppleBluetoothMultitouch.trackpad Dragging 0
-com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag 1
-com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerHorizSwipeGesture 0
-com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerVertSwipeGesture 0
-com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadFourFingerHorizSwipeGesture 2
-com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadFourFingerVertSwipeGesture 2'
+com.apple.AppleMultitouchTrackpad Dragging 1
+com.apple.AppleMultitouchTrackpad DragLock 0
+com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag 0
+com.apple.driver.AppleBluetoothMultitouch.trackpad Dragging 1
+com.apple.driver.AppleBluetoothMultitouch.trackpad DragLock 0
+com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag 0'
 # Each trackpad key's value before the first run, from the record ("absent"
 # or "<type> <value>"), saved before configure off drops the lines.
 print -r -- "$trackpad" | while read -r d k _; do
@@ -62,7 +56,7 @@ omamac configure desktops off
 omamac configure window-margins off
 omamac configure desktop-widgets off
 omamac configure tap-to-click off
-omamac configure three-finger-drag off
+omamac configure tap-to-drag off
 # The four keys the clean Mac lacked are gone; Reduce motion is back to 0.
 if defaults read com.apple.dock mru-spaces; then exit 1; fi
 if defaults read NSGlobalDomain AppleSpacesSwitchOnActivate; then exit 1; fi
@@ -82,7 +76,7 @@ choices=$(< ~/.local/state/omamac/choices.env)
 [[ $'\n'$choices$'\n' == *$'\n'window_margins=no$'\n'* ]]
 [[ $'\n'$choices$'\n' == *$'\n'desktop_widgets=no$'\n'* ]]
 [[ $'\n'$choices$'\n' == *$'\n'tap_to_click=no$'\n'* ]]
-[[ $'\n'$choices$'\n' == *$'\n'three_finger_drag=no$'\n'* ]]
+[[ $'\n'$choices$'\n' == *$'\n'tap_to_drag=no$'\n'* ]]
 # Each trackpad key omamac changed is back: gone if it was unset, else its
 # earlier value (a boolean reads as 1 or 0).
 while read -r d k t v; do
@@ -110,7 +104,7 @@ omamac configure desktops off
 omamac configure window-margins off
 omamac configure desktop-widgets off
 omamac configure tap-to-click off
-omamac configure three-finger-drag off
+omamac configure tap-to-drag off
 after=$(fp)
 if [[ $before != "$after" ]]; then
   diff <(print -r -- "$before") <(print -r -- "$after")

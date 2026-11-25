@@ -30,7 +30,7 @@ A yellow Removes box shows what goes (the app, Homebrew's cask, its data only if
 
 Settings aren't uninstalled: turn them off with `omamac configure` (see [Keeping it up to date](updating.md#omamac-configure)).
 
-- `omamac configure desktops off`, and the same for `window-margins`, `desktop-widgets`, `dock-autohide`, `tap-to-click` and `three-finger-drag`, puts the earlier values back.
+- `omamac configure desktops off`, and the same for `window-margins`, `desktop-widgets`, `dock-autohide`, `tap-to-click` and `tap-to-drag`, puts the earlier values back.
 - `omamac configure dock off` puts the Dock back to how it was before the cleanup. Changes you made to it since are undone, and suggested and recent apps come back.
 
 ### Docker

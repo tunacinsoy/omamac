@@ -45,7 +45,7 @@ configure_does() {
     dock) echo "Apple's apps and Downloads leave the Dock (not your Mac), the apps omamac installs take their place, and suggested and recent apps turn off" ;;
     dock_autohide) echo "the Dock hides when you're not using it" ;;
     tap_to_click) echo "a tap on the trackpad clicks" ;;
-    three_finger_drag) echo "three fingers on the trackpad drag, and swiping between desktops and to Mission Control moves to four fingers" ;;
+    tap_to_drag) echo "a double tap on the trackpad, finger kept down, drags; lifting it drops" ;;
   esac
 }
 
