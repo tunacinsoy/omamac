@@ -120,7 +120,7 @@ See [Themes](themes.md#vs-code).
 
 ## macOS settings
 
-Only for the answers you chose, written with `defaults`, and the Dock restarted once.
+Only for the answers you chose, written with `defaults`, and the Dock restarted once when a Dock or desktop setting changed.
 
 **Desktops as workspaces:**
 
@@ -134,6 +134,12 @@ Only for the answers you chose, written with `defaults`, and the Dock restarted 
 **Desktop widgets:** `com.apple.WindowManager StandardHideWidgets` and `StageManagerHideWidgets` (both on, so widgets are hidden on the desktop and in Stage Manager).
 
 **Dock auto-hide:** `com.apple.dock autohide` (on).
+
+**Tap to click:** `Clicking` (on) in `com.apple.AppleMultitouchTrackpad` (the built-in trackpad) and `com.apple.driver.AppleBluetoothMultitouch.trackpad` (a Magic Trackpad), and `com.apple.mouse.tapBehavior` (1) in this Mac's own `NSGlobalDomain` (`defaults -currentHost`), the three keys System Settings writes.
+
+**Three-finger drag:** in both trackpad domains, what System Settings → Accessibility → Pointer Control → Trackpad Options writes for it: `TrackpadThreeFingerDrag` (on); `Dragging` (off, since tap-to-drag and three-finger drag are one choice); `TrackpadThreeFingerHorizSwipeGesture` and `TrackpadThreeFingerVertSwipeGesture` (0) and `TrackpadFourFingerHorizSwipeGesture` and `TrackpadFourFingerVertSwipeGesture` (2), so swiping between desktops and to Mission Control moves to four fingers.
+
+omamac asks macOS to read the trackpad settings again straight away. If a tap doesn't click, or three fingers don't drag, log out and back in.
 
 `omamac update` sets them again if you changed them; the first earlier value stays in `macos-settings.tsv`.
 

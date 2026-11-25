@@ -35,14 +35,14 @@ If you know what you want:
 
 ## omamac configure
 
-`omamac configure` turns one of the five macOS settings on or off: desktops as workspaces, window margins, desktop widgets, Dock cleanup and Dock auto-hide.
+`omamac configure` turns one of the seven macOS settings on or off: desktops as workspaces, window margins, desktop widgets, Dock cleanup, Dock auto-hide, Tap to click and three-finger drag.
 
 - With no name, it lists them, each with whether it's on or off. Pick one, and it shows what changes and asks "Turn on …?" or "Turn off …?".
 - `omamac configure dock-autohide` asks only about that one.
 - `omamac configure dock-autohide on` (or `off`) asks nothing.
 - On sets only that setting. Off puts back the values you had before omamac changed them; for Dock cleanup, your Dock goes back to how it was before the cleanup.
 
-The names are `desktops`, `window-margins`, `desktop-widgets`, `dock` and `dock-autohide`. What each one changes: [What it changes](what-it-changes.md#macos-settings).
+The names are `desktops`, `window-margins`, `desktop-widgets`, `dock`, `dock-autohide`, `tap-to-click` and `three-finger-drag`. What each one changes: [What it changes](what-it-changes.md#macos-settings).
 
 ## omamac doctor
 

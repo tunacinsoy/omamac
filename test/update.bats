@@ -303,7 +303,7 @@ choose() { sed -i '' "s/^$1=.*/$1=$2/" "$CHOICES_FILE"; }
   [[ "$output" == *"New question: Dock auto-hide. To answer it: omamac configure dock-autohide."* ]]
   [[ "$output" == *"New question: Coding agents. To answer it: omamac install coding-agents."* ]]
   [[ "$output" != *"one-liner"* ]]
-  [ "$(grep -c 'New question' <<< "$output")" -eq 18 ]
+  [ "$(grep -c 'New question' <<< "$output")" -eq 20 ]
 }
 
 @test "every answer saved: no new question named" {

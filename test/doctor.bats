@@ -435,7 +435,7 @@ own_nvim() {
   healthy_mac
   echo 'colour=red' >> "$CHOICES_FILE"
   expect_fail "Your answers" "Delete that line"
-  [[ "$output" == *"line 21"* ]]
+  [[ "$output" == *"line 23"* ]]
 }
 
 @test "saved answers incomplete" {

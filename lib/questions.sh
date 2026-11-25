@@ -50,6 +50,10 @@ question_help desktop_widgets "The Weather and other widgets a new Mac shows lea
 question dock yesno "Dock cleanup" "Clean up the Dock?"
 question_help dock "Apple's apps and Downloads leave the Dock (not your Mac), and the apps omamac installs take their place."
 question dock_autohide yesno "Dock auto-hide" "Hide the Dock when you're not using it?"
+question tap_to_click yesno "Tap to click" "Click with a tap on the trackpad?"
+question_help tap_to_click "A light tap clicks, as on a phone, so you don't have to press the trackpad down."
+question three_finger_drag yesno "Three-finger drag" "Drag with three fingers on the trackpad?"
+question_help three_finger_drag "Move three fingers to drag a window or select text, without pressing down. Swiping between desktops and to Mission Control moves to four fingers, as macOS does when you turn it on."
 question languages multi Languages "Programming languages" \
   "Ruby on Rails:ruby" Node.js:node Go:go Python:python Elixir:elixir Rust:rust Java:java
 question cloud_clis multi "Cloud CLIs" "Cloud command-line tools" \

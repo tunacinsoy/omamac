@@ -42,7 +42,7 @@ With no name, it asks which section (only the ones with something omamac install
 
 ## omamac configure
 
-With no name, it lists the five settings, each with whether it's on or off. Pick one, and it shows what changes and asks "Turn on …?" or "Turn off …?".
+With no name, it lists the seven settings, each with whether it's on or off. Pick one, and it shows what changes and asks "Turn on …?" or "Turn off …?".
 
 `omamac configure <setting>` asks only about that one. `omamac configure <setting> on` or `off` asks nothing.
 
@@ -51,6 +51,8 @@ With no name, it lists the five settings, each with whether it's on or off. Pick
 - `desktop-widgets`: widgets leave the desktop and Stage Manager. [What it changes](what-it-changes.md#macos-settings)
 - `dock`: Apple's apps and Downloads leave the Dock (not your Mac), the apps omamac installs take their place, and suggested and recent apps turn off. Off puts your Dock back as it was before the cleanup, and changes you made to it since are undone. [What it changes](what-it-changes.md#dock-cleanup)
 - `dock-autohide`: the Dock hides when you're not using it. [What it changes](what-it-changes.md#macos-settings)
+- `tap-to-click`: a tap on the trackpad clicks. [What it changes](what-it-changes.md#macos-settings)
+- `three-finger-drag`: three fingers on the trackpad drag, and swiping between desktops and to Mission Control moves to four fingers. [What it changes](what-it-changes.md#macos-settings)
 
 Off puts back the values you had before omamac changed them.
 

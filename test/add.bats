@@ -180,7 +180,7 @@ choices_stamp() { echo "$(shasum < "$CHOICES_FILE") $(stat -f %m "$CHOICES_FILE"
   gum_answers "" ""
   run omamac_install
   [ "$status" -eq 1 ]
-  [[ "$output" == *"line 21: omamac has no question 'colour'"* ]]
+  [[ "$output" == *"line 23: omamac has no question 'colour'"* ]]
   [ -z "$(prompts)" ]
 }
 
@@ -486,7 +486,7 @@ by_hand() { # <cask> <App.app>
   [[ "$output" == *"dock: omamac configure dock"* ]]
   [[ "$output" == *"cloud_clis: omamac install cloud-clis"* ]]
   [[ "$output" == *"docker: omamac install docker"* ]]
-  [ "$(grep -c ': omamac ' <<< "$output")" -eq 19 ]
+  [ "$(grep -c ': omamac ' <<< "$output")" -eq 21 ]
 }
 
 @test "install a section and an id together: one question, one Install?" {

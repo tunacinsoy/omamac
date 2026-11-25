@@ -10,9 +10,15 @@ dock_urls persistent-apps > ~/dock-before-apps
 dock_urls persistent-others > ~/dock-before-others
 # An empty list means the Dock hasn't written its plist yet.
 [[ -s ~/dock-before-apps ]]
-# The keys test/fingerprint.sh lists, and the widget keys; "absent" is a value too.
+# dread <domain> <key>: defaults read; a currentHost:<domain> is that domain
+# for this Mac only, as lib/settings.sh names it.
+dread() {
+  if [[ $1 == currentHost:* ]]; then defaults -currentHost read "${1#currentHost:}" "$2"; else defaults read "$1" "$2"; fi
+}
+# The keys test/fingerprint.sh lists, and the widget and trackpad keys;
+# "absent" is a value too.
 while read -r domain key; do
-  value=$(defaults read "$domain" "$key" 2>/dev/null) || value=absent
+  value=$(dread "$domain" "$key" 2>/dev/null) || value=absent
   print -r -- "$domain $key $value"
 done > ~/settings-before <<'KEYS'
 com.apple.dock mru-spaces
@@ -24,6 +30,21 @@ com.apple.WindowManager StandardHideWidgets
 com.apple.WindowManager StageManagerHideWidgets
 com.apple.dock show-recents
 com.apple.dock autohide
+com.apple.AppleMultitouchTrackpad Clicking
+com.apple.AppleMultitouchTrackpad Dragging
+com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag
+com.apple.AppleMultitouchTrackpad TrackpadThreeFingerHorizSwipeGesture
+com.apple.AppleMultitouchTrackpad TrackpadThreeFingerVertSwipeGesture
+com.apple.AppleMultitouchTrackpad TrackpadFourFingerHorizSwipeGesture
+com.apple.AppleMultitouchTrackpad TrackpadFourFingerVertSwipeGesture
+com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking
+com.apple.driver.AppleBluetoothMultitouch.trackpad Dragging
+com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag
+com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerHorizSwipeGesture
+com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerVertSwipeGesture
+com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadFourFingerHorizSwipeGesture
+com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadFourFingerVertSwipeGesture
+currentHost:NSGlobalDomain com.apple.mouse.tapBehavior
 KEYS
 # The Ctrl 1–6 shortcuts' entries, nested in one dictionary, so saved apart.
 defaults export com.apple.symbolichotkeys - > ~/hotkeys.plist
