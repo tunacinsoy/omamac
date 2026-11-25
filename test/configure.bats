@@ -71,7 +71,7 @@ vm_exp_safe() {
   gum_answers window-margins no
   run omamac_configure
   [ "$status" -eq 0 ]
-  [ "$(prompts | sed -n 1p)" = "gum choose --header What do you want to change? --label-delimiter=: Desktops as workspaces (off):desktops Window margins (on):window-margins Desktop widgets (off):desktop-widgets Dock cleanup (on):dock Dock auto-hide (off):dock-autohide Tap to click (off):tap-to-click Three-finger drag (off):three-finger-drag" ]
+  [ "$(prompts | sed -n 1p)" = "gum choose --header What do you want to change? --label-delimiter=: Desktops as workspaces (off):desktops Window margins (on):window-margins Desktop widgets (off):desktop-widgets Dock cleanup (on):dock Dock auto-hide (off):dock-autohide Tap to click (off):tap-to-click Tap to drag (off):tap-to-drag" ]
   [ "$(prompts | sed -n 2p)" = "gum confirm --default=false Turn off Window margins?" ]
   [[ "$output" == *"Nothing changed."* ]]
   grep -qx 'window_margins=yes' "$CHOICES_FILE"
@@ -369,7 +369,7 @@ file://${OMAMAC_TEST_APPLICATIONS// /%20}/Ghostty.app/" ]
   gum_answers
   run --separate-stderr omamac_configure nope
   [ "$status" -eq 2 ]
-  [[ "$stderr" == *"omamac doesn't know 'nope'. Settings: desktops, window-margins, desktop-widgets, dock, dock-autohide, tap-to-click, three-finger-drag."* ]]
+  [[ "$stderr" == *"omamac doesn't know 'nope'. Settings: desktops, window-margins, desktop-widgets, dock, dock-autohide, tap-to-click, tap-to-drag."* ]]
   [ -z "$(prompts)" ]
 }
 

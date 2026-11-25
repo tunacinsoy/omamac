@@ -32,18 +32,12 @@ com.apple.dock show-recents
 com.apple.dock autohide
 com.apple.AppleMultitouchTrackpad Clicking
 com.apple.AppleMultitouchTrackpad Dragging
+com.apple.AppleMultitouchTrackpad DragLock
 com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag
-com.apple.AppleMultitouchTrackpad TrackpadThreeFingerHorizSwipeGesture
-com.apple.AppleMultitouchTrackpad TrackpadThreeFingerVertSwipeGesture
-com.apple.AppleMultitouchTrackpad TrackpadFourFingerHorizSwipeGesture
-com.apple.AppleMultitouchTrackpad TrackpadFourFingerVertSwipeGesture
 com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking
 com.apple.driver.AppleBluetoothMultitouch.trackpad Dragging
+com.apple.driver.AppleBluetoothMultitouch.trackpad DragLock
 com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag
-com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerHorizSwipeGesture
-com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerVertSwipeGesture
-com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadFourFingerHorizSwipeGesture
-com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadFourFingerVertSwipeGesture
 currentHost:NSGlobalDomain com.apple.mouse.tapBehavior
 KEYS
 # The Ctrl 1–6 shortcuts' entries, nested in one dictionary, so saved apart.

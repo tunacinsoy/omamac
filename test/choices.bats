@@ -33,7 +33,7 @@ expect_bad() {
 
 @test "the table has the 21 keys in the vision's order" {
   in_lib 'echo "${QUESTION_KEYS[*]}"'
-  [ "$output" = "theme apps_browsers apps_communication apps_media apps_screen_recording apps_storage apps_developer apps_ai apps_productivity wispr_flow desktops window_margins desktop_widgets dock dock_autohide tap_to_click three_finger_drag languages cloud_clis coding_agents docker" ]
+  [ "$output" = "theme apps_browsers apps_communication apps_media apps_screen_recording apps_storage apps_developer apps_ai apps_productivity wispr_flow desktops window_margins desktop_widgets dock dock_autohide tap_to_click tap_to_drag languages cloud_clis coding_agents docker" ]
 }
 
 @test "every key has a kind, a text and a title" {

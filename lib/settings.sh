@@ -1,7 +1,7 @@
 # shellcheck shell=bash disable=SC2034 # OMAMAC_STEP is read by the caller's ERR trap; SETTINGS_REFUSED by install_summary
 # The macOS settings behind the yes/no answers `desktops`, `window_margins`,
 # `desktop_widgets`, `dock`, `dock_autohide`, `tap_to_click` and
-# `three_finger_drag`.
+# `tap_to_drag`.
 # Sourced after lib/ui.sh, lib/questions.sh and lib/choices.sh, before lib/dock.sh
 # (settings_apply calls its dock_apply) and lib/apply.sh.
 # Each key is "domain key type value"; the type is the word `defaults read-type`
@@ -15,7 +15,7 @@
 # JSON, so uninstall puts it back exactly.
 
 # The seven answers, in table order; omamac configure turns each on or off.
-SETTINGS_ANSWERS=(desktops window_margins desktop_widgets dock dock_autohide tap_to_click three_finger_drag)
+SETTINGS_ANSWERS=(desktops window_margins desktop_widgets dock dock_autohide tap_to_click tap_to_drag)
 
 SETTINGS_KEYS_desktops=(
   "com.apple.dock mru-spaces boolean false"
@@ -49,22 +49,16 @@ SETTINGS_KEYS_tap_to_click=(
   "com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking boolean true"
   "currentHost:NSGlobalDomain com.apple.mouse.tapBehavior integer 1"
 )
-# What System Settings writes for three-finger drag, on both trackpads: tap
-# to drag goes off (dragging is one choice), and the three-finger swipes
-# between desktops and to Mission Control move to four fingers.
-SETTINGS_KEYS_three_finger_drag=(
-  "com.apple.AppleMultitouchTrackpad Dragging boolean false"
-  "com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag boolean true"
-  "com.apple.AppleMultitouchTrackpad TrackpadThreeFingerHorizSwipeGesture integer 0"
-  "com.apple.AppleMultitouchTrackpad TrackpadThreeFingerVertSwipeGesture integer 0"
-  "com.apple.AppleMultitouchTrackpad TrackpadFourFingerHorizSwipeGesture integer 2"
-  "com.apple.AppleMultitouchTrackpad TrackpadFourFingerVertSwipeGesture integer 2"
-  "com.apple.driver.AppleBluetoothMultitouch.trackpad Dragging boolean false"
-  "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag boolean true"
-  "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerHorizSwipeGesture integer 0"
-  "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerVertSwipeGesture integer 0"
-  "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadFourFingerHorizSwipeGesture integer 2"
-  "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadFourFingerVertSwipeGesture integer 2"
+# What System Settings writes for dragging "Without Drag Lock", on both
+# trackpads: tap to drag on, Drag Lock and three-finger drag off (dragging is
+# one choice).
+SETTINGS_KEYS_tap_to_drag=(
+  "com.apple.AppleMultitouchTrackpad Dragging boolean true"
+  "com.apple.AppleMultitouchTrackpad DragLock boolean false"
+  "com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag boolean false"
+  "com.apple.driver.AppleBluetoothMultitouch.trackpad Dragging boolean true"
+  "com.apple.driver.AppleBluetoothMultitouch.trackpad DragLock boolean false"
+  "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag boolean false"
 )
 SETTINGS_REFUSED=0
 SETTINGS_DOCK=0
@@ -208,7 +202,7 @@ settings_label() {
     show-recents) echo "Suggested and recent apps" ;;
     autohide) echo "Dock auto-hide" ;;
     Clicking | com.apple.mouse.tapBehavior) echo "Tap to click" ;;
-    Dragging | TrackpadThreeFingerDrag | Trackpad*SwipeGesture) echo "Three-finger drag" ;;
+    Dragging | DragLock | TrackpadThreeFingerDrag) echo "Tap to drag" ;;
     *) echo "$1" ;;
   esac
 }
@@ -393,7 +387,7 @@ settings_what() {
     desktop_widgets) echo "your earlier desktop-widget settings" ;;
     dock_autohide) echo "your earlier Dock auto-hide setting" ;;
     tap_to_click) echo "your earlier Tap to click setting" ;;
-    three_finger_drag) echo "your earlier dragging and three-finger swipe settings" ;;
+    tap_to_drag) echo "your earlier dragging setting" ;;
     *) echo "your earlier window-margin setting" ;;
   esac
 }

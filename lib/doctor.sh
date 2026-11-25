@@ -59,7 +59,7 @@ doctor_check desktop_widgets "Desktop widgets" "the Weather and other widgets st
 doctor_check dock "Dock cleanup" "Apple's apps leave the Dock; the apps omamac installs take their place"
 doctor_check dock_autohide "Dock auto-hide" "the Dock hides until you point at it"
 doctor_check tap_to_click "Tap to click" "a tap on the trackpad clicks"
-doctor_check three_finger_drag "Three-finger drag" "three fingers on the trackpad drag, without pressing down"
+doctor_check tap_to_drag "Tap to drag" "a double tap on the trackpad, finger kept down, drags"
 
 # Your tools and apps, after the checks: one row per tool or app omamac
 # installed, "group<TAB>name<TAB>version<TAB>newer". newer is "latest", the
@@ -824,7 +824,7 @@ doctor_see() {
     desktops) REPLY="$mac, and Keyboard → Keyboard Shortcuts" ;;
     window_margins | desktop_widgets | dock | dock_autohide) REPLY=$mac ;;
     tap_to_click) REPLY='System Settings → Trackpad' ;;
-    three_finger_drag) REPLY='System Settings → Accessibility → Pointer Control → Trackpad Options' ;;
+    tap_to_drag) REPLY='System Settings → Accessibility → Pointer Control → Trackpad Options' ;;
   esac
   REPLY=${REPLY/#"$HOME"/\~}
 }
