@@ -82,6 +82,7 @@ update_choices() {
   fi
   # choices_load has said what's wrong and how to fix it.
   choices_load "$OMAMAC_CHOICES_FILE" || exit 1
+  settings_retire_drag
 }
 
 # update_upgrade: upgrade, by name, the installed formulas omamac installs:

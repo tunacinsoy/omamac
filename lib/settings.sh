@@ -380,6 +380,37 @@ settings_dock_restart() {
   OMAMAC_STEP=$step
 }
 
+# settings_retire_drag: after choices_load, undo what three-finger drag alone
+# changed (the swipes it moved to four fingers), turn a yes into tap to drag,
+# and save the answers without the old line. Dragging and three-finger drag's
+# own switch keep their record lines: tap to drag sets the same keys, so
+# turning it off still puts back the values from before omamac.
+settings_retire_drag() {
+  local d k before rc=0
+  [ -n "$CHOICES_RETIRED_DRAG" ] || return 0
+  OMAMAC_STEP='putting back the three-finger swipes'
+  SETTINGS_ACTIVATE=0
+  SETTINGS_DOCK=0
+  for d in com.apple.AppleMultitouchTrackpad com.apple.driver.AppleBluetoothMultitouch.trackpad; do
+    for k in TrackpadThreeFingerHorizSwipeGesture TrackpadThreeFingerVertSwipeGesture \
+      TrackpadFourFingerHorizSwipeGesture TrackpadFourFingerVertSwipeGesture; do
+      before=$(settings_before "$d" "$k") || continue
+      settings_restore "$d" "$k" "$before" || return 1
+      settings_changed "$d"
+      settings_drop "$d" "$k"
+    done
+  done
+  settings_reload
+  if [ "$CHOICES_RETIRED_DRAG" = yes ] && [ -z "${CHOICES[tap_to_drag]+set}" ]; then
+    CHOICES[tap_to_drag]=yes
+    ui_info "Three-finger drag is now tap to drag; your three-finger swipes are back. Turn it off: omamac configure tap-to-drag off"
+  fi
+  OMAMAC_STEP='saving your answers'
+  choices_save "$OMAMAC_CHOICES_FILE" || rc=$?
+  [ "$rc" -eq 0 ] || return "$rc"
+  CHOICES_RETIRED_DRAG=''
+}
+
 # settings_what <answer-key>: what uninstall puts back, for its box.
 settings_what() {
   case $1 in

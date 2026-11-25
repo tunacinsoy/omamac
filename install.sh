@@ -74,6 +74,7 @@ install_questions() {
   OMAMAC_STEP='reading your saved answers'
   # choices_load has said what's wrong and how to fix it.
   choices_load "$OMAMAC_CHOICES_FILE" || exit 1
+  settings_retire_drag
   OMAMAC_STEP='asking the questions'
   local unanswered
   unanswered=$(choices_missing)
