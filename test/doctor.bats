@@ -1169,7 +1169,7 @@ healthy_apps() {
   run doctor
   grep -qx 'brew reinstall --cask zoom' "$STUB_LOG"
   [ -z "$(grep '^gum spin' "$STUB_LOG")" ]
-  [[ "$output" == *"Homebrew asks for your password for: Zoom."* ]]
+  [[ "$output" == *"Reinstalling Zoom"* ]]
 }
 
 @test "doctor: Remove it from my answers drops the app" {

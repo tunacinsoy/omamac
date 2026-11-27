@@ -165,8 +165,7 @@ docker_uninstall_desktop() {
   local list
   OMAMAC_STEP="removing Docker Desktop"
   if core_cask_listed docker-desktop; then
-    # Homebrew resets sudo for its links in /usr/local and asks itself; no spinner hides that.
-    ui_info "Homebrew may ask for your password."
+    # Homebrew resets sudo for its links in /usr/local and asks itself; ui_run_open names the prompt.
     ui_run_open "Removing Docker Desktop" "$OMAMAC_BREW_PREFIX/bin/brew" uninstall --cask "$@" docker-desktop || return
   fi
   OMAMAC_STEP="removing lazydocker"

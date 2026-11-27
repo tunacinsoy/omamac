@@ -15,8 +15,8 @@ It updates omamac and what omamac installed, nothing else:
 - pulls omamac (and stops if you edited its files) and rewrites the files omamac writes;
 - puts back any core tool, app, language, cloud CLI or coding agent that is missing, and the macOS settings you chose if you changed them;
 - upgrades the core tools, bash, gum, colima and its tools if you chose it, the cloud CLIs and coding agents you chose (the casks among them with `--greedy`) and the languages you chose;
-- upgrades Ghostty, Docker Desktop and your apps only when Homebrew lists them as outdated (they update themselves), and only if your terminal has App Management; otherwise it says what to click and exits 1. Homebrew may ask for your password for some of them;
-- while Homebrew downloads an upgrade, its row says how much has come and how fast (`Upgrading Visual Studio Code · 142 MB · 3.1 MB/s`), so a big app from a slow server reads as slow, not stuck. Homebrew gives no total, so there is no percentage;
+- upgrades Ghostty, Docker Desktop and your apps only when Homebrew lists them as outdated (they update themselves), and only if your terminal has App Management; otherwise it says what to click and exits 1. Some upgrades need your password partway through (for example to stop an app's background helper). The row then says which app needs it and why, right above the `Password:` prompt;
+- while Homebrew downloads an upgrade, its row says how much has come and how fast (`Upgrading Visual Studio Code · 142 MB · 3.1 MB/s`), so a big app from a slow server reads as slow, not stuck. Homebrew gives no total, so there is no percentage. After the download, an app's row says what Homebrew is doing (`removing the old version`, `installing the new version`);
 - runs `mise prune`, which deletes versions of those languages that no mise config uses, such as one you installed with `mise install node@18`;
 - names any question added since your first run, and the command that asks it, such as `omamac install apps` or `omamac configure desktop-widgets`: update itself asks nothing.
 

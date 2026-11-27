@@ -284,17 +284,69 @@ FAKE_DOWNLOAD='d="$HOME/Library/Caches/Homebrew/downloads"; mkdir -p "$d"
   [[ "$(drawn)" != *"MB"* ]]
 }
 
-@test "download progress, open: a row only while the download runs, so none sits on a password prompt" {
+@test "download progress, open: the row stays for the whole command and says what Homebrew does" {
   export OMAMAC_TEST_UI_TERMINAL=1
-  run kit "exec 9>&1; ui_stages 2; ui_stage 'App upgrades'
-    ui_run_download open 'Upgrading Zoom' bash -c 'echo BEFORE >&9; sleep 0.5; $FAKE_DOWNLOAD; sleep 0.6; echo PROMPT >&9; sleep 0.5' _ 2 2"
+  run kit "ui_stages 2; ui_stage 'App upgrades'
+    ui_run_download open 'Upgrading Zoom' bash -c 'echo \"==> Fetching downloads for: zoom\"; sleep 0.5; $FAKE_DOWNLOAD; echo \"==> Removing App\"; sleep 0.6' _ 2 2"
   [ "$status" -eq 0 ]
-  [ "${output%%BEFORE*}" = "" ]
-  between=${output#*BEFORE}
-  between=${between%%PROMPT*}
-  [[ "$(printf '%s' "$between" | perl -pe 's/\e\[[0-9;]*m//g')" == *"App upgrades     Upgrading Zoom · 4.0 MB"* ]]
-  [[ "$between" == *$'\r\e[K' ]]
-  [ "${output#*PROMPT}" = "" ]
+  [[ "$(drawn)" == *"App upgrades     Upgrading Zoom · checking the download"* ]]
+  [[ "$(drawn)" == *"App upgrades     Upgrading Zoom · 4.0 MB"* ]]
+  [[ "$(drawn)" == *"App upgrades     Upgrading Zoom · removing the old version"* ]]
+  # The cursor waits two lines under the row and redraws leave it there; at
+  # the end the row is cleared and the cursor is back on its line.
+  [[ "$output" == *$'\n\n\e7\e[2A\r\e[K'*$'\e8'* ]]
+  [[ "$output" == *$'\e[2A\r\e[K' ]]
+}
+
+# SUDO_WAITS: a stand-in for sudo asking for the password, as a command's
+# child: named sudo, prints Password: on the terminal (fd 9) and waits without
+# a child of its own, then ends the line as sudo does after Enter. fd 8 is a
+# pipe nobody writes to, for read's timeout.
+SUDO_WAITS='(exec -a sudo "$BASH" -c "printf Password: >&9; read -r -t 1.2 _ <&8; echo >&9")'
+
+@test "password: when sudo waits, the row says who needs it and why, once, above sudo's prompt" {
+  export OMAMAC_TEST_UI_TERMINAL=1
+  run kit "exec 9>&1 8< <(sleep 3); ui_stages 13; ui_stage Apps
+    ui_run_download open 'Upgrading Spotify' bash -c 'echo \"==> Upgrading spotify\"; echo \"==> Removing launchctl service com.spotify.client.startuphelper\"; sleep 0.3; $SUDO_WAITS; sleep 0.4'"
+  [ "$status" -eq 0 ]
+  after=${output#*Password:}
+  [ "$after" != "$output" ]
+  # Saved cursor, up to the row, the label; down a line, the reason; back.
+  [[ "$after" == *$'\e7\e[2A\r\e[K'*"Apps             "*"Spotify needs your Mac password"*$'\e[1B\r\e[K'*"to stop its background helper."*$'\e8'* ]]
+  [ "$(grep -o 'needs your Mac password' <<< "$output" | wc -l)" -eq 1 ]
+  # Nothing moved the cursor off sudo's line before the label.
+  [[ "${after%%needs your Mac password*}" != *$'\n'* ]]
+  # The reason sits under the row's text column.
+  [[ "$(drawn)" == *$'\r\e[K                         to stop its background helper.'* ]]
+  # The spinner goes on below sudo's prompt, not over it.
+  [[ "$after" == *$'\e8\n\r\e[K'*"Upgrading Spotify"*$'\n\n'* ]]
+}
+
+@test "password: several apps need it, for their installers" {
+  export OMAMAC_TEST_UI_TERMINAL=1
+  run kit "exec 9>&1 8< <(sleep 3)
+    ui_run_open 'Installing Zoom, Google Drive' bash -c 'echo \"==> Running installer for zoom with sudo (which may request your password)...\"; $SUDO_WAITS'"
+  [ "$status" -eq 0 ]
+  [[ "$(drawn)" == *"Zoom, Google Drive need your Mac password"*"to run their installer."* ]]
+}
+
+@test "password: a sudo that already runs its command gets no label" {
+  export OMAMAC_TEST_UI_TERMINAL=1
+  run kit "exec 9>&1
+    ui_run_download open 'Upgrading Spotify' bash -c '(exec -a sudo \"\$BASH\" -c \"sleep 1; true\")'"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"needs your Mac password"* ]]
+  [[ "$(drawn)" == *"Upgrading Spotify"* ]]
+}
+
+@test "password: the reason follows Homebrew's last step" {
+  run kit 'for l in "Running installer for zoom" "Removing launchctl service x" "Uninstalling packages with sudo" "Removing files:" "Linking Binary '"'"'docker'"'"' to '"'"'/usr/local/bin/docker'"'"'" "Something new"; do _ui_reason "$l" its; echo "$REPLY"; done'
+  [ "$output" = "to run its installer.
+to stop its background helper.
+to remove its system files.
+to remove its system files.
+to link its tools into /usr/local.
+to change system files." ]
 }
 
 @test "download progress, open: the command reads the terminal's input" {

@@ -15,7 +15,7 @@ A yellow Removes box shows what goes (the app, Homebrew's cask, its data only if
 `brave`, `chrome`, `firefox`, `whatsapp`, `telegram`, `signal`, `discord`, `slack`, `zoom`, `spotify`, `vlc`, `cap`, `dropbox`, `google-drive`, `vscode`, `claude`, `chatgpt`, `copilot`, `antigravity`, `raycast`, `obsidian` and `wispr-flow`.
 
 - omamac first asks whether to remove the app's settings and data too. Enter alone is no; yes lets Homebrew delete what the app keeps in `~/Library`.
-- Homebrew may ask for your password.
+- Some apps need your password to be removed. omamac then says which app and why, right above the `Password:` prompt.
 - An app Homebrew took over is removed like the others. One still installed by hand stays, and omamac only forgets your pick.
 - With Dock cleanup on, the app's tile leaves the Dock. An app you installed by hand keeps its tile.
 
