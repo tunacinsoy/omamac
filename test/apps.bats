@@ -158,7 +158,8 @@ changes() { grep -E '^brew (install|reinstall|uninstall|upgrade|tap|services)' "
   [ "$(changes | head -1)" = "brew install --cask zoom google-drive docker-desktop" ]
   [ "$(changes | grep -c 'zoom')" -eq 1 ]
   [ "$(changes | grep -c 'docker-desktop')" -eq 1 ]
-  [[ "$output" == *"ℹ Homebrew asks for your password for: Zoom, Google Drive, Docker Desktop."$'\n'"Installing Zoom, Google Drive, Docker Desktop"$'\n'* ]]
+  [[ "$output" == *"Installing Zoom, Google Drive, Docker Desktop"$'\n'* ]]
+  [[ "$output" != *"Homebrew asks for your password for"* ]]
   run ! grep -q '^gum spin.*zoom' "$STUB_LOG"
 }
 
@@ -195,7 +196,7 @@ changes() { grep -E '^brew (install|reinstall|uninstall|upgrade|tap|services)' "
   [ "${lines[0]}" = zoom ]
   [ "${lines[1]}" = docker-desktop ]
   [ "${lines[2]}" = docker-desktop ]
-  [ "${lines[3]}" = "ℹ Homebrew asks for your password for: Docker Desktop." ]
+  [ "${lines[3]}" = "Installing Docker Desktop" ]
   [[ "$output" == *$'\n'"Open Docker Desktop once to finish its setup." ]]
   [ "$(changes)" = "brew install --cask docker-desktop" ]
 }

@@ -448,7 +448,7 @@ no_brew_changes() { run ! grep -qE '^brew (uninstall|install|reinstall)' "$STUB_
   [ "$status" -eq 0 ]
   [ "$(grep '^brew uninstall' "$STUB_LOG")" = "brew uninstall --cask docker-desktop
 brew uninstall lazydocker" ]
-  [[ "$output" == *"Docker Desktop: the app and lazydocker. Your images, containers and volumes stay."*"ℹ Homebrew may ask for your password."*"Removing Docker Desktop"* ]]
+  [[ "$output" == *"Docker Desktop: the app and lazydocker. Your images, containers and volumes stay."$'\n'"Removing Docker Desktop"* ]]
   [ ! -e "$OMAMAC_TEST_APPLICATIONS/Docker.app" ]
   grep -qx 'docker=none' "$CHOICES_FILE"
   run ! grep -q -- '--zap' "$STUB_LOG"
@@ -591,7 +591,7 @@ app_run() {
   [ "$(grep -E '^(gum confirm|brew uninstall)' "$STUB_LOG")" = "gum confirm --default=false Also remove VLC's settings and data?
 gum confirm --default=false Remove VLC?
 brew uninstall --cask --zap vlc" ]
-  [[ "$output" == *"ℹ On yes, Homebrew also deletes what VLC keeps in ~/Library."*"VLC: the app, with its settings and data."*"ℹ Homebrew may ask for your password."*"Removing VLC"*"✓ VLC is removed"* ]]
+  [[ "$output" == *"ℹ On yes, Homebrew also deletes what VLC keeps in ~/Library."*"VLC: the app, with its settings and data."$'\n'"Removing VLC"*"✓ VLC is removed"* ]]
   # In the open, so Homebrew's password prompt shows.
   run ! grep -q '^gum spin.*vlc' "$STUB_LOG"
   [ ! -e "$OMAMAC_TEST_APPLICATIONS/VLC.app" ]
@@ -883,8 +883,6 @@ gum confirm --default=false Remove VLC?" ]
 │ Homebrew  the vlc cask                                           │
 │ Data      what VLC keeps in ~/Library, only if you say yes below │
 ╰──────────────────────────────────────────────────────────────────╯
-  ℹ Homebrew may ask for your password.
-  › Removing VLC
   ✓ VLC             removed, with its settings and data" ]
   [[ "$output" == *$'╭ \e[33mRemoves\e[0m'* ]]
   grep -qx 'brew uninstall --cask --zap vlc' "$STUB_LOG"

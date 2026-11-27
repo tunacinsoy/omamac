@@ -157,7 +157,7 @@ update_upgrade_casks() {
 # call, so Homebrew asks once. Every upgrade runs in the open: it runs the old
 # version's uninstall steps, which ask for the password for some casks (Discord, Dropbox).
 update_upgrade_apps() {
-  local id cask state out label app status said=0
+  local id cask state out label app status
   local order=(ghostty) casks=() outdated=() pids=() pcasks=()
   local -A label_of=() password_of=() id_of=()
   OMAMAC_STEP='upgrading your apps'
@@ -201,7 +201,6 @@ update_upgrade_apps() {
           pids+=("${id_of[$cask]}") pcasks+=("$cask")
         else
           OMAMAC_STEP="upgrading $label"
-          [ "$said" -eq 1 ] || { ui_info "Homebrew may ask for your password."; said=1; }
           ui_run_download open "Upgrading $label" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask "$cask"
           UPDATE_APPS+=("$label")
         fi
@@ -221,7 +220,6 @@ update_upgrade_apps() {
   [ "${#pids[@]}" -gt 0 ] || return 0
   label=$(apps_step_labels "${pids[@]}")
   OMAMAC_STEP="upgrading $label"
-  apps_password_say "${pids[@]}"
   ui_run_download open "Upgrading $label" "$OMAMAC_BREW_PREFIX/bin/brew" upgrade --cask "${pcasks[@]}"
   UPDATE_APPS+=("$label")
 }

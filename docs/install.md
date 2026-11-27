@@ -43,7 +43,7 @@ Tools and apps come from Homebrew; languages come from mise.
 
 - omamac asks for your password once and never stores it.
 - The exception: if you chose Zoom, Google Drive or Docker Desktop, Homebrew asks for your password once more, right after "Install?", once for all of them.
-- It asks once they are downloaded, so stay at the keyboard until it has asked.
+- It asks once they are downloaded, so stay at the keyboard until it has asked. omamac says which apps need it and why, right above the `Password:` prompt.
 
 ## The questions
 

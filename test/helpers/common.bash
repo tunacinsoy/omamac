@@ -77,8 +77,10 @@ terminal_look() {
 }
 
 # uncoloured: stdin without its colour codes.
-# A row a spinner drew and cleared (\r\e[K) is gone, as on a terminal.
-uncoloured() { perl -pe 's/^.*\r\e\[K//; s/\e\[[0-9;]*m//g'; }
+# A row a spinner drew and cleared (\r\e[K) is gone, as on a terminal. So are
+# the open row's two lines under it once \e[2A goes back up over them, and
+# its redraws between a saved and restored cursor (\e7 … \e8).
+uncoloured() { perl -ne 's/\e7.*?\e8//g; splice(@o, -2) if s/^\e\[2A//; s/^.*\r\e\[K//; s/\e\[[0-9;]*m//g; push @o, $_; END { print @o }'; }
 # drawn: $output without its colour codes, every row a spinner drew kept.
 # shellcheck disable=SC2154 # bats sets output
 drawn() { printf '%s\n' "$output" | perl -pe 's/\e\[[0-9;]*m//g'; }
