@@ -94,6 +94,7 @@ Type `omamac` and it asks what you want. Each command below asks what it needs, 
 
 <table>
   <tr><td width="42%"><code>omamac theme</code></td><td>Switch the look everywhere (<a href="docs/themes.md">how</a>)</td></tr>
+  <tr><td><code>omamac font-size</code></td><td>Make the terminal text bigger or smaller</td></tr>
   <tr><td><code>omamac update</code></td><td>Update omamac, your tools and apps (<a href="docs/updating.md">how</a>)</td></tr>
   <tr><td><code>omamac install</code></td><td>Add an app, language or tool you skipped</td></tr>
   <tr><td><code>omamac uninstall</code></td><td>Remove one, cleanly (<a href="docs/uninstalling.md">how</a>)</td></tr>

@@ -13,6 +13,7 @@ Which command to run for what you want to change. You don't need to remember any
 | Remove one of those | `omamac uninstall` | `omamac uninstall vlc` |
 | Turn a macOS setting on or off | `omamac configure` | `omamac configure dock-autohide off` |
 | Change the look | `omamac theme` | `omamac theme nord` |
+| Make the terminal text bigger or smaller | `omamac font-size` | `omamac font-size 16` |
 | Get the latest omamac, tools and apps | `omamac update` | |
 | Check that everything is healthy | `omamac doctor` | `omamac doctor --all` |
 
@@ -59,6 +60,10 @@ Off puts back the values you had before omamac changed them.
 ## omamac theme
 
 With no name, it lists the 13 themes. `omamac theme nord` switches straight away. See [Themes](themes.md).
+
+## omamac font-size
+
+With no size, it lists 10 to 20, with a hint next to some for where each suits, and Default. `omamac font-size 16` sets it straight away; `omamac font-size default` goes back to Ghostty's own size, or the one in your own Ghostty config. Open Ghostty windows change at once.
 
 ## omamac update and omamac doctor
 

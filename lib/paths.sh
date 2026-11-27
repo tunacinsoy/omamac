@@ -14,6 +14,8 @@ OMAMAC_NVIM_DIR=$HOME/.config/nvim
 OMAMAC_NVIM_MARKER=$OMAMAC_NVIM_DIR/lua/plugins/omamac.lua
 OMAMAC_LAZYVIM_URL=${OMAMAC_TEST_LAZYVIM_URL:-https://github.com/LazyVim/starter}
 OMAMAC_CHOICES_FILE=$OMAMAC_STATE_DIR/choices.env
+# The size picked with omamac font-size: one number, 10 to 20 (lib/ghostty.sh).
+OMAMAC_FONT_SIZE_FILE=$OMAMAC_STATE_DIR/font-size
 OMAMAC_HERDR_FILE=$OMAMAC_CONFIG_DIR/herdr.toml
 OMAMAC_HERDR_USER_FILE=$HOME/.config/herdr/config.toml
 OMAMAC_STARSHIP_FILE=$OMAMAC_CONFIG_DIR/starship.toml

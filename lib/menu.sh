@@ -9,6 +9,7 @@ menu_run() {
     "Remove something:uninstall" \
     "Change a macOS setting:configure" \
     "Switch the theme:theme" \
+    "Change the font size:font-size" \
     "Update everything:update" \
     "Check everything:doctor"
   exec "$BASH" "$OMAMAC_CHECKOUT/bin/omamac" "$ASK_PICKED"

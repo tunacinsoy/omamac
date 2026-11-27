@@ -13,6 +13,18 @@ ghostty_render() {
   # Not sed: a path may hold & or /. The quoted replacement keeps bash 5.2 from reading & too.
   printf '%s\n' "${s//@OMAMAC_TERMINAL@/"$OMAMAC_TERMINAL"}" > "$1"
   cat "$OMAMAC_CHECKOUT/themes/${CHOICES[theme]}/ghostty.conf" >> "$1"
+  local size
+  size=$(ghostty_font_size)
+  [ -z "$size" ] || printf '# Picked with omamac font-size.\nfont-size = %s\n' "$size" >> "$1"
+}
+
+# ghostty_font_size: the size saved by omamac font-size (10 to 20), or nothing.
+# The file is read as data; anything else in it counts as no size.
+ghostty_font_size() {
+  local s=''
+  [ -f "$OMAMAC_FONT_SIZE_FILE" ] && s=$(<"$OMAMAC_FONT_SIZE_FILE")
+  if [[ $s =~ ^(1[0-9]|20)$ ]]; then echo "$s"; fi
+  return 0
 }
 
 # ghostty_user_files: Ghostty's four user files, in load order (a later one wins).

@@ -100,3 +100,26 @@ in_lib() {
   diff -r "$HOME" "$BATS_TEST_TMPDIR/after-first"
   [ "$(grep -cF "$LINE" "$XDG/config.ghostty")" -eq 1 ]
 }
+
+@test "render writes the saved font size last" {
+  mkdir -p "$HOME/.local/state/omamac"
+  echo 16 > "$HOME/.local/state/omamac/font-size"
+  in_lib "ghostty_render '$BATS_TEST_TMPDIR/out'"
+  [ "$(tail -2 "$BATS_TEST_TMPDIR/out")" = $'# Picked with omamac font-size.\nfont-size = 16' ]
+}
+
+@test "render writes no font size when none is saved" {
+  in_lib "ghostty_render '$BATS_TEST_TMPDIR/out'"
+  ! grep -q '^font-size' "$BATS_TEST_TMPDIR/out"
+}
+
+@test "render ignores a bad saved size" {
+  local v
+  mkdir -p "$HOME/.local/state/omamac"
+  for v in abc 25 9 '$(touch $HOME/ran)' '' $'16\n17' 016; do
+    printf '%s\n' "$v" > "$HOME/.local/state/omamac/font-size"
+    in_lib "ghostty_render '$BATS_TEST_TMPDIR/out'"
+    ! grep -q '^font-size' "$BATS_TEST_TMPDIR/out"
+    [ ! -e "$HOME/ran" ]
+  done
+}

@@ -224,3 +224,11 @@ listener() {
   # The path is long in the sandbox, so it wraps inside the box.
   [[ "$(printf "%s\n" "$output" | uncoloured)" == *"╭ Stopped"*"│ While  writing "*"│ Fix    run omamac theme again"* ]]
 }
+
+@test "theme switch keeps the size" {
+  mkdir -p "$HOME/.local/state/omamac"
+  echo 16 > "$HOME/.local/state/omamac/font-size"
+  run omamac_theme nord
+  [ "$status" -eq 0 ]
+  grep -qx 'font-size = 16' "$OM/ghostty.conf"
+}

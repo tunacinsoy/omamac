@@ -263,3 +263,10 @@ prompts() { grep -E '^gum (choose|confirm)' "$STUB_LOG" || true; }
   [[ "$output" == *"✗ omamac needs a terminal to ask its questions. Run it from Terminal."* ]]
   [ -z "$(prompts)" ]
 }
+
+@test "ask_choose passes ASK_SELECTED to gum" {
+  gum_answers b
+  in_ask 'ASK_SELECTED=B; ask_choose H A:a B:b'
+  [ "$status" -eq 0 ]
+  [ "$(prompts)" = "gum choose --header H --label-delimiter=: --selected=B A:a B:b" ]
+}
