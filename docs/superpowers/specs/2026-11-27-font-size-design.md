@@ -8,7 +8,7 @@ On a different-sized monitor you want a different terminal text size. Omakub had
 
 ## Goals
 
-- `omamac font-size` shows a picker like Omakub's, with some seasoning: 10 to 20, then "Ghostty's default (13)". The cursor starts on the current size. A few sizes carry a dim hint for where they suit: 11 "more on screen", 14 "laptop", 16 "external monitor", 18 "monitor further away", 20 "presenting or sharing your screen".
+- `omamac font-size` shows a picker like Omakub's, with some seasoning: 10 to 20, then "Default". The header is just "Which size?"; the cursor starts on the current size. A few sizes carry a dim hint for where they suit: 11 "more on screen", 14 "laptop", 16 "external monitor", 18 "monitor further away", 20 "presenting or sharing your screen".
 - `omamac font-size 16` sets it directly; `omamac font-size default` removes omamac's size.
 - The `omamac` menu gets "Change the font size", right after "Switch the theme".
 - The change shows at once in open Ghostty windows (the same reload a theme switch uses), and stays on every later update and theme switch.
@@ -39,8 +39,7 @@ On a different-sized monitor you want a different terminal text size. Omakub had
 
 - The size is saved in its own file, `~/.local/state/omamac/font-size`, not in `choices.env`: `choices.env` holds the first-run questions, and a key there would be asked at the first run and by update. It is read as data and checked to be 10–20; anything else is reported and ignored.
 - `ghostty_render` appends `font-size = N` after the theme when the file holds a size. Ghostty reads an included file after the file that includes it, so omamac's file always loads after the user's own config and a picked size wins over theirs. omamac never edits their config to win.
-- When the user's own Ghostty files set `font-size`, the command prints one ℹ line: "Your own Ghostty config sets font-size = 14. omamac's 17 wins while you have one picked." `omamac font-size default` gives theirs back.
-- Output mirrors `omamac theme`: ✓ Font size, ✓ Now. A size outside 10–20 (or `default`) stops with the list of valid sizes, exit 2. No "Install?" step.
+- Output is one line, `✓ Font size 17` (or `✓ Font size Default`); the font changing on screen is the rest. Nothing about Ghostty, config files or the user's own size is printed. `omamac font-size default` gives a user's own size back. A size outside 10–20 (or `default`) stops with one line naming the valid sizes, exit 2. No "Install?" step.
 - `omamac doctor` gets no check; "What you have" lists the size when one is picked.
 - The VM run checks what a window resized with Cmd +/− does on reload; the docs say which.
 - `vision.md` changes the font line to "Ghostty's built-in font; omamac sets no size until you pick one with `omamac font-size`", with a dated decision.
