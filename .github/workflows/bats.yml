@@ -16,7 +16,7 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-          gate='^(\.github/rulesets/main\.json|\.github/workflows/bats\.yml|test/(vm\.sh|vm\.exp|fingerprint\.sh|image\.sh))$'
+          gate='^(\.github/rulesets/main\.json|\.github/workflows/(bats|pr-title|release)\.yml|\.github/scripts/release\.sh|test/(vm\.sh|vm\.exp|fingerprint\.sh|image\.sh))$'
           # On its own line, so a failed diff fails the step.
           changed=$(git diff --name-only "origin/$BASE_REF...HEAD")
           # grep finding no gate file is fine.
