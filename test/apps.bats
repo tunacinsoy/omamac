@@ -59,6 +59,7 @@ copilot|github-copilot-app|GitHub Copilot.app||
 antigravity|antigravity|Antigravity.app||
 raycast|raycast|Raycast.app||
 obsidian|obsidian|Obsidian.app||
+alt-tab|alt-tab|AltTab.app||AltTab: allow Accessibility and Screen Recording, then Cmd+Tab shows every window.
 wispr-flow|wispr-flow|Wispr Flow.app||Wispr Flow: allow Microphone and Accessibility." ]
 }
 
@@ -386,4 +387,109 @@ vlc_by_hand() {
   [[ "$output" == *"rc=1 step=handing VLC to Homebrew" ]]
   [ "$(cat "$OMAMAC_TEST_APPLICATIONS/VLC.app/marker")" = mine ]
   [ ! -e "$P/Caskroom/vlc" ]
+}
+
+@test "catalog: AltTab's defaults lines; no other app has any" {
+  in_apps 'for id in $(apps_ids); do [ -z "${APP_DEFAULTS[$id]}" ] || printf "%s|%s\n" "$id" "${APP_DEFAULTS[$id]}"; done'
+  [ "$status" -eq 0 ]
+  [ "$output" = "alt-tab|com.lwouis.alt-tab-macos preferencesVersion string 10.3.0
+com.lwouis.alt-tab-macos holdShortcut string ⌘" ]
+}
+
+@test "catalog: a defaults line needs a domain, a key, a known type and a value" {
+  local co="$BATS_TEST_TMPDIR/co" bad
+  mkdir -p "$co/apps"
+  for bad in 'defaults=com.x key' 'defaults=com.x key float 1'; do
+    printf 'cask=x\napp=X.app\n%s\n' "$bad" > "$co/apps/bad"
+    run "$BASH5" -c "set -e; export OMAMAC_CHECKOUT='$co'
+      for f in paths ui questions choices core; do source '$REPO_ROOT/lib/'\$f.sh; done
+      source '$REPO_ROOT/lib/apps.sh'; echo sourced"
+    [ "$status" -ne 0 ]
+    [[ $output == *"apps/bad, line 3"* ]]
+  done
+}
+
+@test "catalog: no password app has a defaults line" {
+  local f
+  for f in "$REPO_ROOT"/apps/*; do
+    if grep -q '^password=yes' "$f" && grep -q '^defaults=' "$f"; then echo "$f"; return 1; fi
+  done
+}
+
+alttab_written() { grep -q '^defaults write com.lwouis.alt-tab-macos holdShortcut -string ⌘$' "$STUB_LOG"; }
+
+@test "apps_install: AltTab installed gets its settings, before the install" {
+  apps_brew
+  in_steps 'CHOICES[apps_productivity]=alt-tab; apps_install
+    defaults read com.lwouis.alt-tab-macos holdShortcut; defaults read com.lwouis.alt-tab-macos preferencesVersion'
+  [ "$status" -eq 0 ]
+  [ "$(changes)" = "brew install --cask alt-tab" ]
+  [[ "$output" == *$'\n⌘\n10.3.0' ]]
+  [ "$(grep -nE '^brew install --cask alt-tab|^defaults write com.lwouis.alt-tab-macos holdShortcut' "$STUB_LOG" | cut -d: -f2 | cut -c1-5)" = $'defau\nbrew ' ]
+}
+
+@test "apps_install: AltTab adopted gets its settings; reinstalled too" {
+  apps_brew
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/AltTab.app"
+  in_steps 'CHOICES[apps_productivity]=alt-tab; APPS_ADOPT=(alt-tab); apps_install'
+  [ "$status" -eq 0 ]
+  [ "$(changes)" = "brew install --cask --adopt alt-tab" ]
+  alttab_written
+  rm -rf "$OMAMAC_TEST_APPLICATIONS/AltTab.app"
+  in_steps 'CHOICES[apps_productivity]=alt-tab; apps_install'
+  [ "$(changes)" = "brew reinstall --cask alt-tab" ]
+  alttab_written
+}
+
+@test "apps_install: AltTab already from Homebrew, or by hand and not adopted: nothing written" {
+  apps_brew
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/AltTab.app"
+  in_steps 'CHOICES[apps_productivity]=alt-tab; apps_install'
+  [ "$status" -eq 0 ]
+  ! grep -q '^defaults write' "$STUB_LOG"
+  rm -rf "$OMAMAC_TEST_APPLICATIONS/AltTab.app"
+  "$P/bin/brew" install --cask alt-tab
+  in_steps 'CHOICES[apps_productivity]=alt-tab; apps_install'
+  [ "$status" -eq 0 ]
+  [ -z "$(changes)" ]
+  ! grep -q '^defaults write' "$STUB_LOG"
+}
+
+@test "apps_install: a failed settings write stops the run naming AltTab, installs nothing; the next run tries both" {
+  apps_brew
+  export T_DEFAULTS_FAIL=com.lwouis.alt-tab-macos:holdShortcut
+  in_steps 'set +e; CHOICES[apps_productivity]=alt-tab; apps_install; echo "rc=$? step=$OMAMAC_STEP"'
+  [[ "$output" == *"rc=1 step=setting up AltTab" ]]
+  [ -z "$(changes)" ]
+  unset T_DEFAULTS_FAIL
+  in_steps 'CHOICES[apps_productivity]=alt-tab; apps_install'
+  [ "$status" -eq 0 ]
+  [ "$(changes)" = "brew install --cask alt-tab" ]
+  alttab_written
+}
+
+@test "apps_install: AltTab running when adopted is quit, written, opened again, then adopted" {
+  apps_brew
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/AltTab.app"
+  local up="$BATS_TEST_TMPDIR/alttab-up"
+  touch "$up"
+  printf '#!/bin/bash\n[ ! -e %q ] || echo /Applications/AltTab.app/Contents/MacOS/AltTab\necho /usr/sbin/cfprefsd\n' "$up" > "$STUB_DIR/ps"
+  printf '#!/bin/bash\necho "osascript $*" >> "$STUB_LOG"\nrm -f %q\n' "$up" > "$STUB_DIR/osascript"
+  printf '#!/bin/bash\necho "open $*" >> "$STUB_LOG"\n' > "$STUB_DIR/open"
+  chmod +x "$STUB_DIR/ps" "$STUB_DIR/osascript" "$STUB_DIR/open"
+  in_steps 'CHOICES[apps_productivity]=alt-tab; APPS_ADOPT=(alt-tab); apps_install'
+  [ "$status" -eq 0 ]
+  [ "$(grep -E '^(osascript|defaults write|open|brew install)' "$STUB_LOG" | cut -c1-10)" = "osascript 
+defaults w
+defaults w
+open -g -a
+brew insta" ]
+  grep -qxF "open -g -a $OMAMAC_TEST_APPLICATIONS/AltTab.app" "$STUB_LOG"
+}
+
+@test "apps_install: AltTab not running when installed: nothing quit or opened" {
+  apps_brew
+  in_steps 'CHOICES[apps_productivity]=alt-tab; apps_install'
+  [ "$status" -eq 0 ]
+  ! grep -qE '^(osascript|open) ' "$STUB_LOG"
 }

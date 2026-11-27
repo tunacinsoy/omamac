@@ -9,6 +9,7 @@ Do each once, top to bottom; skip a line that names something you didn't choose.
 - [ ] Open Ghostty. It starts herdr. The first time, macOS asks you to confirm; click Open.
 - [ ] Open each app once. macOS asks you to confirm; click Open.
 - [ ] Some apps need a permission, in System Settings → Privacy & Security:
+  - [ ] AltTab: allow Accessibility and Screen Recording, then Cmd+Tab shows every window.
   - [ ] Cap: allow Screen Recording, and Camera and Microphone if you use them.
   - [ ] Wispr Flow: allow Microphone and Accessibility.
   - [ ] Zoom: allow Camera and Microphone, and Screen Recording to share.

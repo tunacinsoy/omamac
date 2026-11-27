@@ -31,7 +31,7 @@ With no name, it asks which section (only the ones with something left to add), 
 
 **Names** (they ask nothing but "Install?", and several can go in one run):
 
-- **Apps:** `brave`, `chrome`, `firefox`, `whatsapp`, `telegram`, `signal`, `discord`, `slack`, `zoom`, `spotify`, `vlc`, `cap`, `dropbox`, `google-drive`, `vscode`, `claude`, `chatgpt`, `copilot`, `antigravity`, `raycast`, `obsidian` and `wispr-flow`.
+- **Apps:** `brave`, `chrome`, `firefox`, `whatsapp`, `telegram`, `signal`, `discord`, `slack`, `zoom`, `spotify`, `vlc`, `cap`, `dropbox`, `google-drive`, `vscode`, `claude`, `chatgpt`, `copilot`, `antigravity`, `raycast`, `obsidian`, `alt-tab` and `wispr-flow`.
 - **Languages:** `ruby` (with Rails), `node`, `go`, `python`, `elixir`, `rust` and `java`.
 - **Cloud CLIs:** `azure`, `aws`, `gcloud`, `gh` and `terraform`.
 - **Coding agents:** `claude-code`, `codex`, `copilot-cli`, `antigravity-cli` and `opencode`.

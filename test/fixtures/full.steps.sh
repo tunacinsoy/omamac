@@ -28,7 +28,7 @@ checkout=~/.local/share/omamac
 mise=/opt/homebrew/bin/mise
 # The catalog in catalog order (lib/questions.sh), then Wispr Flow.
 ids=(brave chrome firefox whatsapp telegram signal discord slack zoom spotify vlc cap dropbox google-drive vscode
-  claude chatgpt copilot antigravity raycast obsidian wispr-flow)
+  claude chatgpt copilot antigravity raycast obsidian alt-tab wispr-flow)
 # Each coding agent as <id>:<its command>.
 agents=(claude-code:claude antigravity-cli:agy opencode:opencode)
 
@@ -48,6 +48,18 @@ dock_want+=$'\n'file:///Applications/Docker.app/
 [[ -d /Applications/Docker.app ]]
 [[ $(readlink /usr/local/bin/docker) == /Applications/Docker.app/* ]]
 lazydocker --version
+# AltTab: omamac wrote Cmd as its hold key, and AltTab keeps it once it reads
+# it (it drops a value it can't convert). The one app run here: quarantine is
+# lifted in this VM only, so the first-open check doesn't wait.
+[[ $(defaults read com.lwouis.alt-tab-macos holdShortcut) == ⌘ ]]
+xattr -dr com.apple.quarantine /Applications/AltTab.app
+open -a AltTab
+sleep 15
+osascript -e 'quit app "AltTab"' || true
+sleep 3
+pkill -x AltTab || true
+[[ $(defaults read-type com.lwouis.alt-tab-macos holdShortcut) == "Type is dictionary" ]]
+[[ $(defaults read com.lwouis.alt-tab-macos holdShortcut) == *'string = "\U2318"'* ]]
 # Every language is installed by mise.
 for tool in ruby node go python erlang elixir rust java; do
   [[ -n $(cd ~ && $mise ls --installed --no-header "$tool") ]]

@@ -57,6 +57,7 @@ case "$cmd" in
     case "${4:-}" in
       -bool) echo "boolean $5" > "$f" ;;
       -int) echo "integer $5" > "$f" ;;
+      -string) echo "string $5" > "$f" ;;
       *) echo "fake-defaults: unsupported write type '${4:-}'" >&2; exit 1 ;;
     esac
     ;;

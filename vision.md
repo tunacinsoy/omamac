@@ -1,6 +1,6 @@
 # omamac — vision
 
-Status: living document · Owner: Tuna Cinsoy · Started Nov 9, 2026 · Updated Nov 24, 2026
+Status: living document · Owner: Tuna Cinsoy · Started Nov 9, 2026 · Updated Nov 27, 2026
 
 What omamac is, who it's for and why, in as much detail as we have today.
 
@@ -66,7 +66,7 @@ What that means in practice:
 5. It installs and configures everything chosen, with clear progress output, and ends with a short summary: what was installed, anything that needs one manual click (for example a macOS permission prompt, such as allowing the microphone for Wispr Flow or screen recording for Cap, or App Management for Ghostty), and how to open Ghostty. Each click is one line, never a block of text, plus one line: "The first time you open each app, macOS asks you to confirm; click Open." The "After install" page (`docs/after-install.md`, linked from the README) lists the same clicks.
 6. The user opens Ghostty and is already in herdr, with nothing to start or set up: their prompt, their editor, their aliases, and the theme they picked (for example Tokyo Night), visible at once.
 
-**Desktops that stay put.** omawsl and Omakub users think of desktops as fixed slots: desktop 6 is Spotify, and it stays desktop 6. Out of the box, macOS reorders desktops by most recent use and slides the screen on every switch, which breaks that habit. omamac is opinionated about the experience, not only the tools, so it fixes this itself: one first-run question ("Make desktops behave like workspaces?") and, on yes, desktops keep their place, Cmd+Tab jumps to the app's desktop, and switching becomes a short crossfade instead of a slide. The one thing a script can't do reliably, giving each app its own desktop, is a short "After install" line in the README. macOS's own desktops, with these settings, are enough; omamac does not add a tiling window manager.
+**Desktops that stay put.** omawsl and Omakub users think of desktops as fixed slots: desktop 6 is Spotify, and it stays desktop 6. Out of the box, macOS reorders desktops by most recent use and slides the screen on every switch, which breaks that habit. omamac is opinionated about the experience, not only the tools, so it fixes this itself: one first-run question ("Make desktops behave like workspaces?") and, on yes, desktops keep their place, Cmd+Tab jumps to the app's desktop (with AltTab, Cmd+Tab picks a window and still goes to its desktop), and switching becomes a short crossfade instead of a slide. The one thing a script can't do reliably, giving each app its own desktop, is a short "After install" line in the README. macOS's own desktops, with these settings, are enough; omamac does not add a tiling window manager.
 
 **A Dock that holds your apps.** A fresh Mac's Dock is full of Apple's own apps (Mail, Safari, Maps, Photos, Notes, Calendar, Contacts, Music, TV and more) that pull the user into Apple's ecosystem whether they use them or not. If the user opts in, omamac clears them and the Downloads stack out of the Dock and puts the apps omamac installed there instead. The Apple apps are **not uninstalled**: they stay in Applications and open as usual from Spotlight, they just stop taking up the Dock. The result, left to right: Finder, apps the user pinned themselves, omamac's apps (Ghostty, the catalog apps in catalog order, then Docker Desktop), Trash. Finder and Trash always stay, since macOS doesn't allow removing them.
 
@@ -162,7 +162,7 @@ Because omamac runs natively on the host, it can install real desktop apps as Ho
 | Storage and sync | Dropbox, Google Drive |
 | Developer | VS Code |
 | AI apps | Claude, ChatGPT (includes Codex), GitHub Copilot, Antigravity |
-| Productivity | Raycast, Obsidian |
+| Productivity | Raycast, Obsidian, AltTab |
 | Voice dictation | Wispr Flow |
 
 An app joins the catalog only if it installs cleanly as a cask with no prompt other than Homebrew's one password step right after "Install?" (see "What the user experiences"), proven in the VM; one that fails the rule is dropped, not worked around. An app the user already installed by hand is detected and offered to Homebrew for adoption, never overwritten or failed on (see "omamac and Homebrew"). The catalog starts small and grows; adding an app should be one small file.
@@ -302,7 +302,7 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - Languages and cloud CLIs as omawsl offers them, except PHP for now; Terraform from HashiCorp's official tap; `gh` with the cloud CLIs.
 - Coding agents as their own question (Claude Code, Codex CLI, GitHub Copilot CLI, Antigravity CLI, opencode), and their desktop apps as the AI apps group (Claude, ChatGPT with Codex, GitHub Copilot, Antigravity).
 - A tool with one config file and no include (herdr, starship, btop) uses omamac's file only when the user has none; a user's own is left alone and doctor explains. The user's own mise pins win.
-- The v1 app catalog is the 21 apps in the table plus Wispr Flow; an app that isn't a clean cask is dropped.
+- The v1 app catalog is the 22 apps in the table plus Wispr Flow; an app that isn't a clean cask is dropped.
 - Gatekeeper and permission prompts stay with the user, one line each in the summary, built from each app's catalog file.
 - First-run question order: theme, desktop apps, Wispr Flow, desktops, window margins, desktop widgets, Dock, Dock auto-hide, Tap to click, tap to drag, languages, cloud CLIs, coding agents, Docker; adoption questions come after the questions at the first run, right after each app question in `omamac install`, before the summary; one summary and "Install?" at the end.
 - An existing `~/.config/nvim` is left alone with no extra files; doctor explains (ℹ) why themes don't reach neovim and what to do.
@@ -468,3 +468,4 @@ One line per decision: date, question, answer, who decided. Move the item out of
 - 2026-11-27 — Font size — `omamac font-size` picks Ghostty's size, 10 to 20 with hints or Default, from its own menu entry; not a first-run question; prints one line; the user's own Ghostty config is never written — Tuna (how: Claude)
 - 2026-11-27 — Releases — every user-facing merge to main is a release, versioned from the PR title's Conventional Commits type by a workflow; squash merges only; a `pr-title` check joins the gate; GitHub Releases is the changelog; no stable branch or channels until outside users depend on omamac — Tuna (how: Claude)
 - 2026-11-27 — Password prompt — a Homebrew step that may ask keeps a live row (download, then "removing the old version" or "installing the new version"); when sudo waits, the row says "Spotify needs your Mac password" with the reason under it, right above sudo's own prompt; the "Homebrew may ask" lines go. omamac still never feeds or skips the prompt (no `SUDO_ASKPASS`) — Tuna (how: Claude)
+- 2026-11-27 — Window switcher — AltTab joins Productivity; picking it makes Cmd+Tab open AltTab, so two windows of one app (a private and a normal Brave window, two VS Code windows) can be told apart; written once at install and adoption, uninstall gives Cmd+Tab back — Tuna

@@ -5,7 +5,7 @@
 # The install steps also use clis_join (lib/clis.sh) and DOCKER_NOTES (lib/docker.sh).
 # Each file is read as data, line by line, never sourced.
 
-declare -gA APP_CASK=() APP_BUNDLE=() APP_PASSWORD=() APP_ALLOW=()
+declare -gA APP_CASK=() APP_BUNDLE=() APP_PASSWORD=() APP_ALLOW=() APP_DEFAULTS=()
 
 # apps_load: fill the tables from $OMAMAC_CHECKOUT/apps. On a bad file or
 # line, says which and returns 1.
@@ -17,19 +17,25 @@ apps_load() {
     n=0
     APP_ALLOW[$id]=''
     APP_PASSWORD[$id]=''
+    APP_DEFAULTS[$id]=''
     while IFS= read -r line || [ -n "$line" ]; do
       n=$((n + 1))
       [[ -z $line || $line == \#* ]] && continue
-      if [[ ! $line =~ ^(cask|app|password|allow)=(.+)$ ]]; then
+      if [[ ! $line =~ ^(cask|app|password|allow|defaults)=(.+)$ ]]; then
         echo "apps/$id, line $n: not a known key=value line." >&2
         return 1
       fi
       key=${BASH_REMATCH[1]} value=${BASH_REMATCH[2]}
+      if [ "$key" = defaults ] && [[ ! $value =~ ^[^\ ]+\ [^\ ]+\ (bool|int|string)\ .+$ ]]; then
+        echo "apps/$id, line $n: a defaults line is <domain> <key> <bool|int|string> <value>." >&2
+        return 1
+      fi
       case $key in
         cask) APP_CASK[$id]=$value ;;
         app) APP_BUNDLE[$id]=$value ;;
         password) APP_PASSWORD[$id]=$value ;;
         allow) APP_ALLOW[$id]+="${APP_ALLOW[$id]:+$'\n'}$value" ;;
+        defaults) APP_DEFAULTS[$id]+="${APP_DEFAULTS[$id]:+$'\n'}$value" ;;
       esac
     done < "$file"
     if [ -z "${APP_CASK[$id]:-}" ] || [ -z "${APP_BUNDLE[$id]:-}" ]; then
@@ -116,6 +122,35 @@ apps_ask_adopt() {
 apps_allow() {
   local id
   for id in "$@"; do [ -z "${APP_ALLOW[$id]}" ] || printf '%s\n' "${APP_ALLOW[$id]}"; done
+}
+
+# apps_running <id>: succeeds when the app's program runs. ps, not pgrep: on
+# macOS 27 pgrep misses some apps (see theme_signal).
+apps_running() {
+  # shellcheck disable=SC2009 # pgrep misses some apps on macOS 27
+  ps -axo comm= 2>/dev/null | grep -qF "/${APP_BUNDLE[$1]}/Contents/MacOS/"
+}
+
+# apps_defaults <id>: write the app's defaults lines (`domain key type value`),
+# just before omamac installs or adopts it, so a failed write installs nothing
+# and the next run tries both again; never otherwise, so the user's own later
+# change stays. A running app (one being adopted) is quit first, so it can't
+# write over the values, and opened again after. Returns non-zero on the first
+# failed write.
+apps_defaults() {
+  local line domain key type value running=0 i bundle=${APP_BUNDLE[$1]} log=${OMAMAC_LOG:-/dev/null}
+  [ -n "${APP_DEFAULTS[$1]}" ] || return 0
+  OMAMAC_STEP="setting up $(apps_label "$1")"
+  if apps_running "$1"; then
+    running=1
+    osascript -e "quit app \"${bundle%.app}\"" >> "$log" 2>&1 || true
+    for i in {1..20}; do apps_running "$1" || break; sleep 0.5; done
+  fi
+  while IFS= read -r line; do
+    read -r domain key type value <<< "$line"
+    defaults write "$domain" "$key" "-$type" "$value" > /dev/null || return
+  done <<< "${APP_DEFAULTS[$1]}"
+  [ "$running" -eq 0 ] || open -g -a "$OMAMAC_APPLICATIONS/$bundle" >> "$log" 2>&1 || true
 }
 
 # Docker Desktop's cask shares the password step, though it isn't a catalog app.
@@ -212,14 +247,17 @@ apps_install() {
         [ "${APP_PASSWORD[$id]}" != yes ] || continue
         # A plain install of a cask Homebrew lists does nothing; reinstall puts the app back.
         if core_cask_listed "$cask"; then
+          apps_defaults "$id" || return
           ui_run "Reinstalling $label" "$brew" reinstall --cask "$cask" || return
         else
+          apps_defaults "$id" || return
           ui_run "Installing $label" "$brew" install --cask "$cask" || return
         fi
         ;;
       hand)
         # Only an app the user said yes to at the questions; one that turned up later gets the line.
         if [[ " ${APPS_ADOPT[*]} " == *" $id "* ]]; then
+          apps_defaults "$id" || return
           OMAMAC_STEP="handing $label to Homebrew"
           ui_run "Handing $label to Homebrew" "$brew" install --cask --adopt "$cask" || return
         else
