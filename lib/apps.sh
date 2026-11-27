@@ -127,6 +127,7 @@ apps_allow() {
 # apps_running <id>: succeeds when the app's program runs. ps, not pgrep: on
 # macOS 27 pgrep misses some apps (see theme_signal).
 apps_running() {
+  # shellcheck disable=SC2009 # pgrep misses some apps on macOS 27
   ps -axo comm= 2>/dev/null | grep -qF "/${APP_BUNDLE[$1]}/Contents/MacOS/"
 }
 
