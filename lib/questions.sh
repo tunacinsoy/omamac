@@ -39,7 +39,7 @@ question apps_developer multi Developer Developer "VS Code:vscode"
 question apps_ai multi "AI apps" "AI desktop apps" \
   Claude:claude "ChatGPT and Codex:chatgpt" "GitHub Copilot:copilot" Antigravity:antigravity
 question_help apps_ai "These are desktop apps. ChatGPT's includes Codex. The terminal tools come later, under Coding agents."
-question apps_productivity multi Productivity Productivity Raycast:raycast Obsidian:obsidian
+question apps_productivity multi Productivity Productivity Raycast:raycast Obsidian:obsidian AltTab:alt-tab
 question wispr_flow yesno "Wispr Flow" "Install Wispr Flow for voice dictation?"
 question_help wispr_flow "Wispr Flow turns your speech into text in the cloud."
 question desktops yesno "Desktops as workspaces" "Make desktops behave like workspaces?"

@@ -1,0 +1,7 @@
+cask=alt-tab
+app=AltTab.app
+# Cmd+Tab opens AltTab. AltTab turns a plain-text shortcut into its own format
+# only when upgrading settings from before 10.4.0, so the version says that.
+defaults=com.lwouis.alt-tab-macos preferencesVersion string 10.3.0
+defaults=com.lwouis.alt-tab-macos holdShortcut string ⌘
+allow=AltTab: allow Accessibility and Screen Recording, then Cmd+Tab shows every window.

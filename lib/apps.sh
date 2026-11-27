@@ -5,7 +5,7 @@
 # The install steps also use clis_join (lib/clis.sh) and DOCKER_NOTES (lib/docker.sh).
 # Each file is read as data, line by line, never sourced.
 
-declare -gA APP_CASK=() APP_BUNDLE=() APP_PASSWORD=() APP_ALLOW=()
+declare -gA APP_CASK=() APP_BUNDLE=() APP_PASSWORD=() APP_ALLOW=() APP_DEFAULTS=()
 
 # apps_load: fill the tables from $OMAMAC_CHECKOUT/apps. On a bad file or
 # line, says which and returns 1.
@@ -17,19 +17,25 @@ apps_load() {
     n=0
     APP_ALLOW[$id]=''
     APP_PASSWORD[$id]=''
+    APP_DEFAULTS[$id]=''
     while IFS= read -r line || [ -n "$line" ]; do
       n=$((n + 1))
       [[ -z $line || $line == \#* ]] && continue
-      if [[ ! $line =~ ^(cask|app|password|allow)=(.+)$ ]]; then
+      if [[ ! $line =~ ^(cask|app|password|allow|defaults)=(.+)$ ]]; then
         echo "apps/$id, line $n: not a known key=value line." >&2
         return 1
       fi
       key=${BASH_REMATCH[1]} value=${BASH_REMATCH[2]}
+      if [ "$key" = defaults ] && [[ ! $value =~ ^[^\ ]+\ [^\ ]+\ (bool|int|string)\ .+$ ]]; then
+        echo "apps/$id, line $n: a defaults line is <domain> <key> <bool|int|string> <value>." >&2
+        return 1
+      fi
       case $key in
         cask) APP_CASK[$id]=$value ;;
         app) APP_BUNDLE[$id]=$value ;;
         password) APP_PASSWORD[$id]=$value ;;
         allow) APP_ALLOW[$id]+="${APP_ALLOW[$id]:+$'\n'}$value" ;;
+        defaults) APP_DEFAULTS[$id]+="${APP_DEFAULTS[$id]:+$'\n'}$value" ;;
       esac
     done < "$file"
     if [ -z "${APP_CASK[$id]:-}" ] || [ -z "${APP_BUNDLE[$id]:-}" ]; then
@@ -116,6 +122,19 @@ apps_ask_adopt() {
 apps_allow() {
   local id
   for id in "$@"; do [ -z "${APP_ALLOW[$id]}" ] || printf '%s\n' "${APP_ALLOW[$id]}"; done
+}
+
+# apps_defaults <id>: write the app's defaults lines (`domain key type value`),
+# right after omamac installs or adopts it; never otherwise, so the user's own
+# later change stays. Returns non-zero on the first failed write.
+apps_defaults() {
+  local line domain key type value
+  [ -n "${APP_DEFAULTS[$1]}" ] || return 0
+  OMAMAC_STEP="setting up $(apps_label "$1")"
+  while IFS= read -r line; do
+    read -r domain key type value <<< "$line"
+    defaults write "$domain" "$key" "-$type" "$value" > /dev/null || return
+  done <<< "${APP_DEFAULTS[$1]}"
 }
 
 # Docker Desktop's cask shares the password step, though it isn't a catalog app.
@@ -217,8 +236,10 @@ apps_install() {
         # A plain install of a cask Homebrew lists does nothing; reinstall puts the app back.
         if core_cask_listed "$cask"; then
           ui_run "Reinstalling $label" "$brew" reinstall --cask "$cask" || return
+          apps_defaults "$id" || return
         else
           ui_run "Installing $label" "$brew" install --cask "$cask" || return
+          apps_defaults "$id" || return
         fi
         ;;
       hand)
@@ -226,6 +247,7 @@ apps_install() {
         if [[ " ${APPS_ADOPT[*]} " == *" $id "* ]]; then
           OMAMAC_STEP="handing $label to Homebrew"
           ui_run "Handing $label to Homebrew" "$brew" install --cask --adopt "$cask" || return
+          apps_defaults "$id" || return
         else
           # A password app can't be adopted (Homebrew would install it again), so no command for it.
           if [ "${APP_PASSWORD[$id]}" = yes ]; then

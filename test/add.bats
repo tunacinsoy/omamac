@@ -8,7 +8,7 @@ OMAMAC_FORMULAS='starship neovim btop mise herdr eza bat zoxide fzf ripgrep fd l
 
 ALL_BROWSERS='brave chrome firefox'
 ALL_COMMUNICATION='whatsapp telegram signal discord slack zoom'
-ALL_CASKS='brave-browser google-chrome firefox whatsapp telegram signal discord slack zoom spotify vlc cap dropbox google-drive visual-studio-code claude chatgpt github-copilot-app antigravity raycast obsidian wispr-flow'
+ALL_CASKS='brave-browser google-chrome firefox whatsapp telegram signal discord slack zoom spotify vlc cap dropbox google-drive visual-studio-code claude chatgpt github-copilot-app antigravity raycast obsidian alt-tab wispr-flow'
 ALL_AGENTS='claude-code codex copilot-cli antigravity-cli opencode'
 
 setup() {
@@ -29,7 +29,7 @@ setup() {
     -e 's/^apps_media=.*/apps_media=spotify vlc/' -e 's/^apps_screen_recording=.*/apps_screen_recording=cap/' \
     -e 's/^apps_storage=.*/apps_storage=dropbox google-drive/' -e 's/^apps_developer=.*/apps_developer=vscode/' \
     -e 's/^apps_ai=.*/apps_ai=claude chatgpt copilot antigravity/' \
-    -e 's/^apps_productivity=.*/apps_productivity=raycast obsidian/' -e 's/^wispr_flow=.*/wispr_flow=yes/' "$CHOICES_FILE"
+    -e 's/^apps_productivity=.*/apps_productivity=raycast obsidian alt-tab/' -e 's/^wispr_flow=.*/wispr_flow=yes/' "$CHOICES_FILE"
   "$OMAMAC_TEST_BREW_PREFIX/bin/brew" install --cask $ALL_CASKS
   # Every coding agent picked and installed too: the tests below ask about languages and cloud CLIs.
   choose coding_agents "$ALL_AGENTS"
@@ -638,7 +638,7 @@ shown() { printf '%s\n' "$output" | uncoloured; }
 │ Shells     they work in every shell; one already open needs one Enter first.
 │ Log        ~/.local/state/omamac/logs/$(basename "$HOME"/.local/state/omamac/logs/*.log)
 ╰──────────────────────────────────────────────────────────────────────────────╯" ]
-  shown | grep -qE "^[0-9]/$n ✓ Apps            22 installed$"
+  shown | grep -qE "^[0-9]/$n ✓ Apps            23 installed$"
   [ "$(shown | widest)" -le 80 ]
   grep -qx 'languages=go rust' "$CHOICES_FILE"
 }

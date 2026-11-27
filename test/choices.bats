@@ -51,11 +51,11 @@ expect_bad() {
   [ "$output" = "No Docker" ]
 }
 
-@test "13 themes, 21 apps" {
+@test "13 themes, 22 apps" {
   in_lib 'question_values theme | wc -l'
   [ "${output// /}" = 13 ]
   in_lib 'for k in "${QUESTION_KEYS[@]}"; do [[ $k == apps_* ]] && question_values "$k"; done | wc -l'
-  [ "${output// /}" = 21 ]
+  [ "${output// /}" = 22 ]
 }
 
 @test "languages has no php" {
