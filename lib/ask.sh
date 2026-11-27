@@ -137,10 +137,12 @@ ask_yes() {
 # ask_choose <header> <Label:value>…: one pick; sets ASK_PICKED to its value.
 # Not printed for $(…): there, ask_stopped would leave only the subshell, not the script.
 ask_choose() {
-  local header=$1 status=0 out
+  local header=$1 status=0 out selected=()
   shift
   ask_need_tty
-  out=$("$UI_GUM" choose --header "$header" --label-delimiter=: "$@" < "$OMAMAC_TTY") || status=$?
+  # ASK_SELECTED: the label the cursor starts on (gum matches the label, not the value).
+  [ -z "${ASK_SELECTED:-}" ] || selected=(--selected="$ASK_SELECTED")
+  out=$("$UI_GUM" choose --header "$header" --label-delimiter=: "${selected[@]}" "$@" < "$OMAMAC_TTY") || status=$?
   ask_choose_stopped "$status"
   [ "$status" -eq 0 ] || ask_broken "$header"
   # shellcheck disable=SC2034 # read by the caller

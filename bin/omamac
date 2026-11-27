@@ -30,6 +30,8 @@ source "$OMAMAC_CHECKOUT/lib/herdr.sh"
 source "$OMAMAC_CHECKOUT/lib/ghostty.sh"
 # shellcheck source=lib/theme.sh
 source "$OMAMAC_CHECKOUT/lib/theme.sh"
+# shellcheck source=lib/fontsize.sh
+source "$OMAMAC_CHECKOUT/lib/fontsize.sh"
 # shellcheck source=lib/vscode.sh
 source "$OMAMAC_CHECKOUT/lib/vscode.sh"
 # shellcheck source=lib/languages.sh
@@ -109,6 +111,7 @@ asks what it needs when you name nothing after it.
               window-margins, desktop-widgets, dock, dock-autohide):
               configure dock-autohide on
   theme       Switch the theme everywhere
+  font-size   Make the terminal text bigger or smaller: font-size 16
   update      Update omamac and what it installed
   doctor      Check that everything is healthy; doctor --all
               shows every check and what it is
@@ -215,6 +218,16 @@ omamac_main() {
       trap omamac_failed ERR
       omamac_choices
       theme_run "${@:2}"
+      ;;
+    font-size)
+      if [ "$#" -gt 2 ]; then
+        omamac_usage >&2
+        return 2
+      fi
+      OMAMAC_CMD=font-size
+      trap omamac_failed ERR
+      omamac_choices
+      font_size_run "${@:2}"
       ;;
     *)
       echo "Unknown command: $cmd" >&2
