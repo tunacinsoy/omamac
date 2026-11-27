@@ -12,7 +12,7 @@ A yellow Removes box shows what goes (the app, Homebrew's cask, its data only if
 
 ### Apps
 
-`brave`, `chrome`, `firefox`, `whatsapp`, `telegram`, `signal`, `discord`, `slack`, `zoom`, `spotify`, `vlc`, `cap`, `dropbox`, `google-drive`, `vscode`, `claude`, `chatgpt`, `copilot`, `antigravity`, `raycast`, `obsidian` and `wispr-flow`.
+`brave`, `chrome`, `firefox`, `whatsapp`, `telegram`, `signal`, `discord`, `slack`, `zoom`, `spotify`, `vlc`, `cap`, `dropbox`, `google-drive`, `vscode`, `claude`, `chatgpt`, `copilot`, `antigravity`, `raycast`, `obsidian`, `alt-tab` and `wispr-flow`.
 
 - omamac first asks whether to remove the app's settings and data too. Enter alone is no; yes lets Homebrew delete what the app keeps in `~/Library`.
 - Homebrew may ask for your password.
