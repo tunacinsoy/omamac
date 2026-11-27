@@ -245,3 +245,66 @@ b" ]
   [[ "$output" != *$'\e'* ]]
   [[ "$output" == *"✓ Apps"*"│ Languages │ Go │"*"╭ Done"*"1 problem · 2 fine"* ]]
 }
+
+# --- ui_run_download: a Homebrew command's download progress on its row.
+
+# fake_download <MiB> [<MiB>…]: as Homebrew does, a growing .incomplete file in
+# the download cache, one chunk every 0.6 s, then the finished file. For bash -c.
+FAKE_DOWNLOAD='d="$HOME/Library/Caches/Homebrew/downloads"; mkdir -p "$d"
+  f="$d/abc--vlc.dmg.incomplete"
+  for mib in "$@"; do head -c $((mib * 1048576)) /dev/zero >> "$f"; sleep 0.6; done
+  mv "$f" "${f%.incomplete}"'
+
+@test "download progress, plain text: closed runs as ui_run, open as ui_run_open" {
+  run kit 'ui_run_download closed "Upgrading the CLIs" true; ui_run_download open "Upgrading VLC" true'
+  [ "$status" -eq 0 ]
+  grep -q '^gum spin .*--title Upgrading the CLIs -- ' "$STUB_LOG"
+  [ "$output" = "Upgrading VLC" ]
+}
+
+@test "download progress: the spinner row says how much has come and how fast" {
+  export OMAMAC_TEST_UI_TERMINAL=1
+  run kit "ui_stages 2; ui_stage 'App upgrades'; ui_run_download closed 'Upgrading VLC' bash -c '$FAKE_DOWNLOAD' _ 2 2 2"
+  [ "$status" -eq 0 ]
+  [[ "$(drawn)" == *"App upgrades     Upgrading VLC · 6.0 MB · "*" MB/s"* ]]
+  [[ "$(drawn)" == *"App upgrades     Upgrading VLC"* ]]
+  # The row is gone when the command is: the stage's ✓ row takes its place.
+  [[ "$output" == *$'\r\e[K' ]]
+  run ! grep -q '^gum spin' "$STUB_LOG"
+}
+
+@test "download progress: a partial download from before the command isn't counted" {
+  export OMAMAC_TEST_UI_TERMINAL=1
+  mkdir -p "$HOME/Library/Caches/Homebrew/downloads"
+  head -c 3145728 /dev/zero > "$HOME/Library/Caches/Homebrew/downloads/old--zoom.pkg.incomplete"
+  touch -t 202001010000 "$HOME/Library/Caches/Homebrew/downloads/old--zoom.pkg.incomplete"
+  run kit "ui_run_download closed 'Upgrading VLC' sleep 0.5"
+  [ "$status" -eq 0 ]
+  [[ "$(drawn)" == *"Upgrading VLC"* ]]
+  [[ "$(drawn)" != *"MB"* ]]
+}
+
+@test "download progress, open: a row only while the download runs, so none sits on a password prompt" {
+  export OMAMAC_TEST_UI_TERMINAL=1
+  run kit "exec 9>&1; ui_stages 2; ui_stage 'App upgrades'
+    ui_run_download open 'Upgrading Zoom' bash -c 'echo BEFORE >&9; sleep 0.5; $FAKE_DOWNLOAD; sleep 0.6; echo PROMPT >&9; sleep 0.5' _ 2 2"
+  [ "$status" -eq 0 ]
+  [ "${output%%BEFORE*}" = "" ]
+  between=${output#*BEFORE}
+  between=${between%%PROMPT*}
+  [[ "$(printf '%s' "$between" | perl -pe 's/\e\[[0-9;]*m//g')" == *"App upgrades     Upgrading Zoom · 4.0 MB"* ]]
+  [[ "$between" == *$'\r\e[K' ]]
+  [ "${output#*PROMPT}" = "" ]
+}
+
+@test "download progress, open: the command reads the terminal's input" {
+  export OMAMAC_TEST_UI_TERMINAL=1
+  run kit "ui_run_download open 'Upgrading Zoom' bash -c 'read -r x; [ \"\$x\" = hi ]' <<< hi"
+  [ "$status" -eq 0 ]
+}
+
+@test "download progress: a failed command fails the stage with its title" {
+  export OMAMAC_TEST_UI_TERMINAL=1
+  run --separate-stderr kit 'ui_stages 2; ui_stage Apps; OMAMAC_STEP="upgrading VLC"; ui_run_download closed "Upgrading VLC" false || ui_stopped "run omamac update again"'
+  [[ "$(printf '%s' "$stderr" | uncoloured)" == *"Apps            Upgrading VLC didn't finish"* ]]
+}

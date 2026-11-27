@@ -162,6 +162,14 @@ case "${1:-}" in
     ;;
   upgrade)
     [ "${T_BREW_UPGRADE_FAIL:-0}" != 1 ] || [ "${2:-}" != --cask ] || { echo "Error: brew upgrade failed" >&2; exit 1; }
+    # T_BREW_DOWNLOAD_MIB: a cask upgrade downloads that many MiB, as Homebrew
+    # does, into a growing .incomplete file, in two halves 0.6 s apart.
+    if [ -n "${T_BREW_DOWNLOAD_MIB:-}" ] && [ "${2:-}" = --cask ]; then
+      d="$HOME/Library/Caches/Homebrew/downloads" f="$HOME/Library/Caches/Homebrew/downloads/abc--$3.incomplete"
+      mkdir -p "$d"
+      for _ in 1 2; do head -c $((T_BREW_DOWNLOAD_MIB * 524288)) /dev/zero >> "$f"; sleep 0.6; done
+      mv "$f" "${f%.incomplete}"
+    fi
     ;;
   services)
     # A registered service is the file $prefix/services/<formula>.
