@@ -124,17 +124,32 @@ apps_allow() {
   for id in "$@"; do [ -z "${APP_ALLOW[$id]}" ] || printf '%s\n' "${APP_ALLOW[$id]}"; done
 }
 
+# apps_running <id>: succeeds when the app's program runs. ps, not pgrep: on
+# macOS 27 pgrep misses some apps (see theme_signal).
+apps_running() {
+  ps -axo comm= 2>/dev/null | grep -qF "/${APP_BUNDLE[$1]}/Contents/MacOS/"
+}
+
 # apps_defaults <id>: write the app's defaults lines (`domain key type value`),
-# right after omamac installs or adopts it; never otherwise, so the user's own
-# later change stays. Returns non-zero on the first failed write.
+# just before omamac installs or adopts it, so a failed write installs nothing
+# and the next run tries both again; never otherwise, so the user's own later
+# change stays. A running app (one being adopted) is quit first, so it can't
+# write over the values, and opened again after. Returns non-zero on the first
+# failed write.
 apps_defaults() {
-  local line domain key type value
+  local line domain key type value running=0 i bundle=${APP_BUNDLE[$1]} log=${OMAMAC_LOG:-/dev/null}
   [ -n "${APP_DEFAULTS[$1]}" ] || return 0
   OMAMAC_STEP="setting up $(apps_label "$1")"
+  if apps_running "$1"; then
+    running=1
+    osascript -e "quit app \"${bundle%.app}\"" >> "$log" 2>&1 || true
+    for i in {1..20}; do apps_running "$1" || break; sleep 0.5; done
+  fi
   while IFS= read -r line; do
     read -r domain key type value <<< "$line"
     defaults write "$domain" "$key" "-$type" "$value" > /dev/null || return
   done <<< "${APP_DEFAULTS[$1]}"
+  [ "$running" -eq 0 ] || open -g -a "$OMAMAC_APPLICATIONS/$bundle" >> "$log" 2>&1 || true
 }
 
 # Docker Desktop's cask shares the password step, though it isn't a catalog app.
@@ -235,19 +250,19 @@ apps_install() {
         [ "${APP_PASSWORD[$id]}" != yes ] || continue
         # A plain install of a cask Homebrew lists does nothing; reinstall puts the app back.
         if core_cask_listed "$cask"; then
+          apps_defaults "$id" || return
           ui_run "Reinstalling $label" "$brew" reinstall --cask "$cask" || return
-          apps_defaults "$id" || return
         else
-          ui_run "Installing $label" "$brew" install --cask "$cask" || return
           apps_defaults "$id" || return
+          ui_run "Installing $label" "$brew" install --cask "$cask" || return
         fi
         ;;
       hand)
         # Only an app the user said yes to at the questions; one that turned up later gets the line.
         if [[ " ${APPS_ADOPT[*]} " == *" $id "* ]]; then
+          apps_defaults "$id" || return
           OMAMAC_STEP="handing $label to Homebrew"
           ui_run "Handing $label to Homebrew" "$brew" install --cask --adopt "$cask" || return
-          apps_defaults "$id" || return
         else
           # A password app can't be adopted (Homebrew would install it again), so no command for it.
           if [ "${APP_PASSWORD[$id]}" = yes ]; then

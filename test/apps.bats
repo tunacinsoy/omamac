@@ -417,14 +417,14 @@ com.lwouis.alt-tab-macos holdShortcut string ⌘" ]
 
 alttab_written() { grep -q '^defaults write com.lwouis.alt-tab-macos holdShortcut -string ⌘$' "$STUB_LOG"; }
 
-@test "apps_install: AltTab installed gets its settings, after the install" {
+@test "apps_install: AltTab installed gets its settings, before the install" {
   apps_brew
   in_steps 'CHOICES[apps_productivity]=alt-tab; apps_install
     defaults read com.lwouis.alt-tab-macos holdShortcut; defaults read com.lwouis.alt-tab-macos preferencesVersion'
   [ "$status" -eq 0 ]
   [ "$(changes)" = "brew install --cask alt-tab" ]
   [[ "$output" == *$'\n⌘\n10.3.0' ]]
-  [ "$(grep -nE '^brew install --cask alt-tab|^defaults write com.lwouis.alt-tab-macos holdShortcut' "$STUB_LOG" | cut -d: -f2 | cut -c1-5)" = $'brew \ndefau' ]
+  [ "$(grep -nE '^brew install --cask alt-tab|^defaults write com.lwouis.alt-tab-macos holdShortcut' "$STUB_LOG" | cut -d: -f2 | cut -c1-5)" = $'defau\nbrew ' ]
 }
 
 @test "apps_install: AltTab adopted gets its settings; reinstalled too" {
@@ -454,9 +454,41 @@ alttab_written() { grep -q '^defaults write com.lwouis.alt-tab-macos holdShortcu
   ! grep -q '^defaults write' "$STUB_LOG"
 }
 
-@test "apps_install: a failed settings write stops the run naming AltTab" {
+@test "apps_install: a failed settings write stops the run naming AltTab, installs nothing; the next run tries both" {
   apps_brew
   export T_DEFAULTS_FAIL=com.lwouis.alt-tab-macos:holdShortcut
   in_steps 'set +e; CHOICES[apps_productivity]=alt-tab; apps_install; echo "rc=$? step=$OMAMAC_STEP"'
   [[ "$output" == *"rc=1 step=setting up AltTab" ]]
+  [ -z "$(changes)" ]
+  unset T_DEFAULTS_FAIL
+  in_steps 'CHOICES[apps_productivity]=alt-tab; apps_install'
+  [ "$status" -eq 0 ]
+  [ "$(changes)" = "brew install --cask alt-tab" ]
+  alttab_written
+}
+
+@test "apps_install: AltTab running when adopted is quit, written, opened again, then adopted" {
+  apps_brew
+  mkdir -p "$OMAMAC_TEST_APPLICATIONS/AltTab.app"
+  local up="$BATS_TEST_TMPDIR/alttab-up"
+  touch "$up"
+  printf '#!/bin/bash\n[ ! -e %q ] || echo /Applications/AltTab.app/Contents/MacOS/AltTab\necho /usr/sbin/cfprefsd\n' "$up" > "$STUB_DIR/ps"
+  printf '#!/bin/bash\necho "osascript $*" >> "$STUB_LOG"\nrm -f %q\n' "$up" > "$STUB_DIR/osascript"
+  printf '#!/bin/bash\necho "open $*" >> "$STUB_LOG"\n' > "$STUB_DIR/open"
+  chmod +x "$STUB_DIR/ps" "$STUB_DIR/osascript" "$STUB_DIR/open"
+  in_steps 'CHOICES[apps_productivity]=alt-tab; APPS_ADOPT=(alt-tab); apps_install'
+  [ "$status" -eq 0 ]
+  [ "$(grep -E '^(osascript|defaults write|open|brew install)' "$STUB_LOG" | cut -c1-10)" = "osascript 
+defaults w
+defaults w
+open -g -a
+brew insta" ]
+  grep -qxF "open -g -a $OMAMAC_TEST_APPLICATIONS/AltTab.app" "$STUB_LOG"
+}
+
+@test "apps_install: AltTab not running when installed: nothing quit or opened" {
+  apps_brew
+  in_steps 'CHOICES[apps_productivity]=alt-tab; apps_install'
+  [ "$status" -eq 0 ]
+  ! grep -qE '^(osascript|open) ' "$STUB_LOG"
 }
