@@ -41,10 +41,12 @@ release_next() {
 }
 
 # release_notes <number> <body>: the PR body's first paragraph, then (#number).
+# Markdown headings ("## Why") are skipped: they name a section, not the change.
 release_notes() {
   local line para=()
   while IFS= read -r line; do
     line=${line%$'\r'}
+    [[ $line == '#'* ]] && line=''
     if [ -z "$line" ]; then
       [ "${#para[@]}" -eq 0 ] || break
       continue

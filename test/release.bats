@@ -97,3 +97,14 @@ It shows at once.
 
 (#72)" ]
 }
+
+@test "notes: headings are skipped, the first paragraph of text is used" {
+  in_release 'release_notes 65 "## Why
+
+omamac update felt slow when casks were outdated.
+
+## What"'
+  [ "$output" = "omamac update felt slow when casks were outdated.
+
+(#65)" ]
+}
