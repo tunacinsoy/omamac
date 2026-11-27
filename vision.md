@@ -148,7 +148,7 @@ omamac configures tools whose config files the user may already have written, on
 **Terminal and look**
 - **Ghostty and herdr are the terminal pair.** Ghostty is the only terminal app and herdr runs inside it. Opening Ghostty runs `herdr`, which attaches to the running herdr session or starts one: the user never starts, configures or thinks about herdr. If herdr fails to start, Ghostty falls back to plain zsh with a one-line message, so the terminal is never empty. Ghostty's own tabs still work, with their Cmd keys, but omamac doesn't promote them; herdr does that job. Ghostty's split keys (Cmd D, Cmd Shift D) do nothing, because a Ghostty split showed the same herdr session twice. Ghostty gets `macos-option-as-alt = left` so the left Option key is Alt for herdr and the right one still types special characters (Polish letters and the like). Ghostty's own Option ←/→ (a word back or on) is unbound, so those keys reach herdr as Alt ←/→, as on omawsl.
 - omawsl's 13 themes, applied to Ghostty, neovim, btop, herdr, the prompt and VS Code in one step. The first run asks which theme (nothing pre-selected) and applies it, so the user sees it the first time they open Ghostty; `omamac theme` switches later.
-- Ghostty's built-in font (JetBrains Mono, with Nerd Font symbols built in): nothing to install, and no font setting taken over.
+- Ghostty's built-in font (JetBrains Mono, with Nerd Font symbols built in): nothing to install. omamac sets no size until you pick one with `omamac font-size` (10 to 20, with hints such as "laptop" or "external monitor"), for a screen that wants bigger or smaller text.
 
 **Desktop apps (Mac only, new compared to omawsl)**
 Because omamac runs natively on the host, it can install real desktop apps as Homebrew casks, in the spirit of Omakub and Omarchy. Offered as optional, grouped choices:
@@ -297,7 +297,7 @@ Decided by Tuna. Don't reopen these without a real contradiction.
 - `omamac update` follows omawsl's model: `git pull --ff-only` on `main`, timestamped migrations, regenerate configs, `brew upgrade` and `mise upgrade` for the user's choices only. Cloud CLI and coding agent casks are upgraded with `--greedy`; apps (Ghostty, Docker Desktop, the catalog) update themselves and are upgraded only when Homebrew lists them as outdated.
 - `omamac doctor` is a doctor, not an alarm: ✓, ✗ or ℹ per check, each with why and the one fix; it only reports.
 - Everything omamac prints is polished and visual, and as short as possible.
-- Ghostty's built-in font; no font installed or set.
+- Ghostty's built-in font; no font installed; a size only when picked with `omamac font-size`.
 - Languages and cloud CLIs as omawsl offers them, except PHP for now; Terraform from HashiCorp's official tap; `gh` with the cloud CLIs.
 - Coding agents as their own question (Claude Code, Codex CLI, GitHub Copilot CLI, Antigravity CLI, opencode), and their desktop apps as the AI apps group (Claude, ChatGPT with Codex, GitHub Copilot, Antigravity).
 - A tool with one config file and no include (herdr, starship, btop) uses omamac's file only when the user has none; a user's own is left alone and doctor explains. The user's own mise pins win.
@@ -464,3 +464,4 @@ One line per decision: date, question, answer, who decided. Move the item out of
 - 2026-11-24 — `omamac configure` and menus (#60) — the macOS settings leave `install` and `uninstall` (software only) for a new `omamac configure [<setting> [on|off]]`; `omamac` alone asks what to do, and install and uninstall ask the section first, so no name has to be remembered; old setting names point to configure, no alias; ships as 0.2.0, since commands that worked in 0.1.0 change — Tuna (how: Claude)
 - 2026-11-25 — Trackpad settings — Tap to click and a drag setting join the macOS settings, each its own yes/no question after Dock auto-hide, turned on and off with `omamac configure tap-to-click` and `tap-to-drag` — Tuna (how: Claude)
 - 2026-11-25 — Drag style — tap to drag without Drag Lock, not three-finger drag (#62 shipped three-finger drag first; replaced before any release) — Tuna
+- 2026-11-27 — Font size — `omamac font-size` picks Ghostty's size, 10 to 20 with hints or Default, from its own menu entry; not a first-run question; prints one line; the user's own Ghostty config is never written — Tuna (how: Claude)

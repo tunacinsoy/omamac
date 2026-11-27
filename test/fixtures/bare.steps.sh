@@ -91,4 +91,11 @@ if [[ $before != "$after" ]]; then
   diff <(print -r -- "$before") <(print -r -- "$after")
   exit 1
 fi
+# A picked font size reaches Ghostty; default takes it away again.
+omamac font-size 17
+cfg=$($G +show-config --no-pager)
+[[ $'\n'$cfg$'\n' == *$'\n''font-size = 17'$'\n'* ]]
+omamac font-size default
+cfg=$($G +show-config --no-pager)
+[[ $'\n'$cfg$'\n' != *$'\n''font-size = '* ]]
 omamac doctor

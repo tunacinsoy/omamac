@@ -32,7 +32,7 @@ menu_look() {
   gum_answers "exit 1"
   run omamac
   [ "$status" -eq 130 ]
-  [ "$(grep '^gum choose' "$STUB_LOG")" = "gum choose --header What do you want to do? --label-delimiter=: Install something:install Remove something:uninstall Change a macOS setting:configure Switch the theme:theme Update everything:update Check everything:doctor" ]
+  [ "$(grep '^gum choose' "$STUB_LOG")" = "gum choose --header What do you want to do? --label-delimiter=: Install something:install Remove something:uninstall Change a macOS setting:configure Switch the theme:theme Change the font size:font-size Update everything:update Check everything:doctor" ]
   [[ "$output" != *"Usage:"* ]]
 }
 
@@ -75,6 +75,16 @@ menu_look() {
   run omamac
   [ "$status" -eq 130 ]
   grep -q '^gum choose --header What do you want to change?' "$STUB_LOG"
+}
+
+@test "no args in a terminal: Change the font size opens its picker" {
+  menu_look
+  mkdir -p "$HOME/.local/state/omamac"
+  cp "$REPO_ROOT/test/fixtures/bare.env" "$HOME/.local/state/omamac/choices.env"
+  gum_answers font-size "exit 130"
+  run omamac
+  [ "$status" -eq 130 ]
+  grep -q '^gum choose --header Which size?' "$STUB_LOG"
 }
 
 @test "no args with the terminal look but no terminal to ask in: usage" {
