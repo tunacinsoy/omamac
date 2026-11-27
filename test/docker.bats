@@ -239,8 +239,7 @@ DESKTOP='DOCKER_NOTES=(); apps_install_password; docker_install'
   in_lib docker-desktop "$DESKTOP"'; printf "%s\n" "${DOCKER_NOTES[@]}"'
   [ "$status" -eq 0 ]
   [ -d "$OMAMAC_TEST_APPLICATIONS/Docker.app" ]
-  [[ "$output" == *"ℹ Homebrew asks for your password for: Docker Desktop."* ]]
-  [[ "$output" == *"✓ Docker Desktop is installed"* ]]
+  [[ "$output" == *"Installing Docker Desktop"$'\n'*"✓ Docker Desktop is installed"* ]]
   [ "$(stub_calls | grep -c '^brew install lazydocker$')" -eq 1 ]
   [ "$(stub_calls | grep -c '^brew install --cask docker-desktop$')" -eq 1 ]
 }

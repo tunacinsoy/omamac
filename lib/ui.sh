@@ -75,10 +75,12 @@ ui_show_failure() {
   ui_fail "Log: $OMAMAC_LOG"
 }
 
-# ui_run_open <title> <cmd…>: no spinner, output in the log. For a command that
-# may ask for the password: sudo prompts on the terminal itself, so it shows.
+# ui_run_open <title> <cmd…>: output in the log, no gum spinner. For a command
+# that may ask for the password: sudo prompts on the terminal itself, so it
+# shows. In the terminal look it is ui_run_download open's live row.
 ui_run_open() {
   local title=$1 status=0
+  ui_term && { ui_run_download open "$@"; return; }
   shift
   ui_step "$title"
   "$@" >>"$OMAMAC_LOG" 2>&1 || status=$?
@@ -112,35 +114,58 @@ UI_BREW_DOWNLOADS=${HOMEBREW_CACHE:-$HOME/Library/Caches/Homebrew}/downloads
 # ui_run_download <closed|open> <title> <cmd…>: a Homebrew command that may
 # download, its output in the log. In the terminal look its row says how much
 # has come and how fast ("Upgrading Zoom · 142 MB · 3.1 MB/s"): a big app from
-# a slow server then reads as slow, not stuck. closed is ui_run's spinner row,
-# for the whole command. open, for a command that may ask for the password
-# (ui_run_open), draws the row only while the download runs and clears it
-# before Homebrew installs, so no row sits on a password prompt. Homebrew gives
-# no total, so there is no percentage. Plain text: ui_run or ui_run_open.
+# a slow server then reads as slow, not stuck. Homebrew gives no total, so
+# there is no percentage. closed is ui_run's spinner row, for the whole command.
+# open is for a command that may ask for the password, which sudo asks on the
+# terminal itself (omamac never feeds or skips it). Its row also says what
+# Homebrew is doing ("removing the old version"), and keeps two empty lines
+# under it with the cursor on the lower one, where sudo's Password: lands.
+# While a sudo waits, the row stands still, so nothing moves the cursor under
+# it; once it has waited two frames, the row says who needs the password and
+# the line under it why. Plain text: ui_run or ui_run_open.
 ui_run_download() {
-  local mode=$1 title=$2 name=$2 pid status=0 tick=0 seen=0 drawn=0 done=0
-  local start now bytes old_t old_b detail line LC_ALL=en_US.UTF-8
+  local mode=$1 title=$2 name=$2 pid status=0 tick=0 drawn=0 asked=0 waiting=0
+  local start now bytes old_t old_b detail line offset=0 state LC_ALL=en_US.UTF-8
   local frames=(⣾ ⣽ ⣻ ⢿ ⡿ ⣟ ⣯ ⣷) samples=()
   shift 2
   if ! ui_term; then
     if [ "$mode" = open ]; then ui_run_open "$title" "$@"; else ui_run "$title" "$@"; fi
     return
   fi
-  [ "$mode" = closed ] || ui_step "$title"
   _ui_lead
   local lead=$REPLY
   [ -z "$UI_STAGE_NAME" ] || printf -v title '%-*s %s' "$UI_NAME" "$UI_STAGE_NAME" "$title"
   start=$EPOCHSECONDS
+  # Homebrew's ==> lines from this command only: the log before it is older steps'.
+  [ "$OMAMAC_LOG" = /dev/null ] || offset=$(stat -f %z "$OMAMAC_LOG" 2>/dev/null) || offset=0
   # A background command's input would be /dev/null; <&0 keeps the terminal's.
   "$@" <&0 >>"$OMAMAC_LOG" 2>&1 &
   pid=$!
   while kill -0 "$pid" 2>/dev/null; do
+    if [ "$mode" = open ]; then
+      _ui_sudo_state "$pid"
+      state=$REPLY
+      case $state in
+        waiting)
+          # Two frames with no command under it: sudo is asking. Say so once,
+          # on the row above its prompt (none before the row is drawn).
+          waiting=$((waiting + 1))
+          if [ "$waiting" -ge 2 ] && [ "$asked" -eq 0 ] && [ "$drawn" -eq 1 ]; then
+            asked=1
+            _ui_password_label "$name" "$offset" "$lead"
+          fi
+          sleep 0.2; continue ;;
+      esac
+      # sudo has its password (or never needed one): the spinner goes on
+      # below whatever sudo printed.
+      [ "$asked" -eq 0 ] || { drawn=0 asked=0; }
+      waiting=0
+    fi
     _ui_download_bytes "$start"
     bytes=$REPLY
     now=${EPOCHREALTIME/[.,]/}
     detail=''
     if [ -n "$bytes" ]; then
-      seen=1
       samples+=("$now $bytes")
       # The speed over the last two seconds.
       while [ "${#samples[@]}" -gt 1 ] && [ $((now - ${samples[1]%% *})) -ge 2000000 ]; do
@@ -156,27 +181,112 @@ ui_run_download() {
       fi
     else
       samples=()
-    fi
-    if [ "$mode" = open ]; then
-      # Downloads come first; once they are done, Homebrew may ask for the password.
-      if [ "$done" -eq 0 ] && [ "$seen" -eq 1 ] && [ -z "$bytes" ]; then
-        done=1
-        [ "$drawn" -eq 0 ] || { printf '\r\e[K'; drawn=0; }
+      if [ "$mode" = open ]; then
+        _ui_brew_line "$offset"
+        _ui_phase "$REPLY"
+        [ -z "$REPLY" ] || detail=" · $REPLY"
       fi
-      [ "$done" -eq 0 ] && [ -n "$bytes" ] || { sleep 0.2; continue; }
     fi
     line="$lead$UI_BLUE${frames[tick % ${#frames[@]}]}$UI_OFF $title"
     # 80 columns: the speed goes first, then the size.
     [ $((${#lead} + 2 + ${#title} + ${#detail})) -le "$UI_WIDTH" ] || detail=${detail% · *}
     [ $((${#lead} + 2 + ${#title} + ${#detail})) -le "$UI_WIDTH" ] || detail=''
-    printf '\r\e[K%s%s%s%s' "$line" "$UI_DIM" "$detail" "$UI_OFF"
+    if [ "$mode" = closed ]; then
+      printf '\r\e[K%s%s%s%s' "$line" "$UI_DIM" "$detail" "$UI_OFF"
+    elif [ "$drawn" -eq 0 ]; then
+      # The row, then two empty lines; the cursor waits on the lower one.
+      printf '\r\e[K%s%s%s%s\n\n' "$line" "$UI_DIM" "$detail" "$UI_OFF"
+    else
+      # The cursor stays where it is: a sudo that started since the last look
+      # may have put its Password: there.
+      printf '\e7\e[2A\r\e[K%s%s%s%s\e8' "$line" "$UI_DIM" "$detail" "$UI_OFF"
+    fi
     drawn=1 tick=$((tick + 1))
     sleep 0.2
   done
   wait "$pid" || status=$?
-  [ "$drawn" -eq 0 ] || printf '\r\e[K'
+  if [ "$drawn" -eq 1 ]; then
+    if [ "$mode" = closed ]; then printf '\r\e[K'; else printf '\e[2A\r\e[K'; fi
+  fi
   [ "$status" -eq 0 ] || { UI_LAST_FAIL="$name didn't finish"; ui_show_failure; }
   return "$status"
+}
+
+# _ui_sudo_state <pid>: REPLY is "none" when no sudo runs under <pid>,
+# "running" when every one has started its command (a sudo's child), "waiting"
+# when one has none yet: it is asking for the password, or just about to run.
+_ui_sudo_state() {
+  local p pp args a0 kids=" " sudos=() s
+  local -A parent=()
+  REPLY=none
+  while read -r p pp args; do
+    parent[$p]=$pp
+    kids+="$pp "
+    a0=${args%% *}
+    [ "${a0##*/}" != sudo ] || sudos+=("$p")
+  done < <(ps -A -o pid= -o ppid= -o args= 2>/dev/null)
+  for s in "${sudos[@]}"; do
+    # Only a sudo under this command.
+    p=$s
+    while [ -n "${parent[$p]:-}" ] && [ "$p" != "$1" ] && [ "$p" -gt 1 ]; do p=${parent[$p]}; done
+    [ "$p" = "$1" ] || continue
+    if [[ $kids == *" $s "* ]]; then REPLY=running; else REPLY=waiting; return 0; fi
+  done
+}
+
+# _ui_brew_line <offset>: REPLY is the last line Homebrew started with ==> in
+# the log after <offset> bytes, without the ==>; empty when none.
+_ui_brew_line() {
+  local l
+  REPLY=''
+  [ "$OMAMAC_LOG" != /dev/null ] && [ -f "$OMAMAC_LOG" ] || return 0
+  while IFS= read -r l; do
+    [[ $l != '==> '* ]] || REPLY=${l#==> }
+  done < <(tail -c +$(($1 + 1)) "$OMAMAC_LOG" 2>/dev/null)
+}
+
+# _ui_phase <line>: REPLY is what Homebrew is doing, in plain words, from one
+# of its ==> lines; empty when it says nothing a user needs.
+_ui_phase() {
+  case $1 in
+    Fetching*|Downloading*) REPLY='checking the download' ;;
+    *launchctl*|Uninstall*|Removing*|Purging*|Backing*|Quitting*|Signalling*|Trashing*) REPLY='removing the old version' ;;
+    Installing*|Moving*|Linking*|Running\ installer*|Artifact*|Upgrading*) REPLY='installing the new version' ;;
+    *) REPLY='' ;;
+  esac
+}
+
+# _ui_reason <line> <its|their>: REPLY is why sudo needs the password, from
+# the ==> line Homebrew wrote last before it asked. It goes under "Spotify
+# needs your Mac password", so it reads on from it.
+_ui_reason() {
+  case $1 in
+    *installer*) REPLY="to run $2 installer" ;;
+    *launchctl*) REPLY="to stop $2 background helper" ;;
+    *packages*|*pkgutil*|*"Removing files"*|*Purging*) REPLY="to remove $2 system files" ;;
+    *Link*|*link*) REPLY="to link $2 tools into /usr/local" ;;
+    *) REPLY="to change system files" ;;
+  esac
+  REPLY+=.
+}
+
+# _ui_password_label <title> <offset> <lead>: sudo is waiting on the line
+# below the row's empty one. The row says who needs the password, that line
+# why; the cursor goes back to where sudo left it.
+_ui_password_label() {
+  local who=${1#* } verb=needs its=its pad row
+  # "Upgrading Zoom, Google Drive": several apps.
+  if [[ $who == *,* || $who == *" and "* ]]; then verb=need its=their; fi
+  _ui_brew_line "$2"
+  _ui_reason "$REPLY" "$its"
+  if [ -n "$UI_STAGE_NAME" ]; then
+    printf -v row '%s%s›%s %-*s %s%s %s your Mac password%s' "$3" "$UI_YELLOW" "$UI_OFF" "$UI_NAME" "$UI_STAGE_NAME" "$UI_YELLOW" "$who" "$verb" "$UI_OFF"
+    printf -v pad '%*s' $((${#3} + 2 + UI_NAME + 1)) ''
+  else
+    printf -v row '%s%s›%s %s%s %s your Mac password%s' "$3" "$UI_YELLOW" "$UI_OFF" "$UI_YELLOW" "$who" "$verb" "$UI_OFF"
+    printf -v pad '%*s' $((${#3} + 2)) ''
+  fi
+  printf '\e7\e[2A\r\e[K%s\e[1B\r\e[K%s%s%s%s\e8' "$row" "$pad" "$UI_DIM" "$REPLY" "$UI_OFF"
 }
 
 # _ui_download_bytes <since>: REPLY is how many bytes Homebrew's downloads

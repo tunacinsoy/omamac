@@ -21,7 +21,7 @@ The apps you chose, installed with Homebrew (casks) in Applications.
   - No leaves it as it is and drops it from your picks.
 - A Zoom or Google Drive you installed by hand is left alone and dropped, since Homebrew would install it again.
 - For an app you install by hand later, `omamac doctor` and each run show the command.
-- Zoom and Google Drive run an installer, so Homebrew asks for your password; omamac says so first.
+- Zoom and Google Drive run an installer, so Homebrew asks for your password; omamac says so before "Install?" and names them at the prompt.
 - Google Drive also brings Google Docs, Sheets and Slides.
 - VS Code, Obsidian, VLC and Firefox add a command to `/opt/homebrew/bin`, such as `code`.
 
@@ -116,7 +116,7 @@ See [Themes](themes.md#vs-code).
   - A link of yours that points at nothing, such as one Docker Desktop left, is kept too, and omamac says to remove it.
 - colima's login service, started once with `brew services start colima`. To stop colima starting at login: `brew services stop colima`. omamac won't start it again.
 
-**If you chose Docker Desktop:** the `docker-desktop` cask and `lazydocker`, installed with Homebrew. Homebrew asks for your password for the cask's links in `/usr/local`; omamac says so first.
+**If you chose Docker Desktop:** the `docker-desktop` cask and `lazydocker`, installed with Homebrew. Homebrew asks for your password for the cask's links in `/usr/local`; omamac says so before "Install?" and names it at the prompt.
 
 ## macOS settings
 

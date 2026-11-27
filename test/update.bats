@@ -461,7 +461,8 @@ desktop_installed() {
   [ "$status" -eq 0 ]
   grep -qx 'brew outdated --cask --quiet ghostty docker-desktop' "$STUB_LOG"
   grep -qx 'brew upgrade --cask docker-desktop' "$STUB_LOG"
-  [[ "$output" == *"ℹ Homebrew asks for your password for: Docker Desktop."* ]]
+  [[ "$output" == *"Upgrading Docker Desktop"* ]]
+  [[ "$output" != *"Homebrew asks for your password"* ]]
   run ! grep '^gum spin.*docker-desktop' "$STUB_LOG"
   run ! grep -q 'greedy.*docker-desktop' "$STUB_LOG"
 }
@@ -547,14 +548,14 @@ app_installed() {
   run ! grep -q 'greedy.*vlc' "$STUB_LOG"
 }
 
-@test "apps: Ghostty and VLC outdated: upgraded in the open, the password line once" {
+@test "apps: Ghostty and VLC outdated: upgraded in the open, no password line before" {
   app_installed vlc
   ghostty_app
   printf 'ghostty\nvlc\n' > "$OMAMAC_TEST_BREW_PREFIX/outdated"
   run update
   [ "$status" -eq 0 ]
-  [ "$(grep -c 'ℹ Homebrew may ask for your password.' <<< "$output")" -eq 1 ]
-  [[ "$output" == *"ℹ Homebrew may ask for your password."$'\n'"Upgrading Ghostty"* ]]
+  [[ "$output" != *"password"* ]]
+  [[ "$output" == *"Upgrading Ghostty"$'\n'"Upgrading VLC"* ]]
   grep -qx 'brew upgrade --cask ghostty' "$STUB_LOG"
   grep -qx 'brew upgrade --cask vlc' "$STUB_LOG"
   run ! grep -q '^gum spin.*Upgrading \(Ghostty\|VLC\)' "$STUB_LOG"
@@ -613,7 +614,7 @@ app_installed() {
   [ "$status" -eq 0 ]
   [ "$(grep -c '^brew upgrade --cask' "$STUB_LOG")" -eq 1 ]
   grep -qx 'brew upgrade --cask docker-desktop zoom' "$STUB_LOG"
-  [[ "$output" == *"ℹ Homebrew asks for your password for: Docker Desktop, Zoom."* ]]
+  [[ "$output" == *"Upgrading Docker Desktop, Zoom"* ]]
   run ! grep '^gum spin.*\(zoom\|Zoom\)' "$STUB_LOG"
 }
 

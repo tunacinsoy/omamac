@@ -83,7 +83,6 @@ remove_app() {
     log_start
     if [ "$listed" -eq 1 ]; then
       OMAMAC_STEP="removing $label"
-      ui_info "Homebrew may ask for your password."
       # In the open: a cask may need sudo, and Homebrew asks for it itself.
       ui_run_open "Removing $label" "$OMAMAC_BREW_PREFIX/bin/brew" uninstall --cask "${zap[@]}" "$cask" || return
     fi

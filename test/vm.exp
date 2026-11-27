@@ -49,6 +49,9 @@ expect {
       puts stderr "\nvm.exp: asked for a password $passwords times, more than $max_passwords"
       exit 1
     }
+    # A person takes a moment to type; so does this, so omamac's row has
+    # time to say who needs the password (it waits 0.4 s to be sure).
+    after 1000
     send -- "$password\r"
     exp_continue
   }
