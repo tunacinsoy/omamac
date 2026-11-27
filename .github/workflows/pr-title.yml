@@ -1,0 +1,25 @@
+# Required by main's ruleset: a PR title names its type (feat:, fix:, docs:…),
+# which decides the release its merge makes (.github/scripts/release.sh).
+# `edited` re-runs it when the title is fixed. Not path-filtered: a required
+# check that skips a PR would leave it waiting forever.
+name: pr-title
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  pr-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          source .github/scripts/release.sh
+          if ! bump=$(release_bump "$TITLE"); then
+            echo "::error title=PR title::$bump"
+            exit 1
+          fi
+          echo "Release when merged: $bump"

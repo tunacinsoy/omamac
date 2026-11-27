@@ -3,22 +3,39 @@
 ## The flow
 
 1. Work on a branch and push it.
-2. Open a pull request into `main`.
-3. CI runs `bats`: shellcheck, then the bats suite.
-4. Run `test/vm.sh <branch> <fixture>` on the PR's head commit. It posts the `vm` status.
-5. The agent merges once `bats` and `vm` are green and review findings are fixed.
+2. Open a pull request into `main`, its title starting with its type (see [Releases](#releases)).
+3. CI runs `bats` (shellcheck, then the bats suite) and `pr-title`.
+4. Bring the branch up to date with `main`, then run `test/vm.sh <branch> <fixture>` on the PR's head commit. It posts the `vm` status.
+5. The agent squash-merges once `bats`, `vm` and `pr-title` are green and review findings are fixed. The merge makes the release.
 
 Never run omamac on the development Mac. It runs only inside test VMs. To run a branch by hand, see [Testing a branch](docs/testing-changes.md).
 
 ## The merge gate
 
-`main` takes changes only through pull requests, and only when `bats` and `vm` both passed on the PR's exact head commit, with the branch up to date with `main`. No one can bypass this, admins and agents included. `bats` counts only when GitHub Actions posts it.
+`main` takes changes only through squash-merged pull requests, and only when `bats`, `vm` and `pr-title` all passed on the PR's exact head commit, with the branch up to date with `main`. No one can bypass this, admins and agents included. `bats` counts only when GitHub Actions posts it.
 
 Never post `vm` by hand. Only `test/vm.sh` posts it, on a pass or a fail. Only a pass posts success.
 
-Gate files (the ruleset, the CI workflow, `test/vm.sh`, `test/vm.exp`, `test/fingerprint.sh`, `test/image.sh`) are written and changed by the agent, but only in a PR whose purpose is the gate itself, never to turn a red check green. CI flags every PR that touches them, and the agent names them when it reports to Tuna. The agent merges a PR once `bats` and `vm` are green and review findings are fixed; anything that needs Tuna's judgment is raised to Tuna first.
+Gate files (the ruleset, the CI, PR title and release workflows, `.github/scripts/release.sh`, `test/vm.sh`, `test/vm.exp`, `test/fingerprint.sh`, `test/image.sh`) are written and changed by the agent, but only in a PR whose purpose is the gate itself, never to turn a red check green. CI flags every PR that touches them, and the agent names them when it reports to Tuna. The agent merges a PR once `bats` and `vm` are green and review findings are fixed; anything that needs Tuna's judgment is raised to Tuna first.
 
 **Trust model.** GitHub can't prove a VM ran, or that the fixture covers what the PR touched. The gate stops accidental merges (stale commits, unpushed changes, a forgotten VM run), not deliberate fakes.
+
+## Releases
+
+`main` is what the one-liner and `omamac update` install, so every merge that changes what users get is a release. The PR title decides which ([Conventional Commits](https://www.conventionalcommits.org)):
+
+| Title starts with | Release | Example |
+| --- | --- | --- |
+| `feat:` | minor: 0.3.0 → 0.4.0 | `feat: omamac font-size` |
+| `fix:`, `perf:`, `revert:` | patch: 0.4.0 → 0.4.1 | `fix: download progress on upgrade rows` |
+| a `!` before the colon (`feat!:`) | major; before 1.0, the minor | `feat!: configure replaces install for settings` |
+| `docs:`, `test:`, `chore:`, `ci:`, `refactor:`, `build:`, `style:` | none | `docs: font size in commands.md` |
+
+A scope may follow the type: `feat(ghostty): …`. The `pr-title` check fails a title without a type; fixing the title re-runs it.
+
+When the PR merges, the `release` workflow tags the merge commit and publishes a GitHub release named after the version. Its notes are the first paragraph of the PR description, so that paragraph says what the user gets, in their words. The squash commit on `main` is the PR title, so `git log` reads like the changelog. No one types a version by hand.
+
+The full VM run (`full` and `colima`) happens before a milestone such as 1.0, not before every release.
 
 ## Tools on the development Mac
 
@@ -63,7 +80,7 @@ Tests that need mise use a fake, `test/helpers/fake-mise`. Its `T_*` knobs (for 
 
 A change to languages, cloud CLIs or coding agents runs the `bare`, `languages` and `cloud` fixtures. A change to the macOS settings runs `bare` and `desktop`. A change to Docker runs `bare`, `colima` and `docker-desktop`. A change to apps runs `bare`, `apps`, `adopt` and `docker-desktop`. A change to the Dock runs `bare` and `dock`.
 
-Before a release, run every option at once on the release commit, side by side:
+Before a milestone (such as 1.0), run every option at once on its commit, side by side:
 
 ```
 test/vm.sh <branch> full
