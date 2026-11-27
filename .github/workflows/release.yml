@@ -1,0 +1,40 @@
+# Every merge to main is a release when its PR title says it changes what users
+# get: feat bumps the minor, fix/perf/revert the patch, a ! the major (the minor
+# before 1.0). The notes are the PR body's first paragraph. One at a time, so
+# two quick merges get consecutive versions.
+name: release
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+permissions:
+  contents: write
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with: { ref: main, fetch-depth: 0 }
+      - name: Tag and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          source .github/scripts/release.sh
+          bump=$(release_bump "$TITLE")
+          if [ "$bump" = none ]; then
+            echo "No release: $TITLE"
+            exit 0
+          fi
+          last=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1)
+          next=$(release_next "${last:-v0.0.0}" "$bump")
+          release_notes "$NUMBER" "$BODY" > "$RUNNER_TEMP/notes.md"
+          gh release create "$next" --target "$SHA" --title "omamac ${next#v}" --notes-file "$RUNNER_TEMP/notes.md"
+          echo "Released $next: $TITLE" >> "$GITHUB_STEP_SUMMARY"
